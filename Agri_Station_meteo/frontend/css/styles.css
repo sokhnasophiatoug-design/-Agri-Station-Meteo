@@ -107,36 +107,6 @@ section[data-testid="stSidebar"]{
     border-right:none !important;
 }
 
-/* Desktop : sidebar toujours ouverte */
-@media(min-width:769px){
-    section[data-testid="stSidebar"][aria-expanded="false"]{
-        transform:translateX(0%) !important;
-        margin-left:0 !important;
-    }
-    [data-testid="collapsedControl"]{
-        display:none !important;
-    }
-}
-
-/* Mobile : hamburger visible, sidebar rétractable */
-@media(max-width:768px){
-    [data-testid="collapsedControl"]{
-        display:flex !important;
-        position:fixed !important;
-        top:8px !important;
-        left:8px !important;
-        z-index:9999 !important;
-        background:var(--v-noir) !important;
-        border-radius:10px !important;
-        padding:6px !important;
-        box-shadow:0 2px 10px rgba(0,0,0,0.4) !important;
-    }
-    [data-testid="collapsedControl"] svg{
-        fill:white !important;
-        color:white !important;
-    }
-}
-
 /* couleur texte sidebar */
 [data-testid="stSidebar"],
 [data-testid="stSidebar"] *{
