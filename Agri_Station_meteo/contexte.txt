@@ -1,0 +1,747 @@
+LIT LA DOCUMENTATION TECHNIQUE.DOCX ET FAIT LES MISES A JOUR NECESSAIRE POUR UNE MEILLEUR COMPREHENSION DE PROJET 
+
+Pour enrichir le dataset : modifiez directement dataset_agricole.csv (ajoutez des lignes, corrigez des labels) sans toucher au code Python.
+
+Je vois ce que tu veux faire — accéder à ton application Streamlit depuis ton téléphone via le réseau local.
+Pour Streamlit c'est beaucoup plus simple :
+
+---
+
+## Ce que tu dois faire
+
+### Trouver l'IP de ton PC
+Dans PowerShell :
+```powershell
+ipconfig
+```
+Cherche **IPv4 Address** sous "Wireless LAN adapter Wi-Fi" → exemple : `192.168.1.145`
+
+---
+
+Parfait. Lance exactement ces deux commandes dans **deux terminaux séparés** :
+
+---
+
+**Terminal 1 — Backend :**
+```powershell
+cd C:\Users\HP\Downloads\Agri_Station_meteo_restyled\Agri_Station_meteo\backend
+uvicorn main:app --host 0.0.0.0 --reload
+```
+
+---
+
+**Terminal 2 — Frontend :**
+```powershell
+cd C:\Users\HP\Downloads\Agri_Station_meteo_restyled\Agri_Station_meteo\frontend
+streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+```
+
+---
+
+Ensuite ouvre sur ton téléphone (même WiFi que le PC) :
+```
+http://192.168.137.84:8501
+```
+
+
+SEPARER LE FRONTEND ET LE BACKEND FAISONS ETAPE PAR ETAPE CETTE APPLICATION 
+TU VAS ME DIRE LES POINTS ESSENTIELLES DE PROJET ET COMMENT ON VA PROCEDER POUR LA REALISER ET ENSUITE SUIT ETAPE PAR ETAPE POUR QUE JE PUISSE APRES LA CREATION DE CETTE APLLICATION J'AURAIS PLUS UN PROBLEME DE CREATION D'APPLICATION
+#clé API OpenWeather
+API_KEY = "652d3abf887689071d07dcec5e333309"
+FIREBASE_WEB_API_KEY  = "AIzaSyBTgmYJn7WnhcXpKw0Yv8txfXTMKEYqmgo"
+FIREBASE_DB_URL       = "https://stationmeteo-3dc5d-default-rtdb.firebaseio.com"
+
+sur firebase
+authetification:
+Identifiant
+Fournisseurs
+Date de création
+Dernière connexion
+ID utilisateur
+Actions
+ssophiatou.gueye@etu.ussein.edu.sn
+25 avr. 2026
+27 avr. 2026
+AayXUAnqVjctobKJjmTnE2gOTNw2
+sokhnasophiatoug@gmail.com
+25 avr. 2026
+26 avr. 2026
+vr17AOR9v8hd83oNSEfWFUXMssH2
+
+realitimedb
+donnees
+https://stationmeteo-3dc5d-default-rtdb.firebaseio.com/
+admins
+	vr17AOR9v8hd83oNSEfWFUXMssH2
+		role
+:
+"admin"
+agriculteurs
+	AayXUAnqVjctobKJjmTnE2gOTNw2
+	actif
+:
+true
+	date_creation
+:
+"2026-04-25T22:15:03.146078"
+	email
+:
+"ssophiatou.gueye@etu.ussein.edu.sn"
+	firebase_path
+:
+"stations/ST002"
+	nom
+:
+"Ablaye DIOP"
+	region
+:
+"Kaolack"
+	station_id
+:
+"ST002"
+	station_nom
+:
+"Station Kaolack Centre"
+	telephone
+:
+"770130572"
+stations
+ST002
+	historique
+		-OrAkt7j43SkOV-LCxdQ
+			humidite_air
+:
+41
+			humidite_sol
+:
+0
+			station_id
+:
+"ST002"
+			temperature
+:
+31.3
+			timestamp
+:
+"2026-04-26 21:47:59"
+			vitesse_vent
+:
+48.86
+	-OrAl8B28Pb1RIenEz2N
+...
+
+	mesures
+		humidite_air
+:
+45
+		humidite_sol
+:
+100
+		station_id
+:
+"ST002"
+		temperature
+:
+30.2
+		timestamp
+:
+"2026-04-26 22:58:55"
+		vitesse_vent
+:
+10.57
+
+REGLES
+{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}
+
+
+J'ai déjà récupérer le code de serviceAccountKey.json je peux meme vous  partager le fichier
+
+
+Contexte général
+Ce projet est une mini station météo intelligente destinée aux agriculteurs, développé dans le cadre d'un projet IoT (Internet des Objets) académique ou professionnel, probablement au Sénégal vu les régions mentionnées (Thiès, Kaolack, Saint-Louis, Dakar, Fatick, Diourbel...).
+
+La Station Météo Agricole est une plateforme IoT complète permettant la surveillance en temps réel des conditions météorologiques et pédologiques de parcelles agricoles au Sénégal. Chaque station physique est constituée d'un microcontrôleur ESP32 équipé de capteurs (température, humidité de l'air, humidité du sol, vitesse du vent) qui envoient leurs données vers Firebase Realtime Database via WiFi. Une interface web Streamlit, avec serveur backend nécessaire, permet à chaque agriculteur de consulter exclusivement les données de sa propre station, tandis qu'un administrateur dispose d'un tableau de bord global.
+Chaque capteur est soumis à deux niveaux de traitement avant envoi : un filtre de seuil qui rejette toute valeur hors de la plage physique réaliste (parasites électriques, erreurs de lecture), puis un filtre de moyenne glissante sur les 5 dernières mesures valides pour lisser les variations brusques.
+Chaque ESP32 déployé sur le terrain est identifié par un STATION_ID unique défini à la compilation. Ce champ détermine automatiquement les chemins d'écriture dans Firebase, permettant à plusieurs stations d'écrire simultanément sans conflit.
+Reconnexion WiFi automatique
+La boucle loop() vérifie l'état WiFi à chaque itération. En cas de perte de signal (déconnexion réseau, redémarrage du routeur), l'ESP32 appelle WiFi.reconnect() automatiquement sans nécessiter de redémarrage physique.
+Gerer l'authentification sans backend intermédiaire
+
+CODE ARDUINO mais remplacer apres la partie module GPS SIM7600 par api global mapper
+// ============================================================
+// STATION MÉTÉO - ESP32
+// Anémomètre ZTS-3000-FSJT-NPN
+// Capteur DHT11 (température + humidité air)
+// Capteur sol analogique
+// Module GPS SIM7600 (optionnel)
+//
+// MULTI-STATIONS :
+//   Modifier uniquement STATION_ID, WIFI_SSID, WIFI_PASSWORD
+//   L'ESP32 écrira automatiquement dans :
+//     stations/ST002/mesures/
+//     stations/ST002/historique/
+//     stations/ST002/gps/
+// ============================================================
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <DHT.h>
+#include <time.h>
+
+// ============================================================
+// ⚙️  À MODIFIER PAR STATION — 3 LIGNES SEULEMENT
+// ============================================================
+
+#define STATION_ID    "ST002"
+#define WIFI_SSID     "Ussein_LS"
+#define WIFI_PASSWORD "Ussein@12345"
+
+// ============================================================
+// CONFIGURATION FIXE
+// ============================================================
+
+#define FIREBASE_HOST "stationmeteo-3dc5d-default-rtdb.firebaseio.com"
+#define FIREBASE_URL  "https://stationmeteo-3dc5d-default-rtdb.firebaseio.com"
+
+// Broches capteurs
+#define DHT_PIN        4
+#define DHT_TYPE       DHT11
+#define ANEMOMETRE_PIN 18
+#define SOL_PIN        35
+
+// Broches GPS SIM7600
+#define GPS_RX_PIN     16
+#define GPS_TX_PIN     17
+#define GPS_ACTIF      false   // ← true si module GPS branché
+
+// ZTS-3000 : 1 impulsion/s = 0.667 m/s
+#define FACTEUR_VENT   0.667f
+
+// Envoi toutes les 30 secondes
+#define INTERVALLE_MS  30000
+
+// ============================================================
+// LIMITES PHYSIQUES CAPTEURS
+// ============================================================
+
+#define TEMP_MIN     10.0f
+#define TEMP_MAX     50.0f
+#define HUM_AIR_MIN  10.0f
+#define HUM_AIR_MAX  100.0f
+#define HUM_SOL_MIN  0.0f
+#define HUM_SOL_MAX  100.0f
+#define VENT_MAX     60.0f
+
+// ============================================================
+// MOYENNE GLISSANTE — fenêtre 5 mesures
+// ============================================================
+
+#define NB_MESURES 5
+
+float histTemp[NB_MESURES]   = {};
+float histHumAir[NB_MESURES] = {};
+float histHumSol[NB_MESURES] = {};
+float histVent[NB_MESURES]   = {};
+
+int idxTemp = 0, nbTemp = 0;
+int idxHumAir = 0, nbHumAir = 0;
+int idxHumSol = 0, nbHumSol = 0;
+int idxVent = 0, nbVent = 0;
+
+// ============================================================
+// CHEMINS FIREBASE — construits au runtime depuis STATION_ID
+// ============================================================
+// On utilise des String (pas des #define) pour éviter les
+// problèmes de concaténation de littéraux C sur ESP32.
+
+String CHEMIN_MESURES;     // "stations/ST002/mesures"
+String CHEMIN_HISTORIQUE;  // "stations/ST002/historique"
+String CHEMIN_GPS;         // "stations/ST002/gps"
+
+// ============================================================
+
+DHT dht(DHT_PIN, DHT_TYPE);
+
+volatile unsigned long compteur = 0;
+unsigned long dernierCalcul     = 0;
+unsigned long dernierEnvoi      = 0;
+
+
+// ── TIMESTAMP NTP ────────────────────────────────────────────
+
+String obtenirTimestamp() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    return "inconnu_" + String(millis());
+  }
+  char buf[25];
+  strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  return String(buf);
+}
+
+
+// ── INTERRUPTION ANÉMOMÈTRE ──────────────────────────────────
+
+void IRAM_ATTR onImpulsion() {
+  compteur++;
+}
+
+
+// ── FILTRE SEUIL + MOYENNE GLISSANTE ─────────────────────────
+
+float filtrerValeur(float valeur, float valMin, float valMax,
+                    float* hist, int &idx, int &nbV, const char* nom) {
+
+  // Hors plage → parasite rejeté, on retourne la dernière moyenne
+  if (isnan(valeur) || valeur < valMin || valeur > valMax) {
+    Serial.printf("⚠ Parasite [%s]: %.2f (plage %.0f-%.0f)\n",
+                  nom, valeur, valMin, valMax);
+    if (nbV == 0) return (valMin + valMax) / 2.0f;
+    float s = 0;
+    int n = min(nbV, NB_MESURES);
+    for (int i = 0; i < n; i++) s += hist[i];
+    return s / n;
+  }
+
+  // Stocker dans le buffer circulaire
+  hist[idx] = valeur;
+  idx = (idx + 1) % NB_MESURES;
+  if (nbV < NB_MESURES) nbV++;
+
+  // Calculer la moyenne
+  float s = 0;
+  int n = min(nbV, NB_MESURES);
+  for (int i = 0; i < n; i++) s += hist[i];
+  float moy = s / n;
+
+  Serial.printf("   [%s] brut:%.2f → lissé:%.2f\n", nom, valeur, moy);
+  return moy;
+}
+
+
+// ── LECTURE CAPTEURS ──────────────────────────────────────────
+
+float lireTemperature() {
+  float brut = dht.readTemperature();
+  if (isnan(brut)) {
+    Serial.println("✗ DHT11 temperature erreur");
+    return (nbTemp > 0) ? histTemp[(idxTemp - 1 + NB_MESURES) % NB_MESURES] : 25.0f;
+  }
+  return filtrerValeur(brut, TEMP_MIN, TEMP_MAX, histTemp, idxTemp, nbTemp, "Temp");
+}
+
+float lireHumiditeAir() {
+  float brut = dht.readHumidity();
+  if (isnan(brut)) {
+    Serial.println("✗ DHT11 humidité air erreur");
+    return (nbHumAir > 0) ? histHumAir[(idxHumAir - 1 + NB_MESURES) % NB_MESURES] : 50.0f;
+  }
+  return filtrerValeur(brut, HUM_AIR_MIN, HUM_AIR_MAX, histHumAir, idxHumAir, nbHumAir, "HumAir");
+}
+
+float lireHumiditeSol() {
+  int   raw  = analogRead(SOL_PIN);
+  // 4095 = sec (0%), 1500 = saturé (100%)
+  float brut = (float)constrain(map(raw, 4095, 1500, 0, 100), 0, 100);
+  return filtrerValeur(brut, HUM_SOL_MIN, HUM_SOL_MAX, histHumSol, idxHumSol, nbHumSol, "HumSol");
+}
+
+float lireVitesseVent() {
+  unsigned long maintenant = millis();
+  unsigned long duree      = maintenant - dernierCalcul;
+
+  noInterrupts();
+  unsigned long imp = compteur;
+  compteur = 0;
+  interrupts();
+  dernierCalcul = maintenant;
+
+  float hz  = (duree > 0) ? (float)imp / (duree / 1000.0f) : 0.0f;
+  float kmh = hz * FACTEUR_VENT * 3.6f;
+
+  return filtrerValeur(kmh, 0.0f, VENT_MAX, histVent, idxVent, nbVent, "Vent");
+}
+
+
+// ============================================================
+// ENVOI FIREBASE VIA HTTPS REST
+// ============================================================
+
+// Envoie un PUT sur un champ unique (écrase la valeur précédente)
+// URL : https://...firebaseio.com/stations/ST002/mesures/temperature.json
+bool firebasePUT(String chemin, String jsonBody) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("✗ WiFi non connecté — PUT annulé");
+    return false;
+  }
+
+  HTTPClient http;
+  String url = String(FIREBASE_URL) + "/" + chemin + ".json";
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int code = http.PUT(jsonBody);
+  bool ok  = (code == 200);
+
+  if (ok) {
+    Serial.println("✓ PUT " + chemin + " → HTTP " + String(code));
+  } else {
+    Serial.println("✗ PUT " + chemin + " → HTTP " + String(code));
+    String resp = http.getString();
+    Serial.println("  Réponse : " + resp.substring(0, 100));
+  }
+  http.end();
+  return ok;
+}
+
+// Envoie un POST (crée une clé unique push — historique grandit)
+// URL : https://...firebaseio.com/stations/ST002/historique.json
+bool firebasePOST(String chemin, String jsonBody) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("✗ WiFi non connecté — POST annulé");
+    return false;
+  }
+
+  HTTPClient http;
+  String url = String(FIREBASE_URL) + "/" + chemin + ".json";
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int code = http.POST(jsonBody);
+  bool ok  = (code == 200);
+
+  if (ok) {
+    Serial.println("✓ POST " + chemin + " → HTTP " + String(code));
+  } else {
+    Serial.println("✗ POST " + chemin + " → HTTP " + String(code));
+    String resp = http.getString();
+    Serial.println("  Réponse : " + resp.substring(0, 100));
+  }
+  http.end();
+  return ok;
+}
+
+
+// Envoie les 4 mesures actuelles dans stations/ST002/mesures/
+void envoyerMesures(float temp, float humAir, float humSol, float vent) {
+  // On construit un seul JSON et on fait un PUT sur le nœud mesures entier
+  // → 1 seul appel HTTP au lieu de 4
+  String json = "{";
+  json += "\"temperature\":"  + String(temp,   2) + ",";
+  json += "\"humidite_air\":" + String(humAir, 2) + ",";
+  json += "\"humidite_sol\":" + String(humSol, 2) + ",";
+  json += "\"vitesse_vent\":" + String(vent,   2) + ",";
+  json += "\"station_id\":\"" + String(STATION_ID) + "\",";
+  json += "\"timestamp\":\""  + obtenirTimestamp() + "\"";
+  json += "}";
+
+  firebasePUT(CHEMIN_MESURES, json);
+}
+
+// Envoie un enregistrement dans stations/ST002/historique/
+void envoyerHistorique(float temp, float humAir, float humSol, float vent) {
+  String json = "{";
+  json += "\"temperature\":"  + String(temp,   2) + ",";
+  json += "\"humidite_air\":" + String(humAir, 2) + ",";
+  json += "\"humidite_sol\":" + String(humSol, 2) + ",";
+  json += "\"vitesse_vent\":" + String(vent,   2) + ",";
+  json += "\"station_id\":\"" + String(STATION_ID) + "\",";
+  json += "\"timestamp\":\""  + obtenirTimestamp() + "\"";
+  json += "}";
+
+  firebasePOST(CHEMIN_HISTORIQUE, json);
+}
+
+// Envoie la position GPS dans stations/ST002/gps/
+void envoyerGPS(float lat, float lon, float alt) {
+  String json = "{";
+  json += "\"latitude\":"     + String(lat, 6)     + ",";
+  json += "\"longitude\":"    + String(lon, 6)     + ",";
+  json += "\"altitude\":"     + String(alt, 1)     + ",";
+  json += "\"station_id\":\"" + String(STATION_ID) + "\",";
+  json += "\"timestamp\":\""  + obtenirTimestamp() + "\"";
+  json += "}";
+
+  firebasePUT(CHEMIN_GPS, json);
+}
+
+
+// ============================================================
+// GPS SIM7600 — parser NMEA $GPRMC/$GNRMC
+// ============================================================
+
+#if GPS_ACTIF
+#include <HardwareSerial.h>
+HardwareSerial gpsSerial(1);
+
+bool lireGPS(float &latitude, float &longitude, float &altitude) {
+  String ligne = "";
+  unsigned long debut = millis();
+
+  while (millis() - debut < 2000) {
+    if (gpsSerial.available()) {
+      char c = gpsSerial.read();
+      if (c == '\n') {
+        if (ligne.startsWith("$GPRMC") || ligne.startsWith("$GNRMC")) {
+          // Parser les champs séparés par virgules
+          int v[12];
+          int nb = 0;
+          for (int i = 0; i < (int)ligne.length() && nb < 12; i++) {
+            if (ligne[i] == ',') v[nb++] = i;
+          }
+          if (nb >= 6 && ligne.substring(v[1]+1, v[2]) == "A") {
+            // Latitude DDMM.MMMM → degrés décimaux
+            String latS = ligne.substring(v[2]+1, v[3]);
+            String latD = ligne.substring(v[3]+1, v[4]);
+            String lonS = ligne.substring(v[4]+1, v[5]);
+            String lonD = ligne.substring(v[5]+1, v[6]);
+
+            latitude = latS.substring(0,2).toFloat()
+                     + latS.substring(2).toFloat() / 60.0f;
+            if (latD == "S") latitude = -latitude;
+
+            longitude = lonS.substring(0,3).toFloat()
+                      + lonS.substring(3).toFloat() / 60.0f;
+            if (lonD == "W") longitude = -longitude;
+
+            altitude = 0;
+            return true;
+          }
+        }
+        ligne = "";
+      } else if (c != '\r') {
+        ligne += c;
+      }
+    }
+  }
+  return false;
+}
+#endif
+
+
+// ============================================================
+// SETUP
+// ============================================================
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+
+  // ── Construire les chemins Firebase ─────────────────────────
+  // On le fait ici (runtime) pour éviter les problèmes de
+  // concaténation de #define strings sur ESP32
+  CHEMIN_MESURES    = "stations/" + String(STATION_ID) + "/mesures";
+  CHEMIN_HISTORIQUE = "stations/" + String(STATION_ID) + "/historique";
+  CHEMIN_GPS        = "stations/" + String(STATION_ID) + "/gps";
+
+  dht.begin();
+  pinMode(ANEMOMETRE_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(ANEMOMETRE_PIN), onImpulsion, FALLING);
+
+#if GPS_ACTIF
+  gpsSerial.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.println("GPS SIM7600 init OK");
+#endif
+
+  // ── WiFi ─────────────────────────────────────────────────────
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("WiFi [" + String(WIFI_SSID) + "]");
+  int tentatives = 0;
+  while (WiFi.status() != WL_CONNECTED && tentatives < 30) {
+    delay(500);
+    Serial.print(".");
+    tentatives++;
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✓ WiFi OK : " + WiFi.localIP().toString());
+  } else {
+    Serial.println("\n✗ WiFi ECHEC — redémarrage dans 5s");
+    delay(5000);
+    ESP.restart();
+  }
+
+  // ── NTP (heure réseau) ───────────────────────────────────────
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  setenv("TZ", "GMT0", 1);
+  tzset();
+
+  Serial.print("NTP sync");
+  struct tm timeinfo;
+  int ntpTentatives = 0;
+  while (!getLocalTime(&timeinfo) && ntpTentatives < 20) {
+    delay(500);
+    Serial.print(".");
+    ntpTentatives++;
+  }
+  if (getLocalTime(&timeinfo)) {
+    Serial.println("\n✓ NTP OK : " + obtenirTimestamp());
+  } else {
+    Serial.println("\n⚠ NTP non synchronisé — timestamps approximatifs");
+  }
+
+  // ── Résumé de la configuration ───────────────────────────────
+  Serial.println("===========================================");
+  Serial.println("  Station ID    : " + String(STATION_ID));
+  Serial.println("  Mesures       : " + CHEMIN_MESURES);
+  Serial.println("  Historique    : " + CHEMIN_HISTORIQUE);
+  Serial.println("  GPS           : " + CHEMIN_GPS);
+  Serial.println("  Intervalle    : " + String(INTERVALLE_MS/1000) + "s");
+  Serial.println("===========================================");
+
+  dernierCalcul = millis();
+  dernierEnvoi  = millis() - INTERVALLE_MS; // Envoyer dès le démarrage
+}
+
+
+// ============================================================
+// LOOP
+// ============================================================
+
+void loop() {
+  unsigned long maintenant = millis();
+
+  // Reconnexion WiFi automatique si perte de signal
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠ WiFi perdu — reconnexion...");
+    WiFi.reconnect();
+    delay(3000);
+    return;
+  }
+
+  if (maintenant - dernierEnvoi >= INTERVALLE_MS) {
+    dernierEnvoi = maintenant;
+
+    Serial.println("\n── Lecture capteurs ──────────────────────");
+
+    float temp   = lireTemperature();
+    float humAir = lireHumiditeAir();
+    float humSol = lireHumiditeSol();
+    float vent   = lireVitesseVent();
+
+    Serial.println("═════════════════════════════════════════");
+    Serial.println("  Station      : " + String(STATION_ID));
+    Serial.printf ("  Température  : %.1f °C\n",    temp);
+    Serial.printf ("  Humidité air : %.1f %%\n",    humAir);
+    Serial.printf ("  Humidité sol : %.1f %%\n",    humSol);
+    Serial.printf ("  Vent         : %.2f km/h\n",  vent);
+    Serial.println("═════════════════════════════════════════");
+
+    Serial.println("── Envoi Firebase ────────────────────────");
+
+    // 1 seul PUT pour les mesures actuelles (tout le nœud d'un coup)
+    envoyerMesures(temp, humAir, humSol, vent);
+
+    // POST pour l'historique (nouvelle entrée à chaque cycle)
+    envoyerHistorique(temp, humAir, humSol, vent);
+
+    // GPS si module présent
+#if GPS_ACTIF
+    float lat = 0, lon = 0, alt = 0;
+    if (lireGPS(lat, lon, alt)) {
+      Serial.printf("  GPS : %.6f, %.6f alt=%.1fm\n", lat, lon, alt);
+      envoyerGPS(lat, lon, alt);
+    } else {
+      Serial.println("  GPS : pas de fix");
+    }
+#endif
+
+    Serial.println("── Cycle terminé ─────────────────────────");
+  }
+}
+
+Problème résolu
+Les agriculteurs africains font face à plusieurs défis climatiques :
+
+Ils n'ont pas accès à des données météo locales précises pour leurs champs
+Ils ne savent pas quand irriguer, quand pulvériser ou quand récolter
+Les décisions sont prises "à l'œil", ce qui entraîne des pertes de cultures, un gaspillage d'eau et une mauvaise utilisation des produits agricoles 
+Les deux interfaces développées
+
+Interface Agriculteur — simple, visuelle, accessible :
+agriculteur un fois connecter:
+Mesures en temps réel des 4 capteurs Graphiques d'évolution
+Prévisions météo 5 jours (via OpenWeather)
+Recommandations IA automatiques via arbres tree(arroser, attendre, pulvériser...)
+Alertes importantes
+Bouton lecture vocale (pour les agriculteurs peu alphabétisés)
+
+exemple code arbre tree et text to speech de mon cour intelligence artificiel 
+arbre tree
+#classering
+#Importation des modules nécessaires
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+import pandas as pd
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn import metrics
+#importation du dataset
+inputData = pd.read_csv("C:\Users\HP\Documents\L2 revision\IA\BDpalu_TP2025CSV.csv")
+#Déclaration de l'arbre de décision
+model = DecisionTreeClassifier(max_depth=2)
+#Entrainement de l'abre de décision
+X=inputData[['cas','fievre_eleve','douleur_dif','cephal','trouble_dig','frisson','palu']]
+X.values
+Y=inputData['class'].values
+X_train, X_test, Y_train, Y_test=train_test_split(X,Y,test_size=0.01,random_state=2)
+print('train set',X_train.shape,Y_train.shape)
+print('test set',X_test.shape,Y_test.shape)
+model.fit(X_train,Y_train)
+print("Précision",model.score(X_test,Y_test))
+print("Evaluation test",model.predict(X_test))
+#Affichage de l'abre de décision obtenu après entraînement
+plot_tree(model, feature_names= ['cas','fievre_eleve','douleur_dif','cephal','trouble_dig','frisson','palu'], class_names=["tested_positive","tested_negative"],filled=True)
+
+plt.show()
+
+
+text to speech
+############## text_tospeechTP.py(text en son)######
+
+#Importe la classe gTTS (Google Text-to-Speech) depuis le module gtts.
+#Cette classe permet de convertir du texte en voix.
+from gtts import gTTS
+
+#Importe la bibliothèque pygame, souvent utilisée pour créer des jeux, mais ici, 
+# on l’utilise pour jouer le fichier audio généré par gTTS.
+import pygame
+
+#définissez une variable mytext contenant le texte que vous voulez que l’ordinateur prononce.
+#Ce texte est en français.
+mytext = 'Bonjour. VIVE Departement MI. je suis entrain de corriger mes papiers des conférences CHIRA 2024 et ICINCO 24!'
+
+#La langue du texte est spécifiée comme français ('fr') pour que la voix synthétique le prononce correctement.
+language = 'fr'
+
+#Crée un objet gTTS avec les paramètres :
+#text=mytext → le texte à convertir en audio.
+#lang=language → la langue à utiliser pour la prononciation.
+#slow=False → voix rapide/normale. Si True, la voix serait plus lente.
+myobj = gTTS(text=mytext, lang=language, slow=False)
+
+#Convertit le texte en audio et sauvegarde le fichier audio au format MP3 sous le nom "MOI.mp3" 
+# dans le répertoire courant.
+myobj.save("MOI.mp3")
+
+#Initialise  le système audio de pygame pour pouvoir jouer du son.
+pygame.mixer.init()
+
+#Charge le fichier "MOI.mp3" que vous venez de créer afin qu’il soit prêt à être joué.
+pygame.mixer.music.load("MOI.mp3")
+
+#Joue le fichier audio : vous entendrez le texte prononcé par une voix synthétique.
+pygame.mixer.music.play()
+
+Interface Administrateur — technique, de supervision :
+
+Carte GPS de toutes les stations (via api global mapper)
+Configuration des seuils d'alerte
+Gestion des contacts agriculteurs
+
+But final
+Donner à chaque agriculteur, même dans une zone rurale sans expertise technique, un conseiller climatique intelligent dans sa poche — qui lui dit simplement quoi faire, au bon moment, dans sa région, en tenant compte de la météo réelle de son champ.
+
