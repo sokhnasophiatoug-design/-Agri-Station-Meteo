@@ -202,7 +202,7 @@ def _verify_role(id_token):
             return {"ok": True, **resp.json()}
         return {"ok": False, "erreur": resp.json().get("detail", "Accès refusé")}
     except requests.ConnectionError:
-        return {"ok": False, "erreur": "Backend inaccessible (localhost:8000). Vérifiez qu'il est démarré."}
+        return {"ok": False, "erreur": f"Backend inaccessible ({BACKEND_URL}). Vérifiez qu'il est démarré."}
     except Exception as e:
         return {"ok": False, "erreur": str(e)}
 
@@ -214,7 +214,7 @@ def _inscrire_agriculteur(payload):
             return {"ok": True, **resp.json()}
         return {"ok": False, "erreur": resp.json().get("detail", "Erreur d'inscription")}
     except requests.ConnectionError:
-        return {"ok": False, "erreur": "Backend inaccessible (localhost:8000)."}
+        return {"ok": False, "erreur": f"Backend inaccessible ({BACKEND_URL})."}
     except Exception as e:
         return {"ok": False, "erreur": str(e)}
 
