@@ -161,8 +161,6 @@ def _css_login():
 
     .stAlert { border-radius: 10px !important; font-family: 'Nunito', sans-serif !important; }
     #MainMenu, footer, header { visibility: hidden; }
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
