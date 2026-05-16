@@ -13,7 +13,23 @@ from firebase_admin import credentials, db, auth
 def init_firebase():
     """Initialise Firebase Admin SDK (idempotent)."""
     if not firebase_admin._apps:
-        cred_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
+        # Essayer plusieurs emplacements pour le fichier secret
+        chemins_possibles = [
+            os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"), # Local
+            "/etc/secrets/serviceAccountKey.json",                             # Render secrets (absolu)
+            "serviceAccountKey.json",                                          # Render racine
+            "../../serviceAccountKey.json"                                     # Relatif à la racine du repo
+        ]
+        
+        cred_path = None
+        for path in chemins_possibles:
+            if os.path.exists(path):
+                cred_path = path
+                break
+                
+        if not cred_path:
+            raise FileNotFoundError("Impossible de trouver serviceAccountKey.json pour Firebase!")
+            
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred, {
             "databaseURL": "https://stationmeteo-3dc5d-default-rtdb.firebaseio.com"
