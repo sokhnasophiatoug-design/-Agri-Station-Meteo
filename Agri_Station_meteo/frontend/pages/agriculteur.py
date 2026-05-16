@@ -16,7 +16,7 @@ from components.charts       import graphique_historique, graphique_jauge, graph
 from components.weather_card import afficher_previsions, afficher_alerte_meteo, afficher_meteo_actuelle
 from components.auth         import deconnexion
 
-BACKEND = "http://localhost:8000"
+BACKEND = "https://agri-station-meteo.onrender.com"
 
 REGIONS = [
     "Dakar", "Thiès", "Kaolack", "Saint-Louis", "Fatick",

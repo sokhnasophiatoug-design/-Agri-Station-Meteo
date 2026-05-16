@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from components.map_component import afficher_carte_stations
 from components.auth          import deconnexion
 
-BACKEND = "http://localhost:8000"
+BACKEND = "https://agri-station-meteo.onrender.com"
 
 
 def _get(endpoint, default=None):

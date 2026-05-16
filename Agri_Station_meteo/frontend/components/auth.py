@@ -15,7 +15,7 @@ FIREBASE_SIGNUP_URL  = (
     "https://identitytoolkit.googleapis.com/v1/accounts:signUp"
     f"?key={FIREBASE_WEB_API_KEY}"
 )
-BACKEND_URL = "http://localhost:8000"
+BACKEND_URL = "https://agri-station-meteo.onrender.com"
 
 REGIONS = [
     "Dakar", "Thiès", "Kaolack", "Saint-Louis", "Fatick",
