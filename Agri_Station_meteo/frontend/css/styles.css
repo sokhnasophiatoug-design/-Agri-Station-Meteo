@@ -107,6 +107,27 @@ section[data-testid="stSidebar"]{
     border-right:none !important;
 }
 
+/* ── Hamburger Menu Visible (Desktop & Mobile) ── */
+[data-testid="collapsedControl"]{
+    display:flex !important;
+    position:fixed !important;
+    top:8px !important;
+    left:8px !important;
+    z-index:9999 !important;
+    background:var(--v-noir) !important;
+    border-radius:10px !important;
+    padding:6px !important;
+    box-shadow:0 2px 10px rgba(0,0,0,0.4) !important;
+    transition: all 0.3s ease !important;
+}
+[data-testid="collapsedControl"]:hover{
+    background:var(--v-foret) !important;
+}
+[data-testid="collapsedControl"] svg{
+    fill:white !important;
+    color:white !important;
+}
+
 /* couleur texte sidebar */
 [data-testid="stSidebar"],
 [data-testid="stSidebar"] *{
