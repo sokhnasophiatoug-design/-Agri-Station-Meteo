@@ -27,7 +27,7 @@ REGIONS = [
 
 def _get(endpoint, default=None):
     try:
-        r = requests.get(f"{BACKEND}{endpoint}", timeout=15)
+        r = requests.get(f"{BACKEND}{endpoint}", timeout=60)
         return r.json() if r.status_code == 200 else default
     except Exception:
         return default
@@ -35,7 +35,7 @@ def _get(endpoint, default=None):
 
 def _post(endpoint, body, default=None):
     try:
-        r = requests.post(f"{BACKEND}{endpoint}", json=body, timeout=20)
+        r = requests.post(f"{BACKEND}{endpoint}", json=body, timeout=60)
         return r.json() if r.status_code == 200 else default
     except Exception:
         return default
