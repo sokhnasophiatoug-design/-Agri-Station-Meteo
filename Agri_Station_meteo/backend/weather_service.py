@@ -5,7 +5,6 @@ temp_max/min calculés sur toutes les entrées du jour.
 """
 
 
-import streamlit as st   # ou supprime totalement si backend pur
 import requests
 import os
 from datetime import datetime
