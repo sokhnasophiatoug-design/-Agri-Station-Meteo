@@ -354,7 +354,7 @@ def page_login():
         else:
             st.markdown("### 🌱 Créer un compte agriculteur")
             _form_inscription()
-        st.markdown("</div>", unsafe_allow_html=True)
+        # st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("""
         <div style="text-align:center; color:rgba(255,255,255,0.28); font-size:0.72rem; margin-top:18px;">
