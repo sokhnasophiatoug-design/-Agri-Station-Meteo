@@ -209,16 +209,6 @@ def page_agriculteur():
     .meteo-now-ville{ margin-top:18px; font-size:0.9rem; opacity:0.9; }
     .meteo-now-infos{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.88rem; opacity:0.92; }
 
-    /* ===== GRILLE JAUGES MOBILE ===== */
-    .jauges-grid{
-        display:grid;
-        grid-template-columns:repeat(4,1fr);
-        gap:8px;
-        width:100%;
-        margin-bottom:16px;
-    }
-    .jauge-item{ min-width:0; }
-
     /* ===== GRILLE PREVISIONS ===== */
     .previsions-grid{
         display:grid;
@@ -253,27 +243,28 @@ def page_agriculteur():
             transition:transform 0.3s ease !important;
         }
 
-        /* Grille metrics 4 colonnes */
+        /* ── COLONNES STREAMLIT ──
+           flex-wrap force le retour à la ligne.
+           Chaque stColumn prend 24% → 4 par ligne.  */
         [data-testid="stHorizontalBlock"]{
-            display:grid !important;
-            grid-template-columns:repeat(4,1fr) !important;
-            gap:5px !important;
+            flex-wrap: wrap !important;
+            gap: 5px !important;
         }
-        [data-testid="stHorizontalBlock"]>*{
-            min-width:0 !important;
-            width:100% !important;
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
+            flex: 0 0 calc(24% - 2px) !important;
+            max-width: calc(24% - 2px) !important;
+            min-width: 0 !important;
+            width: calc(24% - 2px) !important;
+            box-sizing: border-box !important;
         }
 
         /* Metrics compacts */
         [data-testid="stMetric"]{
             min-height:58px !important;
-            padding:7px 6px !important;
+            padding:7px 5px !important;
         }
-        [data-testid="stMetricValue"]{ font-size:0.90rem !important; }
-        [data-testid="stMetricLabel"]{ font-size:0.50rem !important; }
-
-        /* Jauges : 2 colonnes sur mobile */
-        .jauges-grid{ grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
+        [data-testid="stMetricValue"]{ font-size:0.85rem !important; }
+        [data-testid="stMetricLabel"]{ font-size:0.48rem !important; letter-spacing:0 !important; }
 
         /* Prévisions : 2 colonnes sur mobile */
         .previsions-grid{ grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
@@ -282,7 +273,7 @@ def page_agriculteur():
         .meteo-card{ min-height:unset !important; padding:8px 6px !important; }
         .meteo-card .temp{ font-size:0.88rem !important; }
         .meteo-card .jour{ font-size:0.58rem !important; }
-        .meteo-card .desc{ font-size:0.62rem !important; }
+        .meteo-card .desc{ font-size:0.60rem !important; }
 
         /* Typo */
         h1{ font-size:1.1rem !important; }
@@ -295,12 +286,12 @@ def page_agriculteur():
         .sous-titre{ font-size:0.66rem !important; }
 
         /* Tabs */
-        .stTabs [data-baseweb="tab"]{ font-size:0.65rem !important; padding:5px 6px !important; }
+        .stTabs [data-baseweb="tab"]{ font-size:0.63rem !important; padding:4px 5px !important; }
 
         /* Boutons */
         .stButton>button{ font-size:0.76rem !important; padding:8px !important; }
 
-        /* Reco */
+        /* Reco card */
         .reco-card{ padding:12px 14px !important; }
         .reco-icon{ font-size:1.4rem !important; }
         .reco-titre{ font-size:0.85rem !important; }
@@ -311,11 +302,6 @@ def page_agriculteur():
         .meteo-now-icon{ font-size:1.8rem !important; }
         .meteo-now-temp{ font-size:1.2rem !important; }
         .meteo-now-desc{ font-size:0.72rem !important; }
-
-        /* En-tete accueil : empiler header + meteo verticalement */
-        [data-testid="stHorizontalBlock"].entete-row{
-            grid-template-columns:1fr !important;
-        }
     }
     </style>
     """, unsafe_allow_html=True)

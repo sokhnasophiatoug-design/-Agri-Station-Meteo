@@ -179,13 +179,15 @@ def page_admin():
             transition:transform 0.3s ease !important;
         }
         [data-testid="stHorizontalBlock"]{
-            display:grid !important;
-            grid-template-columns:repeat(2,1fr) !important;
-            gap:8px !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
         }
-        [data-testid="stHorizontalBlock"]>*{
-            min-width:0 !important;
-            width:100% !important;
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
+            flex: 0 0 calc(50% - 4px) !important;
+            max-width: calc(50% - 4px) !important;
+            min-width: 0 !important;
+            width: calc(50% - 4px) !important;
+            box-sizing: border-box !important;
         }
         h1{ font-size:1.1rem !important; }
         .entete h1,.entete-admin h1,.page-header h1{ font-size:1.1rem !important; }
