@@ -102,21 +102,21 @@ def _page_accueil(station_id, nom, station_nom, region):
     with c2: st.metric("💧 Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
     with c3: st.metric("🌱 Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="⚠️ Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
     with c4: st.metric("💨 Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
-    st.caption(f"\U0001f550 Derni\u00e8re mesure : {ts}")
+    st.caption(f"🕐 Dernière mesure : {ts}")
 
+    # ── Historique des mesures (anciennement en bas, maintenant ici) ──
     st.markdown("---")
-    st.markdown("#### \U0001f4c8 Historique des mesures")
+    st.markdown("#### 📈 Historique des mesures")
     if historique:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["\U0001f321\ufe0f Temp\u00e9rature", "\U0001f4a7 Humidit\u00e9 air", "\U0001f331 Humidit\u00e9 sol", "\U0001f4a8 Vent", "\U0001f4ca Vue globale"])
-        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  use_container_width=True, config={"displayModeBar": False})
-        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), use_container_width=True, config={"displayModeBar": False})
-        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), use_container_width=True, config={"displayModeBar": False})
-        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), use_container_width=True, config={"displayModeBar": False})
-        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              use_container_width=True, config={"displayModeBar": False})
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌡️ Température", "💧 Humidité air", "🌱 Humidité sol", "💨 Vent", "📊 Vue globale"])
+        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
+        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
+        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
+        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), width='stretch', config={"displayModeBar": False})
+        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              width='stretch', config={"displayModeBar": False})
     else:
         st.info("Aucun historique disponible pour le moment.")
 
-    st.markdown("---")
     st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
     if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
         reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
@@ -152,8 +152,8 @@ def _page_accueil(station_id, nom, station_nom, region):
                 </div>"""
 
             st.markdown(f"""
-            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
-                <div style="flex:3;min-width:220px;">
+            <div class="ia-flex-row">
+                <div class="ia-reco-col">
                     <div class="reco-card fade-in">
                         <span class="reco-icon">{reco.get('emoji', '✅')}</span>
                         <div class="reco-titre">{reco.get('label', '')}</div>
@@ -163,7 +163,7 @@ def _page_accueil(station_id, nom, station_nom, region):
                         </div>
                     </div>
                 </div>
-                <div style="flex:2;min-width:180px;">
+                <div class="ia-meteo-col">
                     {meteo_html}
                 </div>
             </div>
@@ -186,10 +186,10 @@ def _page_accueil(station_id, nom, station_nom, region):
         st.info("Données capteurs insuffisantes pour générer une recommandation.")
 
     st.markdown("---")
-    st.markdown("#### \U0001f31f\ufe0f Pr\u00e9visions m\u00e9t\u00e9o \u2014 5 prochains jours")
+    st.markdown("#### 🌤️ Prévisions météo — 5 prochains jours")
     afficher_previsions(previsions)
 
-    st.markdown('<div class="footer">Station M\u00e9t\u00e9o Agricole \u00b7 R\u00e9seau IoT S\u00e9n\u00e9gal \u00b7 USSEIN</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>', unsafe_allow_html=True)
 
 
 def _page_historique(station_id):
@@ -234,6 +234,16 @@ def page_agriculteur():
         width:100%;
     }
 
+    /* ===== BLOC IA : reco à gauche, météo à droite ===== */
+    .ia-flex-row{
+        display:flex;
+        gap:16px;
+        align-items:flex-start;
+        flex-wrap:nowrap;
+    }
+    .ia-reco-col{ flex:3; min-width:0; }
+    .ia-meteo-col{ flex:2; min-width:180px; }
+
     /* ===== RESPONSIVE MOBILE ===== */
     @media(max-width:768px){
         /* Conteneur principal */
@@ -260,30 +270,11 @@ def page_agriculteur():
             transition:transform 0.3s ease !important;
         }
 
-        /* ── COLONNES STREAMLIT ─────────────────────────────
-           Section metrics (4 colonnes) : flex-wrap + 24% chacune.
-           Section IA (3:2) et jauges (2 colonnes) : 100% chacune sur mobile. */
+        /* ── COLONNES STREAMLIT ───────────────────── */
         [data-testid="stHorizontalBlock"]{
             flex-wrap: wrap !important;
             gap: 5px !important;
         }
-
-        /* Métriques : 4 colonnes compactes sur mobile */
-        [data-testid="stHorizontalBlock"].metrics-row > [data-testid="stColumn"]{
-            flex: 0 0 calc(48% - 3px) !important;
-            max-width: calc(48% - 3px) !important;
-        }
-
-        /* Section IA et jauges : 2 colonnes pleines */
-        [data-testid="stHorizontalBlock"]:not(.metrics-row) > [data-testid="stColumn"]{
-            flex: 0 0 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
-        }
-
-        /* FALLBACK : metrics (4 cols) si pas de classe */
         [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
             flex: 0 0 calc(48% - 3px) !important;
             max-width: calc(48% - 3px) !important;
@@ -314,6 +305,17 @@ def page_agriculteur():
         .meteo-now-icon{ font-size:1.8rem !important; }
         .meteo-now-temp{ font-size:1.2rem !important; }
         .meteo-now-desc{ font-size:0.72rem !important; }
+
+        /* Bloc IA : empiler en colonne sur mobile */
+        .ia-flex-row{
+            flex-direction:column !important;
+            flex-wrap:wrap !important;
+        }
+        .ia-reco-col, .ia-meteo-col{
+            flex:unset !important;
+            width:100% !important;
+            min-width:0 !important;
+        }
 
         /* Typo */
         h1{ font-size:1.1rem !important; }
