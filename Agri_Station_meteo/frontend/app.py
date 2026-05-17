@@ -24,147 +24,163 @@ def _load_css():
 
 
 def _inject_hamburger():
-    """Injecte le bouton hamburger dans le document parent via
-    st.components.v1.html() — la seule méthode qui exécute réellement le JS
-    dans Streamlit Cloud.
+    """Injecte le bouton hamburger + CSS responsive mobile dans le document
+    parent via st.components.v1.html() — seule méthode fiable sur Streamlit Cloud.
     """
     import streamlit.components.v1 as components
 
     components.html("""
     <script>
     (function() {
-        /* ── Éviter les doublons si Streamlit re-render ── */
         var parentDoc = window.parent.document;
         if (parentDoc.getElementById('custom-hamburger-btn')) return;
 
         var isMobile = window.parent.innerWidth <= 768;
 
-        /* ══════════ CRÉER LE BOUTON HAMBURGER ══════════ */
+        /* ══════════ CSS RESPONSIVE — injecté dans <head> ══════════
+           On injecte le CSS ici pour qu'il ait la priorité maximale
+           et soit appliqué APRES les styles inline de Streamlit.
+        ══════════════════════════════════════════════════════════ */
+        if (!parentDoc.getElementById('custom-mobile-css')) {
+            var mobileStyle = parentDoc.createElement('style');
+            mobileStyle.id  = 'custom-mobile-css';
+            mobileStyle.textContent =
+                '@media(max-width:768px){' +
+                '  .block-container{padding:0.4rem 0.4rem 1rem !important;padding-top:3.8rem !important;max-width:100vw !important;overflow-x:hidden !important;}' +
+                '  [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;gap:5px !important;}' +
+                '  [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{flex:0 0 calc(24% - 2px) !important;max-width:calc(24% - 2px) !important;min-width:0 !important;width:calc(24% - 2px) !important;box-sizing:border-box !important;}' +
+                '  [data-testid="stMetric"]{min-height:55px !important;padding:6px 4px !important;}' +
+                '  [data-testid="stMetricValue"]{font-size:0.82rem !important;line-height:1.1 !important;}' +
+                '  [data-testid="stMetricLabel"]{font-size:0.44rem !important;letter-spacing:0 !important;}' +
+                '  .previsions-grid{grid-template-columns:repeat(2,1fr) !important;gap:6px !important;}' +
+                '  .meteo-card{min-height:unset !important;padding:8px 5px !important;}' +
+                '  .meteo-card .temp{font-size:0.85rem !important;}' +
+                '  .meteo-card .jour{font-size:0.56rem !important;}' +
+                '  .meteo-card .desc{font-size:0.58rem !important;}' +
+                '  h1{font-size:1.05rem !important;}' +
+                '  .entete h1,.entete-admin h1{font-size:1.05rem !important;}' +
+                '  .entete,.entete-admin,.page-header{padding:10px 12px !important;border-radius:14px !important;margin-bottom:10px !important;}' +
+                '  .sous-titre{font-size:0.64rem !important;}' +
+                '  .stTabs [data-baseweb="tab"]{font-size:0.62rem !important;padding:4px 5px !important;}' +
+                '  .stButton>button{font-size:0.76rem !important;padding:8px !important;}' +
+                '  .reco-card{padding:12px 14px !important;}' +
+                '  .reco-titre{font-size:0.85rem !important;}' +
+                '  .reco-desc{font-size:0.74rem !important;}' +
+                '  .meteo-now-card{padding:10px !important;}' +
+                '  .meteo-now-temp{font-size:1.2rem !important;}' +
+                '}';
+            parentDoc.head.appendChild(mobileStyle);
+        }
+
+        /* ── Forcer inline styles sur stColumn (contourne les styles Streamlit) ── */
+        function fixColumns() {
+            if (window.parent.innerWidth > 768) return;
+            parentDoc.querySelectorAll('[data-testid="stHorizontalBlock"]').forEach(function(block) {
+                block.style.setProperty('flex-wrap', 'wrap', 'important');
+                block.style.setProperty('gap', '5px', 'important');
+            });
+            parentDoc.querySelectorAll('[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]').forEach(function(col) {
+                col.style.setProperty('flex',      '0 0 calc(24% - 2px)', 'important');
+                col.style.setProperty('max-width', 'calc(24% - 2px)',      'important');
+                col.style.setProperty('min-width', '0',                    'important');
+                col.style.setProperty('width',     'calc(24% - 2px)',      'important');
+                col.style.setProperty('box-sizing','border-box',           'important');
+            });
+        }
+
+        /* Appliquer au chargement et après chaque re-render Streamlit */
+        fixColumns();
+        setTimeout(fixColumns, 500);
+        setTimeout(fixColumns, 1500);
+        setTimeout(fixColumns, 3000);
+
+        /* MutationObserver : se déclenche à chaque update du DOM Streamlit */
+        new MutationObserver(function() { fixColumns(); })
+            .observe(parentDoc.body, { childList: true, subtree: true });
+
+        /* ══════════ BOUTON HAMBURGER ══════════ */
         var btn = parentDoc.createElement('div');
         btn.id = 'custom-hamburger-btn';
         btn.title = 'Menu';
         btn.innerHTML = '<span></span><span></span><span></span>';
         btn.style.cssText = [
-            'position:fixed',
-            'top:12px', 'left:12px',
-            'z-index:99999',
-            'width:46px', 'height:46px',
-            'background:#0A2E0C',
-            'border:1px solid rgba(255,255,255,0.25)',
-            'border-radius:12px',
-            'cursor:pointer',
-            'display:' + (isMobile ? 'flex' : 'none'),
-            'flex-direction:column',
-            'align-items:center',
-            'justify-content:center',
-            'gap:5px',
-            'box-shadow:0 4px 18px rgba(0,0,0,0.55)',
+            'position:fixed', 'top:12px', 'left:12px', 'z-index:99999',
+            'width:46px', 'height:46px', 'background:#0A2E0C',
+            'border:1px solid rgba(255,255,255,0.25)', 'border-radius:12px',
+            'cursor:pointer', 'display:' + (isMobile ? 'flex' : 'none'),
+            'flex-direction:column', 'align-items:center', 'justify-content:center',
+            'gap:5px', 'box-shadow:0 4px 18px rgba(0,0,0,0.55)',
             'transition:background 0.25s ease'
         ].join(';');
-
-        var spans = btn.querySelectorAll('span');
-        for (var i = 0; i < spans.length; i++) {
-            spans[i].style.cssText = 'display:block;width:20px;height:2.5px;background:white;border-radius:2px;transition:all 0.3s ease;';
-        }
-
+        btn.querySelectorAll('span').forEach(function(s) {
+            s.style.cssText = 'display:block;width:20px;height:2.5px;background:white;border-radius:2px;transition:all 0.3s ease;';
+        });
         parentDoc.body.appendChild(btn);
 
-        /* ══════════ CRÉER L'OVERLAY SOMBRE ══════════ */
+        /* ══════════ OVERLAY ══════════ */
         var overlay = parentDoc.createElement('div');
         overlay.id = 'custom-sidebar-overlay';
-        overlay.style.cssText = [
-            'display:none',
-            'position:fixed', 'top:0', 'left:0',
-            'width:100vw', 'height:100vh',
-            'background:rgba(0,0,0,0.5)',
-            'z-index:9990',
-            'opacity:0',
-            'transition:opacity 0.3s ease'
-        ].join(';');
+        overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:9990;opacity:0;transition:opacity 0.3s ease;';
         parentDoc.body.appendChild(overlay);
 
-        /* ══════════ LOGIQUE TOGGLE ══════════ */
+        /* ══════════ SIDEBAR TOGGLE ══════════ */
         var _open = false;
-
-        function getSidebar() {
-            return parentDoc.querySelector('[data-testid="stSidebar"]');
-        }
+        function getSidebar() { return parentDoc.querySelector('[data-testid="stSidebar"]'); }
 
         function setSidebar(open) {
-            var sidebar = getSidebar();
-            if (!sidebar) return;
+            var sb = getSidebar();
+            if (!sb) return;
             _open = open;
-
             if (open) {
-                sidebar.style.setProperty('transform',  'translateX(0)',    'important');
-                sidebar.style.setProperty('visibility', 'visible',          'important');
-                sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
+                sb.style.setProperty('transform',  'translateX(0)',    'important');
+                sb.style.setProperty('visibility', 'visible',          'important');
+                sb.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
                 overlay.style.display = 'block';
                 setTimeout(function(){ overlay.style.opacity = '1'; }, 20);
             } else {
-                sidebar.style.setProperty('transform',  'translateX(-100%)', 'important');
-                sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
+                sb.style.setProperty('transform',  'translateX(-100%)', 'important');
+                sb.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
                 overlay.style.opacity = '0';
                 setTimeout(function(){ overlay.style.display = 'none'; }, 300);
             }
-
-            /* Animation ☰ → ✕ */
             var s = btn.querySelectorAll('span');
             if (open) {
                 s[0].style.transform = 'rotate(45deg) translate(5px,6px)';
                 s[1].style.opacity   = '0';
                 s[2].style.transform = 'rotate(-45deg) translate(5px,-6px)';
             } else {
-                s[0].style.transform = '';
+                s[0].style.transform = s[2].style.transform = '';
                 s[1].style.opacity   = '1';
-                s[2].style.transform = '';
             }
         }
 
-        /* Clic sur le bouton */
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            setSidebar(!_open);
-        });
+        btn.addEventListener('click', function(e) { e.stopPropagation(); setSidebar(!_open); });
+        overlay.addEventListener('click', function() { setSidebar(false); });
 
-        /* Clic sur l'overlay → fermer */
-        overlay.addEventListener('click', function() {
-            setSidebar(false);
-        });
-
-        /* ══════════ INIT MOBILE ══════════ */
         if (isMobile) {
-            var sidebar = getSidebar();
-            if (sidebar) {
-                sidebar.style.setProperty('transform',  'translateX(-100%)', 'important');
-                sidebar.style.setProperty('visibility', 'visible',           'important');
-                sidebar.style.setProperty('transition', 'none',              'important');
-                setTimeout(function(){
-                    sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
-                }, 100);
+            var sb = getSidebar();
+            if (sb) {
+                sb.style.setProperty('transform',  'translateX(-100%)', 'important');
+                sb.style.setProperty('visibility', 'visible',           'important');
+                sb.style.setProperty('transition', 'none',              'important');
+                setTimeout(function(){ sb.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important'); }, 100);
             }
         }
 
-        /* Cacher le bouton natif Streamlit */
         var nativeBtn = parentDoc.querySelector('[data-testid="collapsedControl"]');
         if (nativeBtn) nativeBtn.style.setProperty('display', 'none', 'important');
 
-        /* ══════════ RESIZE ══════════ */
         window.parent.addEventListener('resize', function() {
             var mobile = window.parent.innerWidth <= 768;
             btn.style.display = mobile ? 'flex' : 'none';
             if (!mobile) {
-                var sidebar = getSidebar();
-                if (sidebar) {
-                    sidebar.style.removeProperty('transform');
-                    sidebar.style.removeProperty('transition');
-                }
+                var sb = getSidebar();
+                if (sb) { sb.style.removeProperty('transform'); sb.style.removeProperty('transition'); }
                 overlay.style.display = 'none';
                 _open = false;
                 var s = btn.querySelectorAll('span');
-                s[0].style.transform = '';
-                s[1].style.opacity   = '1';
-                s[2].style.transform = '';
+                s[0].style.transform = s[2].style.transform = '';
+                s[1].style.opacity = '1';
             }
         });
     })();
