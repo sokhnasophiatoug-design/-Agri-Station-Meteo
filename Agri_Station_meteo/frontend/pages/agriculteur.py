@@ -43,101 +43,6 @@ def _post(endpoint, body, default=None):
 import streamlit as st
 import requests
 
-# CSS responsive — dashboard agriculteur uniquement
-st.markdown("""
-<style>
-
-/* ===== CARD METEO ACTUELLE ===== */
-.meteo-now-card{
-    background: linear-gradient(135deg, #16351c, #1f4d2c);
-    border-radius: 18px;
-    padding: 20px;
-    color: white;
-    box-shadow: 0 6px 22px rgba(0,0,0,0.25);
-    border: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 18px;
-}
-.meteo-now-top{ display:flex; align-items:center; gap:18px; }
-.meteo-now-icon{ font-size:3.2rem; line-height:1; }
-.meteo-now-temp{ font-size:2rem; font-weight:800; line-height:1; }
-.meteo-now-desc{ font-size:0.95rem; opacity:0.85; margin-top:4px; }
-.meteo-now-ville{ margin-top:18px; font-size:0.9rem; opacity:0.9; }
-.meteo-now-infos{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.88rem; opacity:0.92; }
-
-/* ===== RESPONSIVE MOBILE ===== */
-@media(max-width:768px){
-
-    /* Empêcher le scroll horizontal */
-    .stApp, .block-container, [data-testid="stAppViewBlockContainer"]{
-        overflow-x: hidden !important;
-        max-width: 100vw !important;
-    }
-
-    /* Container */
-    .block-container{
-        padding: 0.5rem 0.5rem 1rem !important;
-        padding-top: 3.5rem !important;
-    }
-
-    /* Cacher le bouton natif Streamlit */
-    [data-testid="collapsedControl"]{ display: none !important; }
-
-    /* Sidebar mobile */
-    section[data-testid="stSidebar"]{
-        width: 80vw !important;
-        max-width: 300px !important;
-        min-width: 240px !important;
-        position: fixed !important;
-        top: 0 !important; left: 0 !important;
-        height: 100vh !important; height: 100dvh !important;
-        z-index: 9998 !important;
-        box-shadow: 6px 0 28px rgba(0,0,0,0.6) !important;
-        transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94) !important;
-    }
-
-    /* Colonnes : 4 colonnes (layout desktop) */
-    [data-testid="stHorizontalBlock"]{
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 6px !important;
-    }
-    [data-testid="stHorizontalBlock"] > *{ min-width:0 !important; width:100% !important; }
-    [data-testid="stMetric"]{ min-height:60px !important; padding:8px 7px !important; }
-    [data-testid="stMetricValue"]{ font-size:0.95rem !important; }
-    [data-testid="stMetricLabel"]{ font-size:0.52rem !important; }
-
-    /* Cartes prévisions */
-    .meteo-card{ min-height:100px !important; padding:6px !important; }
-    .meteo-card .temp{ font-size:0.95rem !important; }
-    .meteo-card .jour{ font-size:0.58rem !important; }
-    .meteo-card .desc{ font-size:0.65rem !important; }
-
-    /* Titres */
-    h1{ font-size:1.15rem !important; }
-    .entete h1, .entete-admin h1, .page-header h1{ font-size:1.15rem !important; }
-    .entete, .entete-admin, .page-header{ padding:12px 14px !important; border-radius:14px !important; }
-    .sous-titre{ font-size:0.68rem !important; }
-
-    /* Tabs */
-    .stTabs [data-baseweb="tab"]{ font-size:0.68rem !important; padding:5px 7px !important; }
-
-    /* Boutons */
-    .stButton > button{ font-size:0.78rem !important; padding:8px !important; }
-
-    /* Reco card */
-    .reco-card{ padding:12px 14px !important; }
-    .reco-icon{ font-size:1.5rem !important; }
-    .reco-titre{ font-size:0.88rem !important; }
-    .reco-desc{ font-size:0.75rem !important; }
-
-    /* Météo card */
-    .meteo-now-card{ padding:12px !important; }
-    .meteo-now-icon{ font-size:2rem !important; }
-    .meteo-now-temp{ font-size:1.3rem !important; }
-    .meteo-now-desc{ font-size:0.75rem !important; }
-}
-</style>
-""", unsafe_allow_html=True)
 
 def _calculer_alertes(mesures, seuils):
     alertes = []
@@ -153,63 +58,23 @@ def _calculer_alertes(mesures, seuils):
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
 
-def _render_metric_html(label, value, emoji, alert=False):
-    """Rendu HTML d'une carte métrique — indépendant de st.columns."""
-    border_color = "#E53E3E" if alert else "#1B7F2A"
-    badge = '<span style="background:#E53E3E;color:white;font-size:0.6rem;padding:2px 6px;border-radius:8px;margin-left:6px;">⚠️</span>' if alert else ""
-    return f"""
-    <div style="background:rgba(255,255,255,0.97);border-radius:16px;padding:14px 12px;
-                border-top:4px solid {border_color};
-                box-shadow:0 4px 14px rgba(0,0,0,0.14);flex:1;min-width:0;">
-        <div style="color:#2F5233;font-size:0.65rem;font-weight:800;text-transform:uppercase;
-                    letter-spacing:0.8px;margin-bottom:8px;">{emoji} {label}{badge}</div>
-        <div style="color:#062B0D;font-size:1.4rem;font-weight:900;line-height:1;
-                    font-family:'Roboto Mono',monospace;">{value}</div>
-    </div>
-    """
-
 def _page_accueil(station_id, nom, station_nom, region):
-    # ── En-tête HTML flex (pas de st.columns → tient sur mobile) ──
-    meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
-    _emoji_meteo = {"01":"☀️","02":"⛅","03":"☁️","04":"☁️","09":"🌧️","10":"🌦️","11":"⛈️","13":"❄️","50":"🌫️"}
-    m_emoji = _emoji_meteo.get((meteo.get("icone","01d"))[:2], "🌡️") if meteo.get("ok") else "🌡️"
-
-    meteo_html = ""
-    if meteo.get("ok"):
-        meteo_html = f"""
-        <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:16px;
-                    padding:16px 18px;color:white;box-shadow:0 6px 18px rgba(0,0,0,0.28);
-                    border:1px solid rgba(255,255,255,0.08);min-width:200px;flex-shrink:0;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="font-size:2.4rem;">{m_emoji}</div>
-                <div>
-                    <div style="font-size:1.8rem;font-weight:900;line-height:1;">{meteo.get('temp','--')}°C</div>
-                    <div style="font-size:0.82rem;opacity:0.85;">{meteo.get('description','')}</div>
-                </div>
-            </div>
-            <div style="margin-top:10px;font-size:0.8rem;opacity:0.9;">📍 {meteo.get('ville','')}</div>
-            <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);
-                        font-size:0.78rem;display:flex;gap:12px;flex-wrap:wrap;">
-                <span>💧 {meteo.get('humidite','--')}%</span>
-                <span>💨 {meteo.get('vent','--')} km/h</span>
-                <span>🌡️ Ressenti {meteo.get('ressenti','--')}°C</span>
-            </div>
-        </div>
-        """
-
+    # En-tête + météo actuelle : layout adaptatif
     st.markdown(f"""
-    <div style="display:flex;gap:16px;align-items:stretch;margin-bottom:18px;flex-wrap:wrap;">
-        <div class="entete fade-in" style="flex:1;min-width:200px;">
+    <div class="entete fade-in">
+        <div>
             <h1>🌾 Bonjour, {nom}</h1>
             <div class="sous-titre">
                 <span class="live-dot"></span>
-                {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp; {datetime.now().strftime('%H:%M:%S')}
+                {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp;
+                {datetime.now().strftime('%H:%M:%S')}
             </div>
         </div>
-        {meteo_html}
     </div>
     """, unsafe_allow_html=True)
-
+    # Météo actuelle (pleine largeur sur mobile, colonne sur desktop)
+    meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
+    afficher_meteo_actuelle(meteo)
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
         historique = _get(f"/historique/{station_id}?limit=48", default={}).get("historique", [])
@@ -231,40 +96,33 @@ def _page_accueil(station_id, nom, station_nom, region):
         with st.expander(f"🚨 {len(alertes)} alerte(s) active(s)", expanded=True):
             for al in alertes: st.warning(al)
 
-    # ── Métriques HTML 4 colonnes (pas de st.columns → tient sur mobile) ──
-    st.markdown("")
+    st.markdown("---")
     st.markdown("#### 📡 Mesures en temps réel")
-    alert_temp = isinstance(temp, (int,float)) and temp > seuils.get("temp_max", 40)
-    alert_sol  = isinstance(hum_sol, (int,float)) and hum_sol < seuils.get("hum_sol_min", 25)
-
-    temp_val    = f"{temp}°C"    if isinstance(temp,    (int, float)) else str(temp)
-    hum_air_val = f"{hum_air}%" if isinstance(hum_air, (int, float)) else str(hum_air)
-    hum_sol_val = f"{hum_sol}%" if isinstance(hum_sol, (int, float)) else str(hum_sol)
-    vent_val    = f"{vent} km/h" if isinstance(vent,    (int, float)) else str(vent)
-
-    st.markdown(f"""
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;">
-        {_render_metric_html("Température",  temp_val,    "🌡️", alert_temp)}
-        {_render_metric_html("Humidité air", hum_air_val, "💧")}
-        {_render_metric_html("Humidité sol", hum_sol_val, "🌱", alert_sol)}
-        {_render_metric_html("Vent",         vent_val,    "💨")}
-    </div>
-    <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);margin-bottom:12px;">🕐 Dernière mesure : {ts}</div>
-    """, unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.metric("🌡️ Température",  f"{temp}°C"    if isinstance(temp,    (int, float)) else temp,    delta="⚠️ Élevé" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
+    with c2: st.metric("💧 Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
+    with c3: st.metric("🌱 Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="⚠️ Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
+    with c4: st.metric("💨 Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
+    st.caption(f"🕐 Dernière mesure : {ts}")
 
     st.markdown("#### 🎯 Niveaux actuels")
-    # 2 colonnes × 2 lignes — plus lisible sur mobile que 4 d'affilée
-    jc1, jc2 = st.columns(2)
-    jc3, jc4 = st.columns(2)
-    for capteur, val, col in [("temperature", temp, jc1), ("humidite_air", hum_air, jc2),
-                               ("humidite_sol", hum_sol, jc3), ("vitesse_vent", vent, jc4)]:
+    # Grille de jauges responsive (4 colonnes desktop, 2 colonnes mobile)
+    st.markdown('<div class="jauges-grid">', unsafe_allow_html=True)
+    capteurs_jauges = [
+        ("temperature",  temp,    seuils.get("temp_max"),    None),
+        ("humidite_air", hum_air, None,                      None),
+        ("humidite_sol", hum_sol, None,                      seuils.get("hum_sol_min")),
+        ("vitesse_vent", vent,    seuils.get("vent_max"),    None),
+    ]
+    cols_j = st.columns(4)
+    for idx, (capteur, val, seuil_max, seuil_min) in enumerate(capteurs_jauges):
         if isinstance(val, (int, float)):
-            with col:
-                st.plotly_chart(graphique_jauge(val, capteur,
-                    seuil_min=seuils.get("hum_sol_min") if capteur == "humidite_sol" else None,
-                    seuil_max=seuils.get("temp_max")    if capteur == "temperature"  else
-                              seuils.get("vent_max")    if capteur == "vitesse_vent" else None),
-                    width='stretch', config={"displayModeBar": False})
+            with cols_j[idx]:
+                st.plotly_chart(
+                    graphique_jauge(val, capteur, seuil_min=seuil_min, seuil_max=seuil_max),
+                    width='stretch', config={"displayModeBar": False}
+                )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
@@ -339,6 +197,129 @@ def _page_previsions(station_id, region):
 # ── Page principale avec sidebar ──────────────────────────────────────────────
 
 def page_agriculteur():
+    # CSS responsive injecté ICI (dans la fonction) — jamais sur la page login
+    st.markdown("""
+    <style>
+    /* ===== CARD METEO ACTUELLE ===== */
+    .meteo-now-card{ background:linear-gradient(135deg,#16351c,#1f4d2c); border-radius:18px; padding:20px; color:white; box-shadow:0 6px 22px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); margin-bottom:18px; }
+    .meteo-now-top{ display:flex; align-items:center; gap:18px; }
+    .meteo-now-icon{ font-size:3.2rem; line-height:1; }
+    .meteo-now-temp{ font-size:2rem; font-weight:800; line-height:1; }
+    .meteo-now-desc{ font-size:0.95rem; opacity:0.85; margin-top:4px; }
+    .meteo-now-ville{ margin-top:18px; font-size:0.9rem; opacity:0.9; }
+    .meteo-now-infos{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.88rem; opacity:0.92; }
+
+    /* ===== GRILLE JAUGES MOBILE ===== */
+    .jauges-grid{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:8px;
+        width:100%;
+        margin-bottom:16px;
+    }
+    .jauge-item{ min-width:0; }
+
+    /* ===== GRILLE PREVISIONS ===== */
+    .previsions-grid{
+        display:grid;
+        grid-template-columns:repeat(5,1fr);
+        gap:8px;
+        width:100%;
+    }
+
+    /* ===== RESPONSIVE MOBILE ===== */
+    @media(max-width:768px){
+        /* Conteneur principal */
+        .stApp,.block-container,[data-testid="stAppViewBlockContainer"]{
+            overflow-x:hidden !important;
+            max-width:100vw !important;
+        }
+        .block-container{
+            padding:0.5rem 0.4rem 1rem !important;
+            padding-top:3.8rem !important;
+        }
+        [data-testid="collapsedControl"]{ display:none !important; }
+
+        /* Sidebar mobile */
+        section[data-testid="stSidebar"]{
+            width:82vw !important;
+            max-width:300px !important;
+            min-width:240px !important;
+            position:fixed !important;
+            top:0 !important; left:0 !important;
+            height:100vh !important;
+            z-index:9998 !important;
+            box-shadow:6px 0 28px rgba(0,0,0,0.6) !important;
+            transition:transform 0.3s ease !important;
+        }
+
+        /* Grille metrics 4 colonnes */
+        [data-testid="stHorizontalBlock"]{
+            display:grid !important;
+            grid-template-columns:repeat(4,1fr) !important;
+            gap:5px !important;
+        }
+        [data-testid="stHorizontalBlock"]>*{
+            min-width:0 !important;
+            width:100% !important;
+        }
+
+        /* Metrics compacts */
+        [data-testid="stMetric"]{
+            min-height:58px !important;
+            padding:7px 6px !important;
+        }
+        [data-testid="stMetricValue"]{ font-size:0.90rem !important; }
+        [data-testid="stMetricLabel"]{ font-size:0.50rem !important; }
+
+        /* Jauges : 2 colonnes sur mobile */
+        .jauges-grid{ grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
+
+        /* Prévisions : 2 colonnes sur mobile */
+        .previsions-grid{ grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
+
+        /* Carte météo compacte */
+        .meteo-card{ min-height:unset !important; padding:8px 6px !important; }
+        .meteo-card .temp{ font-size:0.88rem !important; }
+        .meteo-card .jour{ font-size:0.58rem !important; }
+        .meteo-card .desc{ font-size:0.62rem !important; }
+
+        /* Typo */
+        h1{ font-size:1.1rem !important; }
+        .entete h1,.entete-admin h1,.page-header h1{ font-size:1.1rem !important; }
+        .entete,.entete-admin,.page-header{
+            padding:10px 12px !important;
+            border-radius:14px !important;
+            margin-bottom:10px !important;
+        }
+        .sous-titre{ font-size:0.66rem !important; }
+
+        /* Tabs */
+        .stTabs [data-baseweb="tab"]{ font-size:0.65rem !important; padding:5px 6px !important; }
+
+        /* Boutons */
+        .stButton>button{ font-size:0.76rem !important; padding:8px !important; }
+
+        /* Reco */
+        .reco-card{ padding:12px 14px !important; }
+        .reco-icon{ font-size:1.4rem !important; }
+        .reco-titre{ font-size:0.85rem !important; }
+        .reco-desc{ font-size:0.74rem !important; }
+
+        /* Meteo actuelle */
+        .meteo-now-card{ padding:10px !important; }
+        .meteo-now-icon{ font-size:1.8rem !important; }
+        .meteo-now-temp{ font-size:1.2rem !important; }
+        .meteo-now-desc{ font-size:0.72rem !important; }
+
+        /* En-tete accueil : empiler header + meteo verticalement */
+        [data-testid="stHorizontalBlock"].entete-row{
+            grid-template-columns:1fr !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     station_id  = st.session_state.get("station_id",  "ST002")
     nom         = st.session_state.get("nom",          "Agriculteur")
     station_nom = st.session_state.get("station_nom",  station_id)
