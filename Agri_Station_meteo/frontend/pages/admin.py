@@ -16,6 +16,44 @@ from components.auth          import deconnexion
 
 BACKEND = "https://agri-station-meteo.onrender.com"
 
+# CSS responsive — dashboard admin uniquement
+st.markdown("""
+<style>
+@media(max-width:768px){
+    .stApp, .block-container, [data-testid="stAppViewBlockContainer"]{
+        overflow-x: hidden !important; max-width: 100vw !important;
+    }
+    .block-container{
+        padding: 0.5rem 0.5rem 1rem !important;
+        padding-top: 3.5rem !important;
+    }
+    [data-testid="collapsedControl"]{ display: none !important; }
+    section[data-testid="stSidebar"]{
+        width: 80vw !important; max-width: 300px !important; min-width: 240px !important;
+        position: fixed !important; top: 0 !important; left: 0 !important;
+        height: 100vh !important; height: 100dvh !important;
+        z-index: 9998 !important;
+        box-shadow: 6px 0 28px rgba(0,0,0,0.6) !important;
+        transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94) !important;
+    }
+    [data-testid="stHorizontalBlock"]{
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 6px !important;
+    }
+    [data-testid="stHorizontalBlock"] > *{ min-width:0 !important; width:100% !important; }
+    [data-testid="stMetric"]{ min-height:60px !important; padding:8px 7px !important; }
+    [data-testid="stMetricValue"]{ font-size:0.95rem !important; }
+    [data-testid="stMetricLabel"]{ font-size:0.52rem !important; }
+    h1{ font-size:1.15rem !important; }
+    .entete h1, .entete-admin h1{ font-size:1.15rem !important; }
+    .entete-admin, .entete{ padding:12px 14px !important; border-radius:14px !important; }
+    .sous-titre{ font-size:0.68rem !important; }
+    .stButton > button{ font-size:0.78rem !important; padding:8px !important; }
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 def _get(endpoint, default=None):
     try:

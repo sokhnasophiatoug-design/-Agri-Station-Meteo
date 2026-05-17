@@ -43,12 +43,11 @@ def _post(endpoint, body, default=None):
 import streamlit as st
 import requests
 
-# TON CSS
+# CSS responsive — dashboard agriculteur uniquement
 st.markdown("""
 <style>
 
 /* ===== CARD METEO ACTUELLE ===== */
-
 .meteo-now-card{
     background: linear-gradient(135deg, #16351c, #1f4d2c);
     border-radius: 18px;
@@ -58,45 +57,85 @@ st.markdown("""
     border: 1px solid rgba(255,255,255,0.08);
     margin-bottom: 18px;
 }
+.meteo-now-top{ display:flex; align-items:center; gap:18px; }
+.meteo-now-icon{ font-size:3.2rem; line-height:1; }
+.meteo-now-temp{ font-size:2rem; font-weight:800; line-height:1; }
+.meteo-now-desc{ font-size:0.95rem; opacity:0.85; margin-top:4px; }
+.meteo-now-ville{ margin-top:18px; font-size:0.9rem; opacity:0.9; }
+.meteo-now-infos{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.88rem; opacity:0.92; }
 
-.meteo-now-top{
-    display:flex;
-    align-items:center;
-    gap:18px;
+/* ===== RESPONSIVE MOBILE ===== */
+@media(max-width:768px){
+
+    /* Empêcher le scroll horizontal */
+    .stApp, .block-container, [data-testid="stAppViewBlockContainer"]{
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+
+    /* Container */
+    .block-container{
+        padding: 0.5rem 0.5rem 1rem !important;
+        padding-top: 3.5rem !important;
+    }
+
+    /* Cacher le bouton natif Streamlit */
+    [data-testid="collapsedControl"]{ display: none !important; }
+
+    /* Sidebar mobile */
+    section[data-testid="stSidebar"]{
+        width: 80vw !important;
+        max-width: 300px !important;
+        min-width: 240px !important;
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        height: 100vh !important; height: 100dvh !important;
+        z-index: 9998 !important;
+        box-shadow: 6px 0 28px rgba(0,0,0,0.6) !important;
+        transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94) !important;
+    }
+
+    /* Colonnes : 4 colonnes (layout desktop) */
+    [data-testid="stHorizontalBlock"]{
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 6px !important;
+    }
+    [data-testid="stHorizontalBlock"] > *{ min-width:0 !important; width:100% !important; }
+    [data-testid="stMetric"]{ min-height:60px !important; padding:8px 7px !important; }
+    [data-testid="stMetricValue"]{ font-size:0.95rem !important; }
+    [data-testid="stMetricLabel"]{ font-size:0.52rem !important; }
+
+    /* Cartes prévisions */
+    .meteo-card{ min-height:100px !important; padding:6px !important; }
+    .meteo-card .temp{ font-size:0.95rem !important; }
+    .meteo-card .jour{ font-size:0.58rem !important; }
+    .meteo-card .desc{ font-size:0.65rem !important; }
+
+    /* Titres */
+    h1{ font-size:1.15rem !important; }
+    .entete h1, .entete-admin h1, .page-header h1{ font-size:1.15rem !important; }
+    .entete, .entete-admin, .page-header{ padding:12px 14px !important; border-radius:14px !important; }
+    .sous-titre{ font-size:0.68rem !important; }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab"]{ font-size:0.68rem !important; padding:5px 7px !important; }
+
+    /* Boutons */
+    .stButton > button{ font-size:0.78rem !important; padding:8px !important; }
+
+    /* Reco card */
+    .reco-card{ padding:12px 14px !important; }
+    .reco-icon{ font-size:1.5rem !important; }
+    .reco-titre{ font-size:0.88rem !important; }
+    .reco-desc{ font-size:0.75rem !important; }
+
+    /* Météo card */
+    .meteo-now-card{ padding:12px !important; }
+    .meteo-now-icon{ font-size:2rem !important; }
+    .meteo-now-temp{ font-size:1.3rem !important; }
+    .meteo-now-desc{ font-size:0.75rem !important; }
 }
-
-.meteo-now-icon{
-    font-size:3.2rem;
-    line-height:1;
-}
-
-.meteo-now-temp{
-    font-size:2rem;
-    font-weight:800;
-    line-height:1;
-}
-
-.meteo-now-desc{
-    font-size:0.95rem;
-    opacity:0.85;
-    margin-top:4px;
-}
-
-.meteo-now-ville{
-    margin-top:18px;
-    font-size:0.9rem;
-    opacity:0.9;
-}
-
-.meteo-now-infos{
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid rgba(255,255,255,0.08);
-    font-size:0.88rem;
-    opacity:0.92;
-}
-
-     
 </style>
 """, unsafe_allow_html=True)
 

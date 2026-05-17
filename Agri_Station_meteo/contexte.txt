@@ -1,3 +1,8 @@
+git add .                    # ✅ Fichiers ajoutés
+git commit -m "..."          # ✅ Commit créé (793e40e)
+git push                     # ✅ Envoyé sur GitHub (master)
+
+
 LIT LA DOCUMENTATION TECHNIQUE.DOCX ET FAIT LES MISES A JOUR NECESSAIRE POUR UNE MEILLEUR COMPREHENSION DE PROJET 
 
 Pour enrichir le dataset : modifiez directement dataset_agricole.csv (ajoutez des lignes, corrigez des labels) sans toucher au code Python.
