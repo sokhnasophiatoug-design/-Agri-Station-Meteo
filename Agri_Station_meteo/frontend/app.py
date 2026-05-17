@@ -47,8 +47,8 @@ def _inject_hamburger():
             mobileStyle.textContent =
                 '@media(max-width:768px){' +
                 '  .block-container{padding:0.4rem 0.4rem 1rem !important;padding-top:3.8rem !important;max-width:100vw !important;overflow-x:hidden !important;}' +
+                /* Seuls les blocs de 4 colonnes (métriques) sont forcés en 2x2 */
                 '  [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;gap:5px !important;}' +
-                '  [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{flex:0 0 calc(24% - 2px) !important;max-width:calc(24% - 2px) !important;min-width:0 !important;width:calc(24% - 2px) !important;box-sizing:border-box !important;}' +
                 '  [data-testid="stMetric"]{min-height:55px !important;padding:6px 4px !important;}' +
                 '  [data-testid="stMetricValue"]{font-size:0.82rem !important;line-height:1.1 !important;}' +
                 '  [data-testid="stMetricLabel"]{font-size:0.44rem !important;letter-spacing:0 !important;}' +
@@ -66,25 +66,39 @@ def _inject_hamburger():
                 '  .reco-card{padding:12px 14px !important;}' +
                 '  .reco-titre{font-size:0.85rem !important;}' +
                 '  .reco-desc{font-size:0.74rem !important;}' +
-                '  .meteo-now-card{padding:10px !important;}' +
+                '  .meteo-now-card{max-width:100% !important;padding:10px !important;}' +
                 '  .meteo-now-temp{font-size:1.2rem !important;}' +
                 '}';
             parentDoc.head.appendChild(mobileStyle);
         }
 
-        /* ── Forcer inline styles sur stColumn (contourne les styles Streamlit) ── */
+        /* ── Forcer inline styles SEULEMENT sur les blocs de 4 colonnes (métriques)
+           Les blocs 2 colonnes (jauges, section IA) ne sont pas touchés. ── */
         function fixColumns() {
             if (window.parent.innerWidth > 768) return;
             parentDoc.querySelectorAll('[data-testid="stHorizontalBlock"]').forEach(function(block) {
+                var cols = block.querySelectorAll(':scope > [data-testid="stColumn"]');
                 block.style.setProperty('flex-wrap', 'wrap', 'important');
                 block.style.setProperty('gap', '5px', 'important');
-            });
-            parentDoc.querySelectorAll('[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]').forEach(function(col) {
-                col.style.setProperty('flex',      '0 0 calc(24% - 2px)', 'important');
-                col.style.setProperty('max-width', 'calc(24% - 2px)',      'important');
-                col.style.setProperty('min-width', '0',                    'important');
-                col.style.setProperty('width',     'calc(24% - 2px)',      'important');
-                col.style.setProperty('box-sizing','border-box',           'important');
+                if (cols.length === 4) {
+                    /* Métriques : 2 colonnes × 2 lignes sur mobile (48% chacune) */
+                    cols.forEach(function(col) {
+                        col.style.setProperty('flex',      '0 0 calc(48% - 3px)', 'important');
+                        col.style.setProperty('max-width', 'calc(48% - 3px)',      'important');
+                        col.style.setProperty('min-width', '0',                    'important');
+                        col.style.setProperty('width',     'calc(48% - 3px)',      'important');
+                        col.style.setProperty('box-sizing','border-box',           'important');
+                    });
+                } else {
+                    /* Autres blocs (2 cols jauges, 3:2 IA) : 100% largeur sur mobile */
+                    cols.forEach(function(col) {
+                        col.style.setProperty('flex',      '0 0 100%', 'important');
+                        col.style.setProperty('max-width', '100%',     'important');
+                        col.style.setProperty('min-width', '0',        'important');
+                        col.style.setProperty('width',     '100%',     'important');
+                        col.style.setProperty('box-sizing','border-box','important');
+                    });
+                }
             });
         }
 
@@ -204,16 +218,18 @@ def main():
     )
 
     _load_css()
-    _inject_hamburger()
 
     # ── Routing par rôle ──────────────────────────────────────────────────────
     if not st.session_state.get("authenticated", False):
+        # Page login : PAS de hamburger ni de CSS responsive dashboard
         page_login()
 
     elif st.session_state.get("role") == "admin":
+        _inject_hamburger()
         page_admin()
 
     elif st.session_state.get("role") == "agriculteur":
+        _inject_hamburger()
         page_agriculteur()
 
     else:
