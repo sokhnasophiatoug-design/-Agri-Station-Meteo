@@ -72,33 +72,27 @@ def _inject_hamburger():
             parentDoc.head.appendChild(mobileStyle);
         }
 
-        /* ── Forcer inline styles SEULEMENT sur les blocs de 4 colonnes (métriques)
-           Les blocs 2 colonnes (jauges, section IA) ne sont pas touchés. ── */
+        /* ── fixColumns : détecte les blocs métriques par leur CONTENU (stMetric).
+           - Blocs avec stMetric  → 48% chacun (2×2 grid sur mobile)
+           - Tous les autres      → 100% chacun (empilés : section IA, jauges, etc.)
+           Le JS est nécessaire car Streamlit injecte inline style="flex:3" etc.
+           que même CSS !important ne neutralise pas toujours. ── */
         function fixColumns() {
             if (window.parent.innerWidth > 768) return;
             parentDoc.querySelectorAll('[data-testid="stHorizontalBlock"]').forEach(function(block) {
-                var cols = block.querySelectorAll(':scope > [data-testid="stColumn"]');
                 block.style.setProperty('flex-wrap', 'wrap', 'important');
-                block.style.setProperty('gap', '5px', 'important');
-                if (cols.length === 4) {
-                    /* Métriques : 2 colonnes × 2 lignes sur mobile (48% chacune) */
-                    cols.forEach(function(col) {
-                        col.style.setProperty('flex',      '0 0 calc(48% - 3px)', 'important');
-                        col.style.setProperty('max-width', 'calc(48% - 3px)',      'important');
-                        col.style.setProperty('min-width', '0',                    'important');
-                        col.style.setProperty('width',     'calc(48% - 3px)',      'important');
-                        col.style.setProperty('box-sizing','border-box',           'important');
-                    });
-                } else {
-                    /* Autres blocs (2 cols jauges, 3:2 IA) : 100% largeur sur mobile */
-                    cols.forEach(function(col) {
-                        col.style.setProperty('flex',      '0 0 100%', 'important');
-                        col.style.setProperty('max-width', '100%',     'important');
-                        col.style.setProperty('min-width', '0',        'important');
-                        col.style.setProperty('width',     '100%',     'important');
-                        col.style.setProperty('box-sizing','border-box','important');
-                    });
-                }
+                block.style.setProperty('gap',       '5px',  'important');
+
+                var isMetricBlock = !!block.querySelector('[data-testid="stMetric"]');
+                var size = isMetricBlock ? 'calc(48% - 3px)' : '100%';
+
+                block.querySelectorAll('[data-testid="stColumn"]').forEach(function(col) {
+                    col.style.setProperty('flex',      '0 0 ' + size, 'important');
+                    col.style.setProperty('max-width', size,           'important');
+                    col.style.setProperty('min-width', '0',            'important');
+                    col.style.setProperty('width',     size,           'important');
+                    col.style.setProperty('box-sizing','border-box',   'important');
+                });
             });
         }
 
