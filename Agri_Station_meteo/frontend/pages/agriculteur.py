@@ -172,7 +172,7 @@ def _page_accueil(station_id, nom, station_nom, region):
                     seuil_min=seuils.get("hum_sol_min") if capteur == "humidite_sol" else None,
                     seuil_max=seuils.get("temp_max")    if capteur == "temperature"  else
                               seuils.get("vent_max")    if capteur == "vitesse_vent" else None),
-                    use_container_width=True, config={"displayModeBar": False})
+                    width='stretch', config={"displayModeBar": False})
 
     st.markdown("---")
     st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
@@ -195,7 +195,7 @@ def _page_accueil(station_id, nom, station_nom, region):
                 """, unsafe_allow_html=True)
             with col_tts:
                 st.markdown("<br><br>", unsafe_allow_html=True)
-                if st.button("🔊 Écouter le conseil", use_container_width=True, key="btn_tts"):
+                if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
                         resp = requests.post(f"{BACKEND}/tts", json={"texte": reco.get("message_vocal", reco.get("conseil", "")), "lent": False}, timeout=15)
                         if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
@@ -210,11 +210,11 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.markdown("#### 📈 Historique des mesures")
     if historique:
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌡️ Température", "💧 Humidité air", "🌱 Humidité sol", "💨 Vent", "📊 Vue globale"])
-        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  use_container_width=True, config={"displayModeBar": False})
-        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), use_container_width=True, config={"displayModeBar": False})
-        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), use_container_width=True, config={"displayModeBar": False})
-        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), use_container_width=True, config={"displayModeBar": False})
-        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              use_container_width=True, config={"displayModeBar": False})
+        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
+        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
+        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
+        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), width='stretch', config={"displayModeBar": False})
+        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              width='stretch', config={"displayModeBar": False})
     else:
         st.info("Aucun historique disponible pour le moment.")
 
@@ -231,11 +231,11 @@ def _page_historique(station_id):
     if not historique:
         st.info("Aucun historique disponible."); return
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌡️ Température", "💧 Humidité air", "🌱 Humidité sol", "💨 Vent", "📊 Vue globale"])
-    with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  use_container_width=True, config={"displayModeBar": False})
-    with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), use_container_width=True, config={"displayModeBar": False})
-    with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), use_container_width=True, config={"displayModeBar": False})
-    with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), use_container_width=True, config={"displayModeBar": False})
-    with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              use_container_width=True, config={"displayModeBar": False})
+    with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
+    with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
+    with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
+    with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), width='stretch', config={"displayModeBar": False})
+    with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              width='stretch', config={"displayModeBar": False})
 
 
 def _page_previsions(station_id, region):
@@ -316,7 +316,7 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        if st.button("🚪 Se déconnecter", use_container_width=True, key="btn_deco_agri"):
+        if st.button("🚪 Se déconnecter", width='stretch', key="btn_deco_agri"):
             deconnexion()
 
         st.markdown("""

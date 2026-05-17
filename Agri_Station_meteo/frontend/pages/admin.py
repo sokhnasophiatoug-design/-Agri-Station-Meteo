@@ -112,7 +112,7 @@ def _page_donnees(stations):
         rows.append({"Station ID": st_id, "Température (°C)": m.get("temperature", "N/A"),
                      "Humidité air (%)": m.get("humidite_air", "N/A"), "Humidité sol (%)": m.get("humidite_sol", "N/A"),
                      "Vent (km/h)": m.get("vitesse_vent", "N/A"), "Dernière mesure": m.get("timestamp", "N/A")})
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
 
 def _page_agriculteurs(agriculteurs):
@@ -126,7 +126,7 @@ def _page_agriculteurs(agriculteurs):
                      "Station nom": info.get("station_nom", "N/A"), "Téléphone": info.get("telephone", "N/A"),
                      "Actif": "✅" if info.get("actif", True) else "❌",
                      "Créé le": info.get("date_creation", "N/A")[:10] if info.get("date_creation") else "N/A"})
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
 
 def _page_seuils(stations):
@@ -143,7 +143,7 @@ def _page_seuils(stations):
         with sc2:
             temp_min = st.number_input("❄️ Temp. min (°C)",   value=float(seuils_actuels.get("temp_min",   15.0)), step=0.5)
             vent_max = st.number_input("💨 Vent max (km/h)",  value=float(seuils_actuels.get("vent_max",   45.0)), step=1.0)
-        submitted = st.form_submit_button("💾 Enregistrer les seuils globaux", use_container_width=True)
+        submitted = st.form_submit_button("💾 Enregistrer les seuils globaux", width='stretch')
 
     if submitted:
         ok, resp = _post("/seuils", {"station_id": "", "temp_max": temp_max,
@@ -209,7 +209,7 @@ def page_admin():
 
         st.markdown("---")
 
-        if st.button("🚪 Se déconnecter", use_container_width=True, key="btn_deco_admin"):
+        if st.button("🚪 Se déconnecter", width='stretch', key="btn_deco_admin"):
             deconnexion()
 
         st.markdown("""

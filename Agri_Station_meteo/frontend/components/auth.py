@@ -242,7 +242,7 @@ def _form_connexion():
         email    = st.text_input(" Adresse email",  placeholder="votre@email.com")
         password = st.text_input(" Mot de passe",   type="password", placeholder="••••••••")
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-        submitted = st.form_submit_button(" Connecter", use_container_width=True)
+        submitted = st.form_submit_button(" Connecter", width='stretch')
 
     if submitted:
         if not email or not password:
@@ -283,7 +283,7 @@ def _form_inscription():
             options=list(STATIONS_DISPO.keys()),
             format_func=lambda x: f" {STATIONS_DISPO[x]} ({x})")
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-        submitted = st.form_submit_button(" Créer mon compte", use_container_width=True)
+        submitted = st.form_submit_button(" Créer mon compte", width='stretch')
 
     if submitted:
         if not all([prenom, nom, email, mdp]):
@@ -336,10 +336,10 @@ def page_login():
         tab_actuel = st.session_state["auth_tab"]
         col_conn, col_inscr = st.columns(2)
         with col_conn:
-            if st.button("Se Connecter", key="btn_tab_conn", use_container_width=True):
+            if st.button("Se Connecter", key="btn_tab_conn", width='stretch'):
                 st.session_state["auth_tab"] = "connexion"; st.rerun()
         with col_inscr:
-            if st.button("Créer un Compte", key="btn_tab_inscr", use_container_width=True):
+            if st.button("Créer un Compte", key="btn_tab_inscr", width='stretch'):
                 st.session_state["auth_tab"] = "inscription"; st.rerun()
 
        
