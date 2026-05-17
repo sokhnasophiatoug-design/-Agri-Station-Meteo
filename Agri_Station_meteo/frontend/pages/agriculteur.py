@@ -72,9 +72,8 @@ def _page_accueil(station_id, nom, station_nom, region):
         </div>
     </div>
     """, unsafe_allow_html=True)
-    # Météo actuelle (pleine largeur sur mobile, colonne sur desktop)
+    # Météo actuelle — récupérée ici, affichée dans la section Conseil IA
     meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
-    afficher_meteo_actuelle(meteo)
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
         historique = _get(f"/historique/{station_id}?limit=48", default={}).get("historique", [])
@@ -106,23 +105,33 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.caption(f"🕐 Dernière mesure : {ts}")
 
     st.markdown("#### 🎯 Niveaux actuels")
-    # Grille de jauges responsive (4 colonnes desktop, 2 colonnes mobile)
-    st.markdown('<div class="jauges-grid">', unsafe_allow_html=True)
+    # Grille de jauges : 2 colonnes × 2 lignes (desktop & mobile)
     capteurs_jauges = [
         ("temperature",  temp,    seuils.get("temp_max"),    None),
         ("humidite_air", hum_air, None,                      None),
         ("humidite_sol", hum_sol, None,                      seuils.get("hum_sol_min")),
         ("vitesse_vent", vent,    seuils.get("vent_max"),    None),
     ]
-    cols_j = st.columns(4)
-    for idx, (capteur, val, seuil_max, seuil_min) in enumerate(capteurs_jauges):
+    # Ligne 1 : temp + humidite_air
+    row1 = st.columns(2)
+    for idx in range(2):
+        capteur, val, seuil_max, seuil_min = capteurs_jauges[idx]
         if isinstance(val, (int, float)):
-            with cols_j[idx]:
+            with row1[idx]:
                 st.plotly_chart(
                     graphique_jauge(val, capteur, seuil_min=seuil_min, seuil_max=seuil_max),
                     width='stretch', config={"displayModeBar": False}
                 )
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Ligne 2 : humidite_sol + vitesse_vent
+    row2 = st.columns(2)
+    for idx in range(2):
+        capteur, val, seuil_max, seuil_min = capteurs_jauges[idx + 2]
+        if isinstance(val, (int, float)):
+            with row2[idx]:
+                st.plotly_chart(
+                    graphique_jauge(val, capteur, seuil_min=seuil_min, seuil_max=seuil_max),
+                    width='stretch', config={"displayModeBar": False}
+                )
 
     st.markdown("---")
     st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
@@ -131,7 +140,9 @@ def _page_accueil(station_id, nom, station_nom, region):
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
                                          "nom": nom, "region": region})
         if reco:
-            col_reco, col_tts = st.columns([3, 1])
+            # Layout : recommandations (gauche) | météo actuelle + bouton écouter (droite)
+            col_reco, col_droite = st.columns([3, 2])
+
             with col_reco:
                 st.markdown(f"""
                 <div class="reco-card fade-in">
@@ -143,8 +154,14 @@ def _page_accueil(station_id, nom, station_nom, region):
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-            with col_tts:
-                st.markdown("<br><br>", unsafe_allow_html=True)
+
+            with col_droite:
+                # ── Partie haute : météo actuelle ──
+                st.markdown("<div style='font-size:0.80rem;font-weight:800;color:rgba(255,255,255,0.75);margin-bottom:6px;'>🌤️ Météo actuelle</div>", unsafe_allow_html=True)
+                afficher_meteo_actuelle(meteo)
+
+                # ── Partie basse : bouton écouter ──
+                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
                 if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
                         resp = requests.post(f"{BACKEND}/tts", json={"texte": reco.get("message_vocal", reco.get("conseil", "")), "lent": False}, timeout=15)
@@ -154,7 +171,13 @@ def _page_accueil(station_id, nom, station_nom, region):
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
     else:
-        st.info("Données capteurs insuffisantes pour générer une recommandation.")
+        # Pas de données capteurs : afficher quand même la météo actuelle
+        col_info, col_meteo = st.columns([3, 2])
+        with col_info:
+            st.info("Données capteurs insuffisantes pour générer une recommandation.")
+        with col_meteo:
+            st.markdown("<div style='font-size:0.80rem;font-weight:800;color:rgba(255,255,255,0.75);margin-bottom:6px;'>🌤️ Météo actuelle</div>", unsafe_allow_html=True)
+            afficher_meteo_actuelle(meteo)
 
     st.markdown("---")
     st.markdown("#### 📈 Historique des mesures")
@@ -243,18 +266,35 @@ def page_agriculteur():
             transition:transform 0.3s ease !important;
         }
 
-        /* ── COLONNES STREAMLIT ──
-           flex-wrap force le retour à la ligne.
-           Chaque stColumn prend 24% → 4 par ligne.  */
+        /* ── COLONNES STREAMLIT ─────────────────────────────
+           Section metrics (4 colonnes) : flex-wrap + 24% chacune.
+           Section IA (3:2) et jauges (2 colonnes) : 100% chacune sur mobile. */
         [data-testid="stHorizontalBlock"]{
             flex-wrap: wrap !important;
             gap: 5px !important;
         }
-        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
-            flex: 0 0 calc(24% - 2px) !important;
-            max-width: calc(24% - 2px) !important;
+
+        /* Métriques : 4 colonnes compactes sur mobile */
+        [data-testid="stHorizontalBlock"].metrics-row > [data-testid="stColumn"]{
+            flex: 0 0 calc(48% - 3px) !important;
+            max-width: calc(48% - 3px) !important;
+        }
+
+        /* Section IA et jauges : 2 colonnes pleines */
+        [data-testid="stHorizontalBlock"]:not(.metrics-row) > [data-testid="stColumn"]{
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
             min-width: 0 !important;
-            width: calc(24% - 2px) !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        /* FALLBACK : metrics (4 cols) si pas de classe */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
+            flex: 0 0 calc(48% - 3px) !important;
+            max-width: calc(48% - 3px) !important;
+            min-width: 0 !important;
+            width: calc(48% - 3px) !important;
             box-sizing: border-box !important;
         }
 
@@ -274,6 +314,12 @@ def page_agriculteur():
         .meteo-card .temp{ font-size:0.88rem !important; }
         .meteo-card .jour{ font-size:0.58rem !important; }
         .meteo-card .desc{ font-size:0.60rem !important; }
+
+        /* Carte météo actuelle dans le bloc IA */
+        .meteo-now-card{ max-width:100% !important; padding:10px !important; }
+        .meteo-now-icon{ font-size:1.8rem !important; }
+        .meteo-now-temp{ font-size:1.2rem !important; }
+        .meteo-now-desc{ font-size:0.72rem !important; }
 
         /* Typo */
         h1{ font-size:1.1rem !important; }
@@ -296,12 +342,6 @@ def page_agriculteur():
         .reco-icon{ font-size:1.4rem !important; }
         .reco-titre{ font-size:0.85rem !important; }
         .reco-desc{ font-size:0.74rem !important; }
-
-        /* Meteo actuelle */
-        .meteo-now-card{ padding:10px !important; }
-        .meteo-now-icon{ font-size:1.8rem !important; }
-        .meteo-now-temp{ font-size:1.2rem !important; }
-        .meteo-now-desc{ font-size:0.72rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)

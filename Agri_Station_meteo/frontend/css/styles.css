@@ -768,7 +768,7 @@ li{
     border-top: 4px solid #43A047;
 
     width: 100%;
-    max-width: 280px;
+    max-width: 100%;
 }
 /* TOP SECTION */
 .meteo-now-top{
