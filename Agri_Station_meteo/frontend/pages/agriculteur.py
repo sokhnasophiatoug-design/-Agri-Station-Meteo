@@ -123,61 +123,57 @@ def _page_accueil(station_id, nom, station_nom, region):
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
                                          "nom": nom, "region": region})
         if reco:
-            # ── Bloc HTML unique : reco à gauche + météo à droite (flex desktop, colonne mobile)
-            meteo_html = ""
-            if meteo.get("ok"):
-                from components.weather_card import icone_emoji
-                emoji_m = icone_emoji(meteo.get("icone", "01d"))
-                meteo_html = f"""
-                <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;
-                            padding:14px;color:white;margin-bottom:10px;">
-                    <div style="font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;">
-                        🌤️ Météo actuelle</div>
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-size:2rem;">{emoji_m}</span>
-                        <div>
-                            <div style="font-size:1.5rem;font-weight:900;">{meteo.get('temp','--')}°C</div>
-                            <div style="font-size:0.78rem;opacity:0.85;">{meteo.get('description','')}</div>
-                        </div>
-                    </div>
-                    <div style="margin-top:8px;font-size:0.78rem;opacity:0.9;">
-                        📍 {meteo.get('ville','')}
-                    </div>
-                    <div style="margin-top:6px;font-size:0.78rem;opacity:0.88;
-                                display:flex;gap:12px;flex-wrap:wrap;">
-                        <span>💧 {meteo.get('humidite','--')}%</span>
-                        <span>💨 {meteo.get('vent','--')} km/h</span>
-                        <span>🌡️ {meteo.get('ressenti','--')}°C</span>
-                    </div>
-                </div>"""
+            # ── Layout natif st.columns : reco+TTS à gauche, météo à droite ──
+            col_reco, col_meteo = st.columns([3, 2])
 
-            st.markdown(f"""
-            <div class="ia-flex-row">
-                <div class="ia-reco-col">
-                    <div class="reco-card fade-in">
-                        <span class="reco-icon">{reco.get('emoji', '✅')}</span>
-                        <div class="reco-titre">{reco.get('label', '')}</div>
-                        <div class="reco-desc">{reco.get('conseil', '')}</div>
-                        <div style="margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;">
-                            Confiance du modèle : {int(reco.get('confiance', 0) * 100)}%
-                        </div>
+            with col_reco:
+                st.markdown(f"""
+                <div class="reco-card fade-in">
+                    <span class="reco-icon">{reco.get('emoji', '✅')}</span>
+                    <div class="reco-titre">{reco.get('label', '')}</div>
+                    <div class="reco-desc">{reco.get('conseil', '')}</div>
+                    <div style="margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;">
+                        Confiance du modèle : {int(reco.get('confiance', 0) * 100)}%
                     </div>
                 </div>
-                <div class="ia-meteo-col">
-                    {meteo_html}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                # Bouton TTS : sous la reco, dans la colonne gauche
+                if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
+                    try:
+                        resp = requests.post(f"{BACKEND}/tts",
+                                             json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
+                                                   "lent": False}, timeout=15)
+                        if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
+                        else: st.error("Erreur lors de la génération audio")
+                    except Exception as e: st.error(f"Service vocal indisponible : {e}")
 
-            # Bouton écouter (pleine largeur, en dessous du bloc flex)
-            if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
-                try:
-                    resp = requests.post(f"{BACKEND}/tts",
-                                         json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
-                                               "lent": False}, timeout=15)
-                    if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
-                    else: st.error("Erreur lors de la génération audio")
-                except Exception as e: st.error(f"Service vocal indisponible : {e}")
+            with col_meteo:
+                if meteo.get("ok"):
+                    from components.weather_card import icone_emoji
+                    emoji_m = icone_emoji(meteo.get("icone", "01d"))
+                    st.markdown(f"""
+                    <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;
+                                padding:14px;color:white;">
+                        <div style="font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;">
+                            🌤️ Météo actuelle</div>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <span style="font-size:2rem;">{emoji_m}</span>
+                            <div>
+                                <div style="font-size:1.5rem;font-weight:900;">{meteo.get('temp','--')}°C</div>
+                                <div style="font-size:0.78rem;opacity:0.85;">{meteo.get('description','')}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:8px;font-size:0.78rem;opacity:0.9;">
+                            📍 {meteo.get('ville','')}
+                        </div>
+                        <div style="margin-top:6px;font-size:0.78rem;opacity:0.88;
+                                    display:flex;gap:12px;flex-wrap:wrap;">
+                            <span>💧 {meteo.get('humidite','--')}%</span>
+                            <span>💨 {meteo.get('vent','--')} km/h</span>
+                            <span>🌡️ {meteo.get('ressenti','--')}°C</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
     else:
