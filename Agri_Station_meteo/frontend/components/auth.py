@@ -161,6 +161,44 @@ def _css_login():
 
     .stAlert { border-radius: 10px !important; font-family: 'Nunito', sans-serif !important; }
     #MainMenu, footer, header { visibility: hidden; }
+
+    /* ══════════════════════════════════════════════════════
+       ANNULER LA RESPONSIVITÉ MOBILE SUR LA PAGE LOGIN
+       — Conserver le layout desktop (colonnes centrées)
+       ══════════════════════════════════════════════════════ */
+    @media(max-width:768px){
+
+        /* Annuler le grid 4 colonnes global — revenir à flex normal */
+        [data-testid="stHorizontalBlock"]{
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 8px !important;
+        }
+        [data-testid="stHorizontalBlock"] > *{
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+            width: auto !important;
+        }
+
+        /* Garder le container à sa taille normale (pas de padding-top énorme) */
+        .block-container{
+            padding: 0.5rem 1rem 1rem !important;
+            padding-top: 0.5rem !important;
+            max-width: 100vw !important;
+        }
+
+        /* Garder les boutons à taille normale */
+        .stButton > button{
+            font-size: 0.85rem !important;
+            padding: 12px !important;
+        }
+
+        /* Masquer le hamburger sur la page login (pas de sidebar) */
+        #custom-hamburger-btn{
+            display: none !important;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
