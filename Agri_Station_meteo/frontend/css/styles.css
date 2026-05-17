@@ -750,13 +750,21 @@ li{
    ============================================================ */
 @media(max-width:768px){
 
-    /* ── Container — plus de padding top pour le hamburger ── */
+    /* ── Empêcher le scroll horizontal ── */
+    .stApp,
+    .block-container,
+    [data-testid="stAppViewBlockContainer"]{
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+
+    /* ── Container ── */
     .block-container{
         padding:0.5rem 0.5rem 1rem !important;
         padding-top: 3.5rem !important;
     }
 
-    /* ── Bouton hamburger natif Streamlit — caché (on utilise le custom) ── */
+    /* ── Bouton hamburger natif — caché (on utilise le custom) ── */
     [data-testid="collapsedControl"] {
         display: none !important;
     }
@@ -783,25 +791,34 @@ li{
         border-radius: 8px !important;
     }
 
-    /* ── Colonnes : garder le layout horizontal comme sur PC ── */
+    /* ── Colonnes : grille 2×2 adaptative ── */
     [data-testid="stHorizontalBlock"]{
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         gap: 6px !important;
     }
+    /* Par défaut chaque colonne = ~48% → 2 par ligne */
+    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"]{
+        min-width: 47% !important;
+        flex: 1 1 47% !important;
+    }
 
-    /* ── Métriques — légèrement plus compactes ── */
+    /* ── Métriques en grille 2×2 ── */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stVerticalBlock"]{
+        min-width: 47% !important;
+        flex: 1 1 47% !important;
+    }
     [data-testid="stMetric"]{
         min-height:70px !important;
         padding:8px 10px !important;
     }
     [data-testid="stMetricValue"]{
-        font-size:1.1rem !important;
+        font-size:1.15rem !important;
     }
     [data-testid="stMetricLabel"]{
-        font-size:0.58rem !important;
+        font-size:0.6rem !important;
     }
 
-    /* ── Cartes prévisions ── */
+    /* ── Cartes prévisions : 2 par ligne minimum ── */
     .meteo-card{
         min-height:100px !important;
         padding:6px !important;
