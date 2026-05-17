@@ -153,25 +153,63 @@ def _calculer_alertes(mesures, seuils):
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
 
+def _render_metric_html(label, value, emoji, alert=False):
+    """Rendu HTML d'une carte métrique — indépendant de st.columns."""
+    border_color = "#E53E3E" if alert else "#1B7F2A"
+    badge = '<span style="background:#E53E3E;color:white;font-size:0.6rem;padding:2px 6px;border-radius:8px;margin-left:6px;">⚠️</span>' if alert else ""
+    return f"""
+    <div style="background:rgba(255,255,255,0.97);border-radius:16px;padding:14px 12px;
+                border-top:4px solid {border_color};
+                box-shadow:0 4px 14px rgba(0,0,0,0.14);flex:1;min-width:0;">
+        <div style="color:#2F5233;font-size:0.65rem;font-weight:800;text-transform:uppercase;
+                    letter-spacing:0.8px;margin-bottom:8px;">{emoji} {label}{badge}</div>
+        <div style="color:#062B0D;font-size:1.4rem;font-weight:900;line-height:1;
+                    font-family:'Roboto Mono',monospace;">{value}</div>
+    </div>
+    """
+
 def _page_accueil(station_id, nom, station_nom, region):
-    col_h, col_btn = st.columns([3, 2])
-    with col_h:
-        st.markdown(f"""
-        <div class="entete fade-in">
-            <div>
-                <h1>🌾 Bonjour, {nom}</h1>
-                <div class="sous-titre">
-                    <span class="live-dot"></span>
-                    {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp;
-                    {datetime.now().strftime('%H:%M:%S')}
+    # ── En-tête HTML flex (pas de st.columns → tient sur mobile) ──
+    meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
+    _emoji_meteo = {"01":"☀️","02":"⛅","03":"☁️","04":"☁️","09":"🌧️","10":"🌦️","11":"⛈️","13":"❄️","50":"🌫️"}
+    m_emoji = _emoji_meteo.get((meteo.get("icone","01d"))[:2], "🌡️") if meteo.get("ok") else "🌡️"
+
+    meteo_html = ""
+    if meteo.get("ok"):
+        meteo_html = f"""
+        <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:16px;
+                    padding:16px 18px;color:white;box-shadow:0 6px 18px rgba(0,0,0,0.28);
+                    border:1px solid rgba(255,255,255,0.08);min-width:200px;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="font-size:2.4rem;">{m_emoji}</div>
+                <div>
+                    <div style="font-size:1.8rem;font-weight:900;line-height:1;">{meteo.get('temp','--')}°C</div>
+                    <div style="font-size:0.82rem;opacity:0.85;">{meteo.get('description','')}</div>
                 </div>
             </div>
+            <div style="margin-top:10px;font-size:0.8rem;opacity:0.9;">📍 {meteo.get('ville','')}</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);
+                        font-size:0.78rem;display:flex;gap:12px;flex-wrap:wrap;">
+                <span>💧 {meteo.get('humidite','--')}%</span>
+                <span>💨 {meteo.get('vent','--')} km/h</span>
+                <span>🌡️ Ressenti {meteo.get('ressenti','--')}°C</span>
+            </div>
         </div>
-        """, unsafe_allow_html=True)
-    with col_btn:
-        # 🌦 Météo actuelle — à droite du titre
-        meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
-        afficher_meteo_actuelle(meteo)
+        """
+
+    st.markdown(f"""
+    <div style="display:flex;gap:16px;align-items:stretch;margin-bottom:18px;flex-wrap:wrap;">
+        <div class="entete fade-in" style="flex:1;min-width:200px;">
+            <h1>🌾 Bonjour, {nom}</h1>
+            <div class="sous-titre">
+                <span class="live-dot"></span>
+                {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp; {datetime.now().strftime('%H:%M:%S')}
+            </div>
+        </div>
+        {meteo_html}
+    </div>
+    """, unsafe_allow_html=True)
+
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
         historique = _get(f"/historique/{station_id}?limit=48", default={}).get("historique", [])
@@ -193,18 +231,33 @@ def _page_accueil(station_id, nom, station_nom, region):
         with st.expander(f"🚨 {len(alertes)} alerte(s) active(s)", expanded=True):
             for al in alertes: st.warning(al)
 
-    st.markdown("---")
+    # ── Métriques HTML 4 colonnes (pas de st.columns → tient sur mobile) ──
+    st.markdown("")
     st.markdown("#### 📡 Mesures en temps réel")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: st.metric("🌡️ Température",  f"{temp}°C"    if isinstance(temp,    (int, float)) else temp,    delta="⚠️ Élevé" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
-    with c2: st.metric("💧 Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
-    with c3: st.metric("🌱 Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="⚠️ Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
-    with c4: st.metric("💨 Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
-    st.caption(f"🕐 Dernière mesure : {ts}")
+    alert_temp = isinstance(temp, (int,float)) and temp > seuils.get("temp_max", 40)
+    alert_sol  = isinstance(hum_sol, (int,float)) and hum_sol < seuils.get("hum_sol_min", 25)
+
+    temp_val    = f"{temp}°C"    if isinstance(temp,    (int, float)) else str(temp)
+    hum_air_val = f"{hum_air}%" if isinstance(hum_air, (int, float)) else str(hum_air)
+    hum_sol_val = f"{hum_sol}%" if isinstance(hum_sol, (int, float)) else str(hum_sol)
+    vent_val    = f"{vent} km/h" if isinstance(vent,    (int, float)) else str(vent)
+
+    st.markdown(f"""
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;">
+        {_render_metric_html("Température",  temp_val,    "🌡️", alert_temp)}
+        {_render_metric_html("Humidité air", hum_air_val, "💧")}
+        {_render_metric_html("Humidité sol", hum_sol_val, "🌱", alert_sol)}
+        {_render_metric_html("Vent",         vent_val,    "💨")}
+    </div>
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);margin-bottom:12px;">🕐 Dernière mesure : {ts}</div>
+    """, unsafe_allow_html=True)
 
     st.markdown("#### 🎯 Niveaux actuels")
-    jc1, jc2, jc3, jc4 = st.columns(4)
-    for capteur, val, col in [("temperature", temp, jc1), ("humidite_air", hum_air, jc2), ("humidite_sol", hum_sol, jc3), ("vitesse_vent", vent, jc4)]:
+    # 2 colonnes × 2 lignes — plus lisible sur mobile que 4 d'affilée
+    jc1, jc2 = st.columns(2)
+    jc3, jc4 = st.columns(2)
+    for capteur, val, col in [("temperature", temp, jc1), ("humidite_air", hum_air, jc2),
+                               ("humidite_sol", hum_sol, jc3), ("vitesse_vent", vent, jc4)]:
         if isinstance(val, (int, float)):
             with col:
                 st.plotly_chart(graphique_jauge(val, capteur,

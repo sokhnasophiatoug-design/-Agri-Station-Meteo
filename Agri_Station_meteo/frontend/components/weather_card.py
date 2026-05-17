@@ -62,30 +62,47 @@ def afficher_previsions(previsions_data: dict):
         st.markdown(f"<small style='color:#94a3b8'>📍 Données météo pour : <b>{ville}</b></small>",
                     unsafe_allow_html=True)
 
-    cols = st.columns(len(liste)) if liste else []
-    for col, jour in zip(cols, liste):
-        with col:
-            emoji     = icone_emoji(jour.get("icone", "01d"))
-            label     = jour.get("jour") or jour.get("date", "")
-            temp_max  = jour.get("temp_max", "--")
-            temp_min  = jour.get("temp_min", "--")
-            temp_str  = f"{temp_min}° ── {temp_max}°" if temp_max != "--" else f"{jour.get('temp', '--')}°C"
-            pluie     = jour.get("pluie", 0) or 0
-            risque    = jour.get("risque_pluie", 0)
-            pluie_str = f"🌧 {pluie:.1f} mm" if pluie > 0 else f"☀️ {risque}% pluie" if risque > 10 else "☀️ Sec"
+    if not liste:
+        st.info("Aucune prévision disponible.")
+        return
 
-            st.markdown(f"""
-            <div class="meteo-card">
-                <div class="jour">{label}</div>
-                <div class="icon">{emoji}</div>
-                <div class="temp">{temp_str}</div>
-                <div class="desc">{jour.get('description', '')}</div>
-                <div class="desc" style="margin-top:6px">
-                    💧 {jour.get('humidite', '--')}% &nbsp;|&nbsp; 💨 {jour.get('vent', '--')} km/h
-                </div>
-                <div class="desc">{pluie_str}</div>
+    # ── Rendu HTML 2 colonnes — fonctionne sur mobile ET desktop ──
+    cartes = []
+    for jour in liste:
+        emoji     = icone_emoji(jour.get("icone", "01d"))
+        label     = jour.get("jour") or jour.get("date", "")
+        temp_max  = jour.get("temp_max", "--")
+        temp_min  = jour.get("temp_min", "--")
+        temp_str  = f"{temp_min}° ── {temp_max}°" if temp_max != "--" else f"{jour.get('temp', '--')}°C"
+        pluie     = jour.get("pluie", 0) or 0
+        risque    = jour.get("risque_pluie", 0)
+        pluie_str = f"🌧 {pluie:.1f} mm" if pluie > 0 else f"☀️ {risque}% pluie" if risque > 10 else "☀️ Sec"
+        hum       = jour.get("humidite", "--")
+        vent      = jour.get("vent", "--")
+        desc      = jour.get("description", "")
+
+        cartes.append(f"""
+        <div style="background:rgba(255,255,255,0.97);border-radius:18px;padding:14px 12px;
+                    border-top:4px solid #1B7F2A;
+                    box-shadow:0 6px 18px rgba(0,0,0,0.14);text-align:center;">
+            <div style="color:#1B5E20;font-size:0.7rem;font-weight:900;text-transform:uppercase;
+                        letter-spacing:0.8px;margin-bottom:6px;">{label}</div>
+            <div style="font-size:1.6rem;margin-bottom:6px;">{emoji}</div>
+            <div style="color:#062B0D;font-size:1.2rem;font-weight:900;
+                        font-family:'Roboto Mono',monospace;margin-bottom:6px;">{temp_str}</div>
+            <div style="color:#4A5568;font-size:0.75rem;font-weight:700;margin-bottom:4px;">{desc}</div>
+            <div style="color:#374151;font-size:0.72rem;font-weight:600;">
+                💧 {hum}% &nbsp;|&nbsp; 💨 {vent} km/h
             </div>
-            """, unsafe_allow_html=True)
+            <div style="color:#374151;font-size:0.72rem;font-weight:600;margin-top:3px;">{pluie_str}</div>
+        </div>
+        """)
+
+    # Grid 2 colonnes — adapté mobile ET desktop
+    html = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">'
+    html += "".join(cartes)
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 def afficher_alerte_meteo(previsions_data: dict) -> list:
     alertes = []
