@@ -24,167 +24,152 @@ def _load_css():
 
 
 def _inject_hamburger():
-    """Injecte un bouton hamburger custom visible sur mobile uniquement,
-    avec overlay sombre et toggle JS fiable pour la sidebar Streamlit.
+    """Injecte le bouton hamburger dans le document parent via
+    st.components.v1.html() — la seule méthode qui exécute réellement le JS
+    dans Streamlit Cloud.
     """
-    st.markdown("""
-    <!-- ═══ Overlay sombre mobile ═══ -->
-    <div id="sidebar-overlay" style="
-        display:none;
-        position:fixed; top:0; left:0;
-        width:100vw; height:100vh;
-        background:rgba(0,0,0,0.55);
-        z-index:9990;
-        transition:opacity 0.3s ease;
-    "></div>
+    import streamlit.components.v1 as components
 
-    <!-- ═══ Bouton Hamburger ☰ (mobile only) ═══ -->
-    <div id="hamburger-btn" style="
-        display:none;
-        position:fixed;
-        top:12px; left:12px;
-        z-index:99999;
-        width:44px; height:44px;
-        background:#0A2E0C;
-        border:1px solid rgba(255,255,255,0.25);
-        border-radius:10px;
-        cursor:pointer;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        gap:5px;
-        box-shadow:0 4px 16px rgba(0,0,0,0.55);
-        transition:background 0.25s ease;
-    ">
-        <span style="display:block;width:20px;height:2.5px;background:white;border-radius:2px;transition:all 0.3s ease;"></span>
-        <span style="display:block;width:20px;height:2.5px;background:white;border-radius:2px;transition:all 0.3s ease;"></span>
-        <span style="display:block;width:20px;height:2.5px;background:white;border-radius:2px;transition:all 0.3s ease;"></span>
-    </div>
-
+    components.html("""
     <script>
     (function() {
-        var _sidebarOpen = false;
+        /* ── Éviter les doublons si Streamlit re-render ── */
+        var parentDoc = window.parent.document;
+        if (parentDoc.getElementById('custom-hamburger-btn')) return;
 
-        function isMobile() { return window.innerWidth <= 768; }
+        var isMobile = window.parent.innerWidth <= 768;
 
-        function getSidebar() {
-            try { return window.parent.document.querySelector('[data-testid="stSidebar"]'); }
-            catch(e) { return null; }
+        /* ══════════ CRÉER LE BOUTON HAMBURGER ══════════ */
+        var btn = parentDoc.createElement('div');
+        btn.id = 'custom-hamburger-btn';
+        btn.title = 'Menu';
+        btn.innerHTML = '<span></span><span></span><span></span>';
+        btn.style.cssText = [
+            'position:fixed',
+            'top:12px', 'left:12px',
+            'z-index:99999',
+            'width:46px', 'height:46px',
+            'background:#0A2E0C',
+            'border:1px solid rgba(255,255,255,0.25)',
+            'border-radius:12px',
+            'cursor:pointer',
+            'display:' + (isMobile ? 'flex' : 'none'),
+            'flex-direction:column',
+            'align-items:center',
+            'justify-content:center',
+            'gap:5px',
+            'box-shadow:0 4px 18px rgba(0,0,0,0.55)',
+            'transition:background 0.25s ease'
+        ].join(';');
+
+        var spans = btn.querySelectorAll('span');
+        for (var i = 0; i < spans.length; i++) {
+            spans[i].style.cssText = 'display:block;width:20px;height:2.5px;background:white;border-radius:2px;transition:all 0.3s ease;';
         }
 
-        function showHamburger() {
-            var btn = document.getElementById('hamburger-btn');
-            if (btn) btn.style.display = isMobile() ? 'flex' : 'none';
+        parentDoc.body.appendChild(btn);
+
+        /* ══════════ CRÉER L'OVERLAY SOMBRE ══════════ */
+        var overlay = parentDoc.createElement('div');
+        overlay.id = 'custom-sidebar-overlay';
+        overlay.style.cssText = [
+            'display:none',
+            'position:fixed', 'top:0', 'left:0',
+            'width:100vw', 'height:100vh',
+            'background:rgba(0,0,0,0.5)',
+            'z-index:9990',
+            'opacity:0',
+            'transition:opacity 0.3s ease'
+        ].join(';');
+        parentDoc.body.appendChild(overlay);
+
+        /* ══════════ LOGIQUE TOGGLE ══════════ */
+        var _open = false;
+
+        function getSidebar() {
+            return parentDoc.querySelector('[data-testid="stSidebar"]');
         }
 
         function setSidebar(open) {
             var sidebar = getSidebar();
             if (!sidebar) return;
-            var overlay = document.getElementById('sidebar-overlay');
-            var btn     = document.getElementById('hamburger-btn');
-            _sidebarOpen = open;
+            _open = open;
 
             if (open) {
                 sidebar.style.setProperty('transform',  'translateX(0)',    'important');
                 sidebar.style.setProperty('visibility', 'visible',          'important');
                 sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
-                if (overlay) { overlay.style.display = 'block'; setTimeout(function(){ overlay.style.opacity = '1'; }, 10); }
+                overlay.style.display = 'block';
+                setTimeout(function(){ overlay.style.opacity = '1'; }, 20);
             } else {
                 sidebar.style.setProperty('transform',  'translateX(-100%)', 'important');
-                sidebar.style.setProperty('visibility', 'visible',           'important');
                 sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
-                if (overlay) { overlay.style.opacity = '0'; setTimeout(function(){ overlay.style.display = 'none'; }, 300); }
+                overlay.style.opacity = '0';
+                setTimeout(function(){ overlay.style.display = 'none'; }, 300);
             }
 
-            /* Animer les 3 barres du hamburger en ✕ */
-            if (btn) {
-                var spans = btn.querySelectorAll('span');
-                if (spans.length >= 3) {
-                    if (open) {
-                        spans[0].style.transform = 'rotate(45deg) translate(5px,5px)';
-                        spans[1].style.opacity   = '0';
-                        spans[2].style.transform = 'rotate(-45deg) translate(5px,-5px)';
-                    } else {
-                        spans[0].style.transform = '';
-                        spans[1].style.opacity   = '1';
-                        spans[2].style.transform = '';
-                    }
-                }
+            /* Animation ☰ → ✕ */
+            var s = btn.querySelectorAll('span');
+            if (open) {
+                s[0].style.transform = 'rotate(45deg) translate(5px,6px)';
+                s[1].style.opacity   = '0';
+                s[2].style.transform = 'rotate(-45deg) translate(5px,-6px)';
+            } else {
+                s[0].style.transform = '';
+                s[1].style.opacity   = '1';
+                s[2].style.transform = '';
             }
         }
 
-        function toggleSidebar() { setSidebar(!_sidebarOpen); }
+        /* Clic sur le bouton */
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setSidebar(!_open);
+        });
 
-        /* ── Initialisation ── */
-        function init() {
-            showHamburger();
+        /* Clic sur l'overlay → fermer */
+        overlay.addEventListener('click', function() {
+            setSidebar(false);
+        });
 
-            var btn = document.getElementById('hamburger-btn');
-            if (btn && !btn._bound) {
-                btn._bound = true;
-                btn.addEventListener('click', toggleSidebar);
+        /* ══════════ INIT MOBILE ══════════ */
+        if (isMobile) {
+            var sidebar = getSidebar();
+            if (sidebar) {
+                sidebar.style.setProperty('transform',  'translateX(-100%)', 'important');
+                sidebar.style.setProperty('visibility', 'visible',           'important');
+                sidebar.style.setProperty('transition', 'none',              'important');
+                setTimeout(function(){
+                    sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
+                }, 100);
             }
-
-            var overlay = document.getElementById('sidebar-overlay');
-            if (overlay && !overlay._bound) {
-                overlay._bound = true;
-                overlay.addEventListener('click', function() { if (_sidebarOpen) setSidebar(false); });
-            }
-
-            /* Cacher la sidebar sur mobile au chargement */
-            if (isMobile()) {
-                var sidebar = getSidebar();
-                if (sidebar) {
-                    sidebar.style.setProperty('transform',  'translateX(-100%)', 'important');
-                    sidebar.style.setProperty('visibility', 'visible',           'important');
-                    sidebar.style.setProperty('transition', 'none',              'important');
-                    setTimeout(function(){
-                        sidebar.style.setProperty('transition', 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)', 'important');
-                    }, 50);
-                }
-                _sidebarOpen = false;
-            }
-
-            /* Cacher le bouton natif collapsedControl — on utilise le nôtre */
-            try {
-                var native = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-                if (native) native.style.setProperty('display', 'none', 'important');
-            } catch(e){}
         }
 
-        /* Lancer init */
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 300); });
-        } else {
-            setTimeout(init, 300);
-        }
+        /* Cacher le bouton natif Streamlit */
+        var nativeBtn = parentDoc.querySelector('[data-testid="collapsedControl"]');
+        if (nativeBtn) nativeBtn.style.setProperty('display', 'none', 'important');
 
-        /* Ré-appliquer après les reruns Streamlit */
-        try {
-            var observer = new MutationObserver(function(){ setTimeout(function(){ showHamburger(); }, 200); });
-            observer.observe(window.parent.document.body, { childList:true, subtree:true });
-        } catch(e){}
-
-        /* Adaptation au resize */
-        window.addEventListener('resize', function() {
-            showHamburger();
-            if (!isMobile()) {
+        /* ══════════ RESIZE ══════════ */
+        window.parent.addEventListener('resize', function() {
+            var mobile = window.parent.innerWidth <= 768;
+            btn.style.display = mobile ? 'flex' : 'none';
+            if (!mobile) {
                 var sidebar = getSidebar();
                 if (sidebar) {
                     sidebar.style.removeProperty('transform');
                     sidebar.style.removeProperty('transition');
-                    sidebar.style.removeProperty('visibility');
                 }
-                var overlay = document.getElementById('sidebar-overlay');
-                if (overlay) overlay.style.display = 'none';
-                _sidebarOpen = false;
+                overlay.style.display = 'none';
+                _open = false;
+                var s = btn.querySelectorAll('span');
+                s[0].style.transform = '';
+                s[1].style.opacity   = '1';
+                s[2].style.transform = '';
             }
         });
-
-        window.toggleSidebar = toggleSidebar;
     })();
     </script>
-    """, unsafe_allow_html=True)
+    """, height=0)
 
 
 # ── Application principale ───────────────────────────────────────────────────
