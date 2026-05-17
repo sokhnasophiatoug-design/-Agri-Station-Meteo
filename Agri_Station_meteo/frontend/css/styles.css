@@ -756,7 +756,7 @@ li{
         padding-top: 3.8rem !important;
     }
 
-    /* ── Bouton hamburger natif Streamlit — beau et visible ── */
+    /* ── Bouton hamburger natif Streamlit — visible et stylé ── */
     [data-testid="collapsedControl"] {
         display: flex !important;
         visibility: visible !important;
@@ -784,6 +784,12 @@ li{
         width: 22px !important;
         height: 22px !important;
     }
+    /* Libellé ">" natif Streamlit — cacher le texte, garder l'icône */
+    [data-testid="collapsedControl"] span {
+        color: white !important;
+        font-size: 1.4rem !important;
+        font-weight: 900 !important;
+    }
 
     /* ── Sidebar mobile ── */
     section[data-testid="stSidebar"]{
@@ -794,8 +800,24 @@ li{
         top: 0 !important;
         left: 0 !important;
         height: 100vh !important;
+        height: 100dvh !important;
         z-index: 9998 !important;
         box-shadow: 6px 0 28px rgba(0,0,0,0.6) !important;
+        transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94) !important;
+    }
+
+    /* Bouton de fermeture dans la sidebar (croix native Streamlit) */
+    [data-testid="stSidebar"] button[kind="header"] {
+        color: white !important;
+        background: rgba(255,255,255,0.1) !important;
+        border-radius: 8px !important;
+    }
+
+    /* ── Overlay sombre quand sidebar ouverte ── */
+    section[data-testid="stSidebar"][aria-expanded="true"] ~ div::before,
+    .stApp::after {
+        content: "";
+        display: none;
     }
 
     /* ── Colonnes Streamlit : empilement vertical ── */
