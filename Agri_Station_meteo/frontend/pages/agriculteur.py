@@ -102,43 +102,19 @@ def _page_accueil(station_id, nom, station_nom, region):
     with c2: st.metric("💧 Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
     with c3: st.metric("🌱 Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="⚠️ Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
     with c4: st.metric("💨 Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
-    st.caption(f"🕐 Dernière mesure : {ts}")
+    st.caption(f"\U0001f550 Derni\u00e8re mesure : {ts}")
 
-    st.markdown("#### 🎯 Niveaux actuels")
-
-    def _jauge_html(label, valeur, unite, pct, couleur):
-        """Jauge CSS pure — aucun JS externe requis."""
-        return f"""
-        <div style="background:rgba(255,255,255,0.95);border-radius:16px;padding:16px 14px;
-                    border-top:4px solid {couleur};box-shadow:0 4px 14px rgba(0,0,0,0.15);
-                    text-align:center;">
-            <div style="font-size:0.68rem;font-weight:800;color:#2F5233;
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">{label}</div>
-            <div style="font-size:1.6rem;font-weight:900;color:#062B0D;
-                        font-family:'Roboto Mono',monospace;margin-bottom:10px;">{valeur}{unite}</div>
-            <div style="background:#e8f5e9;border-radius:999px;height:10px;overflow:hidden;">
-                <div style="height:10px;width:{min(pct,100):.0f}%;background:{couleur};
-                            border-radius:999px;transition:width 0.6s ease;"></div>
-            </div>
-            <div style="font-size:0.68rem;color:#4A5568;margin-top:5px;">{min(pct,100):.0f}%</div>
-        </div>"""
-
-    capteurs_jauges = [
-        ("Température",  temp,    "°C",   (temp-10)/40*100    if isinstance(temp,(int,float))    else 0, "#f87171"),
-        ("Humidité air", hum_air, "%",    hum_air            if isinstance(hum_air,(int,float)) else 0, "#38bdf8"),
-        ("Humidité sol", hum_sol, "%",    hum_sol            if isinstance(hum_sol,(int,float)) else 0, "#00d97e"),
-        ("Vent",         vent,    " km/h",(vent/60)*100      if isinstance(vent,(int,float))     else 0, "#fbbf24"),
-    ]
-
-    # Affichage 2 par ligne (HTML natif = compatible tous navigateurs mobiles)
-    jauges_html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-    for label, val, unite, pct, couleur in capteurs_jauges:
-        if isinstance(val, (int, float)):
-            jauges_html += _jauge_html(label, val, unite, pct, couleur)
-        else:
-            jauges_html += _jauge_html(label, "--", unite, 0, "#94a3b8")
-    jauges_html += "</div>"
-    st.markdown(jauges_html, unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("#### \U0001f4c8 Historique des mesures")
+    if historique:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["\U0001f321\ufe0f Temp\u00e9rature", "\U0001f4a7 Humidit\u00e9 air", "\U0001f331 Humidit\u00e9 sol", "\U0001f4a8 Vent", "\U0001f4ca Vue globale"])
+        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  use_container_width=True, config={"displayModeBar": False})
+        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), use_container_width=True, config={"displayModeBar": False})
+        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), use_container_width=True, config={"displayModeBar": False})
+        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), use_container_width=True, config={"displayModeBar": False})
+        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("Aucun historique disponible pour le moment.")
 
     st.markdown("---")
     st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
@@ -210,22 +186,10 @@ def _page_accueil(station_id, nom, station_nom, region):
         st.info("Données capteurs insuffisantes pour générer une recommandation.")
 
     st.markdown("---")
-    st.markdown("#### 📈 Historique des mesures")
-    if historique:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌡️ Température", "💧 Humidité air", "🌱 Humidité sol", "💨 Vent", "📊 Vue globale"])
-        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
-        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
-        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
-        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), width='stretch', config={"displayModeBar": False})
-        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              width='stretch', config={"displayModeBar": False})
-    else:
-        st.info("Aucun historique disponible pour le moment.")
-
-    st.markdown("---")
-    st.markdown("#### 🌤️ Prévisions météo — 5 prochains jours")
+    st.markdown("#### \U0001f31f\ufe0f Pr\u00e9visions m\u00e9t\u00e9o \u2014 5 prochains jours")
     afficher_previsions(previsions)
 
-    st.markdown('<div class="footer">Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Station M\u00e9t\u00e9o Agricole \u00b7 R\u00e9seau IoT S\u00e9n\u00e9gal \u00b7 USSEIN</div>', unsafe_allow_html=True)
 
 
 def _page_historique(station_id):
