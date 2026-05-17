@@ -791,21 +791,16 @@ li{
         border-radius: 8px !important;
     }
 
-    /* ── Colonnes : grille 2×2 adaptative ── */
+    /* ── Colonnes : CSS GRID 2 colonnes (plus fiable que flex) ── */
     [data-testid="stHorizontalBlock"]{
-        flex-wrap: wrap !important;
-        gap: 6px !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
     }
-    /* Par défaut chaque colonne = ~48% → 2 par ligne */
-    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"]{
-        min-width: 47% !important;
-        flex: 1 1 47% !important;
-    }
-
-    /* ── Métriques en grille 2×2 ── */
-    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stVerticalBlock"]{
-        min-width: 47% !important;
-        flex: 1 1 47% !important;
+    /* Chaque enfant occupe sa cellule de grille */
+    [data-testid="stHorizontalBlock"] > *{
+        min-width: 0 !important;
+        width: 100% !important;
     }
     [data-testid="stMetric"]{
         min-height:70px !important;
