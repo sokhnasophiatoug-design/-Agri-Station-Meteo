@@ -105,33 +105,40 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.caption(f"🕐 Dernière mesure : {ts}")
 
     st.markdown("#### 🎯 Niveaux actuels")
-    # Grille de jauges : 2 colonnes × 2 lignes (desktop & mobile)
+
+    def _jauge_html(label, valeur, unite, pct, couleur):
+        """Jauge CSS pure — aucun JS externe requis."""
+        return f"""
+        <div style="background:rgba(255,255,255,0.95);border-radius:16px;padding:16px 14px;
+                    border-top:4px solid {couleur};box-shadow:0 4px 14px rgba(0,0,0,0.15);
+                    text-align:center;">
+            <div style="font-size:0.68rem;font-weight:800;color:#2F5233;
+                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">{label}</div>
+            <div style="font-size:1.6rem;font-weight:900;color:#062B0D;
+                        font-family:'Roboto Mono',monospace;margin-bottom:10px;">{valeur}{unite}</div>
+            <div style="background:#e8f5e9;border-radius:999px;height:10px;overflow:hidden;">
+                <div style="height:10px;width:{min(pct,100):.0f}%;background:{couleur};
+                            border-radius:999px;transition:width 0.6s ease;"></div>
+            </div>
+            <div style="font-size:0.68rem;color:#4A5568;margin-top:5px;">{min(pct,100):.0f}%</div>
+        </div>"""
+
     capteurs_jauges = [
-        ("temperature",  temp,    seuils.get("temp_max"),    None),
-        ("humidite_air", hum_air, None,                      None),
-        ("humidite_sol", hum_sol, None,                      seuils.get("hum_sol_min")),
-        ("vitesse_vent", vent,    seuils.get("vent_max"),    None),
+        ("Température",  temp,    "°C",   (temp-10)/40*100    if isinstance(temp,(int,float))    else 0, "#f87171"),
+        ("Humidité air", hum_air, "%",    hum_air            if isinstance(hum_air,(int,float)) else 0, "#38bdf8"),
+        ("Humidité sol", hum_sol, "%",    hum_sol            if isinstance(hum_sol,(int,float)) else 0, "#00d97e"),
+        ("Vent",         vent,    " km/h",(vent/60)*100      if isinstance(vent,(int,float))     else 0, "#fbbf24"),
     ]
-    # Ligne 1 : temp + humidite_air
-    row1 = st.columns(2)
-    for idx in range(2):
-        capteur, val, seuil_max, seuil_min = capteurs_jauges[idx]
+
+    # Affichage 2 par ligne (HTML natif = compatible tous navigateurs mobiles)
+    jauges_html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    for label, val, unite, pct, couleur in capteurs_jauges:
         if isinstance(val, (int, float)):
-            with row1[idx]:
-                st.plotly_chart(
-                    graphique_jauge(val, capteur, seuil_min=seuil_min, seuil_max=seuil_max),
-                    width='stretch', config={"displayModeBar": False}
-                )
-    # Ligne 2 : humidite_sol + vitesse_vent
-    row2 = st.columns(2)
-    for idx in range(2):
-        capteur, val, seuil_max, seuil_min = capteurs_jauges[idx + 2]
-        if isinstance(val, (int, float)):
-            with row2[idx]:
-                st.plotly_chart(
-                    graphique_jauge(val, capteur, seuil_min=seuil_min, seuil_max=seuil_max),
-                    width='stretch', config={"displayModeBar": False}
-                )
+            jauges_html += _jauge_html(label, val, unite, pct, couleur)
+        else:
+            jauges_html += _jauge_html(label, "--", unite, 0, "#94a3b8")
+    jauges_html += "</div>"
+    st.markdown(jauges_html, unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
@@ -140,44 +147,67 @@ def _page_accueil(station_id, nom, station_nom, region):
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
                                          "nom": nom, "region": region})
         if reco:
-            # Layout : recommandations (gauche) | météo actuelle + bouton écouter (droite)
-            col_reco, col_droite = st.columns([3, 2])
+            # ── Bloc HTML unique : reco à gauche + météo à droite (flex desktop, colonne mobile)
+            meteo_html = ""
+            if meteo.get("ok"):
+                from components.weather_card import icone_emoji
+                emoji_m = icone_emoji(meteo.get("icone", "01d"))
+                meteo_html = f"""
+                <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;
+                            padding:14px;color:white;margin-bottom:10px;">
+                    <div style="font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;">
+                        🌤️ Météo actuelle</div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:2rem;">{emoji_m}</span>
+                        <div>
+                            <div style="font-size:1.5rem;font-weight:900;">{meteo.get('temp','--')}°C</div>
+                            <div style="font-size:0.78rem;opacity:0.85;">{meteo.get('description','')}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px;font-size:0.78rem;opacity:0.9;">
+                        📍 {meteo.get('ville','')}
+                    </div>
+                    <div style="margin-top:6px;font-size:0.78rem;opacity:0.88;
+                                display:flex;gap:12px;flex-wrap:wrap;">
+                        <span>💧 {meteo.get('humidite','--')}%</span>
+                        <span>💨 {meteo.get('vent','--')} km/h</span>
+                        <span>🌡️ {meteo.get('ressenti','--')}°C</span>
+                    </div>
+                </div>"""
 
-            with col_reco:
-                st.markdown(f"""
-                <div class="reco-card fade-in">
-                    <span class="reco-icon">{reco.get('emoji', '✅')}</span>
-                    <div class="reco-titre">{reco.get('label', '')}</div>
-                    <div class="reco-desc">{reco.get('conseil', '')}</div>
-                    <div style="margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;">
-                        Confiance du modèle : {int(reco.get('confiance', 0) * 100)}%
+            st.markdown(f"""
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                <div style="flex:3;min-width:220px;">
+                    <div class="reco-card fade-in">
+                        <span class="reco-icon">{reco.get('emoji', '✅')}</span>
+                        <div class="reco-titre">{reco.get('label', '')}</div>
+                        <div class="reco-desc">{reco.get('conseil', '')}</div>
+                        <div style="margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;">
+                            Confiance du modèle : {int(reco.get('confiance', 0) * 100)}%
+                        </div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                <div style="flex:2;min-width:180px;">
+                    {meteo_html}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            with col_droite:
-                # ── Partie haute : météo actuelle ──
-                st.markdown("<div style='font-size:0.80rem;font-weight:800;color:rgba(255,255,255,0.75);margin-bottom:6px;'>🌤️ Météo actuelle</div>", unsafe_allow_html=True)
-                afficher_meteo_actuelle(meteo)
-
-                # ── Partie basse : bouton écouter ──
-                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
-                    try:
-                        resp = requests.post(f"{BACKEND}/tts", json={"texte": reco.get("message_vocal", reco.get("conseil", "")), "lent": False}, timeout=15)
-                        if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
-                        else: st.error("Erreur lors de la génération audio")
-                    except Exception as e: st.error(f"Service vocal indisponible : {e}")
+            # Bouton écouter (pleine largeur, en dessous du bloc flex)
+            if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
+                try:
+                    resp = requests.post(f"{BACKEND}/tts",
+                                         json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
+                                               "lent": False}, timeout=15)
+                    if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
+                    else: st.error("Erreur lors de la génération audio")
+                except Exception as e: st.error(f"Service vocal indisponible : {e}")
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
     else:
-        # Pas de données capteurs : afficher quand même la météo actuelle
-        col_info, col_meteo = st.columns([3, 2])
-        with col_info:
-            st.info("Données capteurs insuffisantes pour générer une recommandation.")
-        with col_meteo:
-            st.markdown("<div style='font-size:0.80rem;font-weight:800;color:rgba(255,255,255,0.75);margin-bottom:6px;'>🌤️ Météo actuelle</div>", unsafe_allow_html=True)
+        if meteo.get("ok"):
             afficher_meteo_actuelle(meteo)
+        st.info("Données capteurs insuffisantes pour générer une recommandation.")
 
     st.markdown("---")
     st.markdown("#### 📈 Historique des mesures")
