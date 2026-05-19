@@ -59,43 +59,47 @@ def _page_accueil(station_id, nom, station_nom, region):
     # Météo actuelle — récupérée EN PREMIER pour l'afficher dans l'entête
     meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
 
-    # ── Ligne météo compacte pour l'entête (visible uniquement si données OK) ──
+    # ── Entête + météo compacte ──
+    heure = datetime.now().strftime('%H:%M:%S')
+
+    # Construire le bloc météo en Python pur (pas de f-string imbriqué)
+    meteo_bloc = ""
     if meteo.get("ok"):
         from components.weather_card import icone_emoji
-        emoji_m   = icone_emoji(meteo.get("icone", "01d"))
-        temp_m    = meteo.get("temp", "--")
-        desc_m    = meteo.get("description", "")
-        hum_m     = meteo.get("humidite", "--")
-        vent_m    = meteo.get("vent", "--")
-        meteo_html = f"""
-        <div class="meteo-entete">
-            {emoji_m} <strong>{temp_m}°C</strong>
-            <span class="meteo-entete-sep">·</span>
-            {desc_m}
-            <span class="meteo-entete-sep">·</span>
-            💧{hum_m}%
-            <span class="meteo-entete-sep">·</span>
-            💨{vent_m} km/h
-        </div>"""
-    else:
-        meteo_html = ""
+        emoji_m = icone_emoji(meteo.get("icone", "01d"))
+        temp_m  = meteo.get("temp", "--")
+        desc_m  = meteo.get("description", "")
+        hum_m   = meteo.get("humidite", "--")
+        vent_m  = meteo.get("vent", "--")
+        meteo_bloc = (
+            "<div style=\"display:inline-flex;align-items:center;gap:6px;"
+            "margin-top:7px;background:rgba(255,255,255,0.10);"
+            "border:1px solid rgba(255,255,255,0.18);border-radius:20px;"
+            "padding:4px 12px;font-size:0.78rem;font-weight:700;"
+            "color:white;backdrop-filter:blur(4px);flex-wrap:wrap;\">"
+            + emoji_m
+            + " <strong style=\"font-size:0.90rem;\">" + str(temp_m) + "°C</strong>"
+            + " <span style=\"opacity:0.45;margin:0 2px;\">·</span> "
+            + str(desc_m)
+            + " <span style=\"opacity:0.45;margin:0 2px;\">·</span> "
+            + "💧" + str(hum_m) + "%"
+            + " <span style=\"opacity:0.45;margin:0 2px;\">·</span> "
+            + "💨" + str(vent_m) + " km/h"
+            + "</div>"
+        )
 
-    # En-tête : titre + sous-titre
-    st.markdown(f"""
-    <div class="entete fade-in">
-        <div>
-            <h1>🌾 Bonjour, {nom}</h1>
-            <div class="sous-titre">
-                <span class="live-dot"></span>
-                {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp;
-                {datetime.now().strftime('%H:%M:%S')}
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    # Météo compacte — appel séparé pour éviter l'échappement HTML dans le f-string
-    if meteo_html:
-        st.markdown(meteo_html, unsafe_allow_html=True)
+    html_entete = (
+        "<div class=\"entete fade-in\">"
+        "<div>"
+        "<h1>🌾 Bonjour, " + str(nom) + "</h1>"
+        "<div class=\"sous-titre\">"
+        "<span class=\"live-dot\"></span>"
+        + str(station_nom) + " &nbsp;·&nbsp; 📍 " + str(region) + " &nbsp;·&nbsp; " + heure
+        + "</div>"
+        + meteo_bloc
+        + "</div></div>"
+    )
+    st.markdown(html_entete, unsafe_allow_html=True)
 
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
