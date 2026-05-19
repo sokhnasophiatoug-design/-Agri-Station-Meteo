@@ -80,7 +80,7 @@ def _page_accueil(station_id, nom, station_nom, region):
     else:
         meteo_html = ""
 
-    # En-tête avec météo compacte intégrée
+    # En-tête : titre + sous-titre
     st.markdown(f"""
     <div class="entete fade-in">
         <div>
@@ -90,10 +90,12 @@ def _page_accueil(station_id, nom, station_nom, region):
                 {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp;
                 {datetime.now().strftime('%H:%M:%S')}
             </div>
-            {meteo_html}
         </div>
     </div>
     """, unsafe_allow_html=True)
+    # Météo compacte — appel séparé pour éviter l'échappement HTML dans le f-string
+    if meteo_html:
+        st.markdown(meteo_html, unsafe_allow_html=True)
 
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
