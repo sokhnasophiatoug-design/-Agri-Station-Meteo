@@ -59,33 +59,40 @@ def _page_accueil(station_id, nom, station_nom, region):
     # Météo actuelle — récupérée EN PREMIER pour l'afficher dans l'entête
     meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
 
-    # ── Entête + météo compacte ──
+    # ── Entête + météo actuelle ──
     heure = datetime.now().strftime('%H:%M:%S')
 
     # Construire le bloc météo en Python pur (pas de f-string imbriqué)
     meteo_bloc = ""
     if meteo.get("ok"):
         from components.weather_card import icone_emoji
-        emoji_m = icone_emoji(meteo.get("icone", "01d"))
-        temp_m  = meteo.get("temp", "--")
-        desc_m  = meteo.get("description", "")
-        hum_m   = meteo.get("humidite", "--")
-        vent_m  = meteo.get("vent", "--")
+        emoji_m   = icone_emoji(meteo.get("icone", "01d"))
+        temp_m    = str(meteo.get('temp', '--'))
+        desc_m    = str(meteo.get('description', ''))
+        ville_m   = str(meteo.get('ville', ''))
+        hum_m     = str(meteo.get('humidite', '--'))
+        vent_m    = str(meteo.get('vent', '--'))
+        ressenti_m = str(meteo.get('ressenti', '--'))
         meteo_bloc = (
-            "<div style='display:inline-flex;align-items:center;gap:6px;"
-            "margin-top:7px;background:rgba(255,255,255,0.10);"
-            "border:1px solid rgba(255,255,255,0.18);border-radius:20px;"
-            "padding:4px 12px;font-size:0.78rem;font-weight:700;"
-            "color:white;backdrop-filter:blur(4px);flex-wrap:wrap;'>"
-            + emoji_m
-            + " <strong style='font-size:0.90rem;'>" + str(temp_m) + "°C</strong>"
-            + " <span style='opacity:0.45;margin:0 2px;'>·</span> "
-            + str(desc_m)
-            + " <span style='opacity:0.45;margin:0 2px;'>·</span> "
-            + "💧" + str(hum_m) + "%"
-            + " <span style='opacity:0.45;margin:0 2px;'>·</span> "
-            + "💨" + str(vent_m) + " km/h"
-            + "</div>"
+            "<div class='ia-meteo-desktop'>"
+            "<div style='background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;"
+            "padding:14px;color:white;margin-top:12px;'>"
+            "<div style='font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;'>"
+            "🌤️ Météo actuelle</div>"
+            "<div style='display:flex;align-items:center;gap:12px;'>"
+            "<span style='font-size:2rem;'>" + emoji_m + "</span>"
+            "<div>"
+            "<div style='font-size:1.5rem;font-weight:900;'>" + temp_m + "°C</div>"
+            "<div style='font-size:0.78rem;opacity:0.85;'>" + desc_m + "</div>"
+            "</div></div>"
+            "<div style='margin-top:8px;font-size:0.78rem;opacity:0.9;'>"
+            "📍 " + ville_m + "</div>"
+            "<div style='margin-top:6px;font-size:0.78rem;opacity:0.88;"
+            "display:flex;gap:12px;flex-wrap:wrap;'>"
+            "<span>💧 " + hum_m + "%</span>"
+            "<span>💨 " + vent_m + " km/h</span>"
+            "<span>🌡️ " + ressenti_m + "°C</span>"
+            "</div></div></div>"
         )
 
     html_entete = (
@@ -149,7 +156,7 @@ def _page_accueil(station_id, nom, station_nom, region):
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
                                          "nom": nom, "region": region})
         if reco:
-            col_reco, col_meteo = st.columns([3, 2])
+            col_reco, _ = st.columns([3, 2])
 
             with col_reco:
                 reco_emoji    = reco.get('emoji', '✅')
@@ -175,38 +182,6 @@ def _page_accueil(station_id, nom, station_nom, region):
                         else: st.error("Erreur lors de la génération audio")
                     except Exception as e: st.error(f"Service vocal indisponible : {e}")
 
-            with col_meteo:
-                if meteo.get("ok"):
-                    from components.weather_card import icone_emoji
-                    emoji_m   = icone_emoji(meteo.get("icone", "01d"))
-                    temp_m    = str(meteo.get('temp', '--'))
-                    desc_m    = str(meteo.get('description', ''))
-                    ville_m   = str(meteo.get('ville', ''))
-                    hum_m     = str(meteo.get('humidite', '--'))
-                    vent_m    = str(meteo.get('vent', '--'))
-                    ressenti_m = str(meteo.get('ressenti', '--'))
-                    st.markdown(
-                        "<div class='ia-meteo-desktop'>"
-                        "<div style='background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;"
-                        "padding:14px;color:white;'>"
-                        "<div style='font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;'>"
-                        "🌤️ Météo actuelle</div>"
-                        "<div style='display:flex;align-items:center;gap:12px;'>"
-                        "<span style='font-size:2rem;'>" + emoji_m + "</span>"
-                        "<div>"
-                        "<div style='font-size:1.5rem;font-weight:900;'>" + temp_m + "°C</div>"
-                        "<div style='font-size:0.78rem;opacity:0.85;'>" + desc_m + "</div>"
-                        "</div></div>"
-                        "<div style='margin-top:8px;font-size:0.78rem;opacity:0.9;'>"
-                        "📍 " + ville_m + "</div>"
-                        "<div style='margin-top:6px;font-size:0.78rem;opacity:0.88;"
-                        "display:flex;gap:12px;flex-wrap:wrap;'>"
-                        "<span>💧 " + hum_m + "%</span>"
-                        "<span>💨 " + vent_m + " km/h</span>"
-                        "<span>🌡️ " + ressenti_m + "°C</span>"
-                        "</div></div></div>",
-                        unsafe_allow_html=True
-                    )
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
     else:
