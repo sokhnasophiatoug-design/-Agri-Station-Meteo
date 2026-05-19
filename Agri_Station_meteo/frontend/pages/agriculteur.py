@@ -40,9 +40,6 @@ def _post(endpoint, body, default=None):
     except Exception:
         return default
 
-import streamlit as st
-import requests
-
 
 def _calculer_alertes(mesures, seuils):
     alertes = []
@@ -59,7 +56,31 @@ def _calculer_alertes(mesures, seuils):
 # ── Pages ─────────────────────────────────────────────────────────────────────
 
 def _page_accueil(station_id, nom, station_nom, region):
-    # En-tête + météo actuelle : layout adaptatif
+    # Météo actuelle — récupérée EN PREMIER pour l'afficher dans l'entête
+    meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
+
+    # ── Ligne météo compacte pour l'entête (visible uniquement si données OK) ──
+    if meteo.get("ok"):
+        from components.weather_card import icone_emoji
+        emoji_m   = icone_emoji(meteo.get("icone", "01d"))
+        temp_m    = meteo.get("temp", "--")
+        desc_m    = meteo.get("description", "")
+        hum_m     = meteo.get("humidite", "--")
+        vent_m    = meteo.get("vent", "--")
+        meteo_html = f"""
+        <div class="meteo-entete">
+            {emoji_m} <strong>{temp_m}°C</strong>
+            <span class="meteo-entete-sep">·</span>
+            {desc_m}
+            <span class="meteo-entete-sep">·</span>
+            💧{hum_m}%
+            <span class="meteo-entete-sep">·</span>
+            💨{vent_m} km/h
+        </div>"""
+    else:
+        meteo_html = ""
+
+    # En-tête avec météo compacte intégrée
     st.markdown(f"""
     <div class="entete fade-in">
         <div>
@@ -69,11 +90,11 @@ def _page_accueil(station_id, nom, station_nom, region):
                 {station_nom} &nbsp;·&nbsp; 📍 {region} &nbsp;·&nbsp;
                 {datetime.now().strftime('%H:%M:%S')}
             </div>
+            {meteo_html}
         </div>
     </div>
     """, unsafe_allow_html=True)
-    # Météo actuelle — récupérée ici, affichée dans la section Conseil IA
-    meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
+
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
         historique = _get(f"/historique/{station_id}?limit=48", default={}).get("historique", [])
@@ -104,7 +125,6 @@ def _page_accueil(station_id, nom, station_nom, region):
     with c4: st.metric("💨 Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
     st.caption(f"🕐 Dernière mesure : {ts}")
 
-    # ── Historique des mesures (anciennement en bas, maintenant ici) ──
     st.markdown("---")
     st.markdown("#### 📈 Historique des mesures")
     if historique:
@@ -123,7 +143,6 @@ def _page_accueil(station_id, nom, station_nom, region):
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
                                          "nom": nom, "region": region})
         if reco:
-            # ── Layout natif st.columns : reco+TTS à gauche, météo à droite ──
             col_reco, col_meteo = st.columns([3, 2])
 
             with col_reco:
@@ -137,7 +156,6 @@ def _page_accueil(station_id, nom, station_nom, region):
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                # Bouton TTS : sous la reco, dans la colonne gauche
                 if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
                         resp = requests.post(f"{BACKEND}/tts",
@@ -152,25 +170,27 @@ def _page_accueil(station_id, nom, station_nom, region):
                     from components.weather_card import icone_emoji
                     emoji_m = icone_emoji(meteo.get("icone", "01d"))
                     st.markdown(f"""
-                    <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;
-                                padding:14px;color:white;">
-                        <div style="font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;">
-                            🌤️ Météo actuelle</div>
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <span style="font-size:2rem;">{emoji_m}</span>
-                            <div>
-                                <div style="font-size:1.5rem;font-weight:900;">{meteo.get('temp','--')}°C</div>
-                                <div style="font-size:0.78rem;opacity:0.85;">{meteo.get('description','')}</div>
+                    <div class="ia-meteo-desktop">
+                        <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;
+                                    padding:14px;color:white;">
+                            <div style="font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;">
+                                🌤️ Météo actuelle</div>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <span style="font-size:2rem;">{emoji_m}</span>
+                                <div>
+                                    <div style="font-size:1.5rem;font-weight:900;">{meteo.get('temp','--')}°C</div>
+                                    <div style="font-size:0.78rem;opacity:0.85;">{meteo.get('description','')}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div style="margin-top:8px;font-size:0.78rem;opacity:0.9;">
-                            📍 {meteo.get('ville','')}
-                        </div>
-                        <div style="margin-top:6px;font-size:0.78rem;opacity:0.88;
-                                    display:flex;gap:12px;flex-wrap:wrap;">
-                            <span>💧 {meteo.get('humidite','--')}%</span>
-                            <span>💨 {meteo.get('vent','--')} km/h</span>
-                            <span>🌡️ {meteo.get('ressenti','--')}°C</span>
+                            <div style="margin-top:8px;font-size:0.78rem;opacity:0.9;">
+                                📍 {meteo.get('ville','')}
+                            </div>
+                            <div style="margin-top:6px;font-size:0.78rem;opacity:0.88;
+                                        display:flex;gap:12px;flex-wrap:wrap;">
+                                <span>💧 {meteo.get('humidite','--')}%</span>
+                                <span>💨 {meteo.get('vent','--')} km/h</span>
+                                <span>🌡️ {meteo.get('ressenti','--')}°C</span>
+                            </div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -210,7 +230,6 @@ def _page_previsions(station_id, region):
 # ── Page principale avec sidebar ──────────────────────────────────────────────
 
 def page_agriculteur():
-    # CSS responsive injecté ICI (dans la fonction) — jamais sur la page login
     st.markdown("""
     <style>
     /* ===== CARD METEO ACTUELLE ===== */
@@ -221,6 +240,31 @@ def page_agriculteur():
     .meteo-now-desc{ font-size:0.95rem; opacity:0.85; margin-top:4px; }
     .meteo-now-ville{ margin-top:18px; font-size:0.9rem; opacity:0.9; }
     .meteo-now-infos{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.88rem; opacity:0.92; }
+
+    /* ===== MÉTÉO COMPACTE DANS L'ENTÊTE ===== */
+    .meteo-entete{
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        margin-top:7px;
+        background:rgba(255,255,255,0.10);
+        border:1px solid rgba(255,255,255,0.18);
+        border-radius:20px;
+        padding:4px 12px;
+        font-size:0.78rem;
+        font-weight:700;
+        color:white;
+        backdrop-filter:blur(4px);
+        flex-wrap:wrap;
+    }
+    .meteo-entete strong{ font-size:0.90rem; }
+    .meteo-entete-sep{ opacity:0.45; margin:0 2px; }
+
+    /* ===== COLONNE MÉTÉO DROITE (bloc IA) — masquée sur mobile ===== */
+    .ia-meteo-desktop{ display:block; }
+    @media(max-width:768px){
+        .ia-meteo-desktop{ display:none !important; }
+    }
 
     /* ===== GRILLE PREVISIONS ===== */
     .previsions-grid{
@@ -242,7 +286,6 @@ def page_agriculteur():
 
     /* ===== RESPONSIVE MOBILE ===== */
     @media(max-width:768px){
-        /* Conteneur principal */
         .stApp,.block-container,[data-testid="stAppViewBlockContainer"]{
             overflow-x:hidden !important;
             max-width:100vw !important;
@@ -253,7 +296,6 @@ def page_agriculteur():
         }
         [data-testid="collapsedControl"]{ display:none !important; }
 
-        /* Sidebar mobile */
         section[data-testid="stSidebar"]{
             width:82vw !important;
             max-width:300px !important;
@@ -266,7 +308,6 @@ def page_agriculteur():
             transition:transform 0.3s ease !important;
         }
 
-        /* ── COLONNES STREAMLIT ───────────────────── */
         [data-testid="stHorizontalBlock"]{
             flex-wrap: wrap !important;
             gap: 5px !important;
@@ -279,7 +320,6 @@ def page_agriculteur():
             box-sizing: border-box !important;
         }
 
-        /* Metrics compacts */
         [data-testid="stMetric"]{
             min-height:58px !important;
             padding:7px 5px !important;
@@ -287,22 +327,18 @@ def page_agriculteur():
         [data-testid="stMetricValue"]{ font-size:0.85rem !important; }
         [data-testid="stMetricLabel"]{ font-size:0.48rem !important; letter-spacing:0 !important; }
 
-        /* Prévisions : 2 colonnes sur mobile */
         .previsions-grid{ grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
 
-        /* Carte météo compacte */
         .meteo-card{ min-height:unset !important; padding:8px 6px !important; }
         .meteo-card .temp{ font-size:0.88rem !important; }
         .meteo-card .jour{ font-size:0.58rem !important; }
         .meteo-card .desc{ font-size:0.60rem !important; }
 
-        /* Carte météo actuelle dans le bloc IA */
         .meteo-now-card{ max-width:100% !important; padding:10px !important; }
         .meteo-now-icon{ font-size:1.8rem !important; }
         .meteo-now-temp{ font-size:1.2rem !important; }
         .meteo-now-desc{ font-size:0.72rem !important; }
 
-        /* Bloc IA : empiler en colonne sur mobile */
         .ia-flex-row{
             flex-direction:column !important;
             flex-wrap:wrap !important;
@@ -313,7 +349,18 @@ def page_agriculteur():
             min-width:0 !important;
         }
 
-        /* Typo */
+        [data-testid="stHorizontalBlock"]:has(.reco-card) > [data-testid="stColumn"]:last-child{
+            flex: 0 0 0 !important;
+            max-width: 0 !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+        }
+        [data-testid="stHorizontalBlock"]:has(.reco-card) > [data-testid="stColumn"]:first-child{
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+
         h1{ font-size:1.1rem !important; }
         .entete h1,.entete-admin h1,.page-header h1{ font-size:1.1rem !important; }
         .entete,.entete-admin,.page-header{
@@ -323,13 +370,10 @@ def page_agriculteur():
         }
         .sous-titre{ font-size:0.66rem !important; }
 
-        /* Tabs */
         .stTabs [data-baseweb="tab"]{ font-size:0.63rem !important; padding:4px 5px !important; }
 
-        /* Boutons */
         .stButton>button{ font-size:0.76rem !important; padding:8px !important; }
 
-        /* Reco card */
         .reco-card{ padding:12px 14px !important; }
         .reco-icon{ font-size:1.4rem !important; }
         .reco-titre{ font-size:0.85rem !important; }
@@ -342,16 +386,7 @@ def page_agriculteur():
     nom         = st.session_state.get("nom",          "Agriculteur")
     station_nom = st.session_state.get("station_nom",  station_id)
     region      = st.session_state.get("region",       "Kaolack")
-    
-    # Forcer la sidebar ouverte si demandé
-    """if st.session_state.get("sidebar_ouverte"):
-        st.session_state["sidebar_ouverte"] = False
-        st.set_page_config(
-            page_title="Station Météo Agricole",
-            page_icon="🌾",
-            layout="wide",
-            initial_sidebar_state="expanded"
-        )"""
+
     # ══════════════════════════════════════════
     #  SIDEBAR — style Station_meteo
     # ══════════════════════════════════════════
@@ -379,7 +414,6 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        
         st.markdown("**📍 Ma région**")
         region_sel = st.selectbox("Région", REGIONS,
                                   index=REGIONS.index(region) if region in REGIONS else 0,
@@ -419,6 +453,6 @@ def page_agriculteur():
     # ══════════════════════════════════════════
     #  ROUTING
     # ══════════════════════════════════════════
-    if "Accueil"    in page: _page_accueil(station_id, nom, station_nom, region_sel)
+    if "Accueil"      in page: _page_accueil(station_id, nom, station_nom, region_sel)
     elif "Historique" in page: _page_historique(station_id)
     elif "Prévisions" in page: _page_previsions(station_id, region_sel)
