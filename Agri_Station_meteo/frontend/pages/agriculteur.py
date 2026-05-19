@@ -13,7 +13,11 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from components.charts       import graphique_historique, graphique_jauge, graphique_tous_capteurs
-from components.weather_card import afficher_previsions, afficher_alerte_meteo, afficher_meteo_actuelle
+from components.weather_card import (
+    afficher_previsions, afficher_alerte_meteo, afficher_meteo_actuelle,
+    html_meteo_entete, html_meteo_carte_ia,
+)
+from components.html_render  import esc, render_html
 from components.auth         import deconnexion
 
 BACKEND = "https://agri-station-meteo.onrender.com"
@@ -62,51 +66,20 @@ def _page_accueil(station_id, nom, station_nom, region):
     # ── Entête + météo actuelle ──
     heure = datetime.now().strftime('%H:%M:%S')
 
-    # Construire le bloc météo en Python pur (pas de f-string imbriqué)
-    meteo_bloc = ""
-    if meteo.get("ok"):
-        from components.weather_card import icone_emoji
-        emoji_m   = icone_emoji(meteo.get("icone", "01d"))
-        temp_m    = str(meteo.get('temp', '--'))
-        desc_m    = str(meteo.get('description', ''))
-        ville_m   = str(meteo.get('ville', ''))
-        hum_m     = str(meteo.get('humidite', '--'))
-        vent_m    = str(meteo.get('vent', '--'))
-        ressenti_m = str(meteo.get('ressenti', '--'))
-        meteo_bloc = (
-            "<div class='ia-meteo-desktop'>"
-            "<div style='background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;"
-            "padding:14px;color:white;margin-top:12px;'>"
-            "<div style='font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;'>"
-            "🌤️ Météo actuelle</div>"
-            "<div style='display:flex;align-items:center;gap:12px;'>"
-            "<span style='font-size:2rem;'>" + emoji_m + "</span>"
-            "<div>"
-            "<div style='font-size:1.5rem;font-weight:900;'>" + temp_m + "°C</div>"
-            "<div style='font-size:0.78rem;opacity:0.85;'>" + desc_m + "</div>"
-            "</div></div>"
-            "<div style='margin-top:8px;font-size:0.78rem;opacity:0.9;'>"
-            "📍 " + ville_m + "</div>"
-            "<div style='margin-top:6px;font-size:0.78rem;opacity:0.88;"
-            "display:flex;gap:12px;flex-wrap:wrap;'>"
-            "<span>💧 " + hum_m + "%</span>"
-            "<span>💨 " + vent_m + " km/h</span>"
-            "<span>🌡️ " + ressenti_m + "°C</span>"
-            "</div></div></div>"
-        )
+    meteo_bloc = html_meteo_entete(meteo)
 
     html_entete = (
         "<div class='entete fade-in'>"
         "<div>"
-        "<h1>🌾 Bonjour, " + str(nom) + "</h1>"
+        "<h1>🌾 Bonjour, " + esc(nom) + "</h1>"
         "<div class='sous-titre'>"
         "<span class='live-dot'></span>"
-        + str(station_nom) + " &nbsp;·&nbsp; 📍 " + str(region) + " &nbsp;·&nbsp; " + heure
+        + esc(station_nom) + " &nbsp;·&nbsp; 📍 " + esc(region) + " &nbsp;·&nbsp; " + heure
         + "</div>"
         + meteo_bloc
         + "</div></div>"
     )
-    st.markdown(html_entete, unsafe_allow_html=True)
+    render_html(html_entete)
 
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
@@ -156,22 +129,21 @@ def _page_accueil(station_id, nom, station_nom, region):
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
                                          "nom": nom, "region": region})
         if reco:
-            col_reco, _ = st.columns([3, 2])
+            col_reco, col_meteo = st.columns([3, 2])
 
             with col_reco:
                 reco_emoji    = reco.get('emoji', '✅')
-                reco_label    = reco.get('label', '')
-                reco_conseil  = reco.get('conseil', '')
+                reco_label     = esc(reco.get('label', ''))
+                reco_conseil   = esc(reco.get('conseil', ''))
                 reco_confiance = int(reco.get('confiance', 0) * 100)
-                st.markdown(
+                render_html(
                     "<div class='reco-card fade-in'>"
                     + "<span class='reco-icon'>" + reco_emoji + "</span>"
                     + "<div class='reco-titre'>" + reco_label + "</div>"
                     + "<div class='reco-desc'>" + reco_conseil + "</div>"
                     + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;'>"
                     + "Confiance du modèle : " + str(reco_confiance) + "%"
-                    + "</div></div>",
-                    unsafe_allow_html=True
+                    + "".join(["</", "div", "></", "div", ">"])
                 )
                 if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
@@ -181,6 +153,10 @@ def _page_accueil(station_id, nom, station_nom, region):
                         if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
                         else: st.error("Erreur lors de la génération audio")
                     except Exception as e: st.error(f"Service vocal indisponible : {e}")
+
+            with col_meteo:
+                if meteo.get("ok"):
+                    render_html(html_meteo_carte_ia(meteo))
 
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
@@ -193,7 +169,7 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.markdown("#### 🌤️ Prévisions météo — 5 prochains jours")
     afficher_previsions(previsions)
 
-    st.markdown("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>", unsafe_allow_html=True)
+    render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
 
 
 def _page_historique(station_id):

@@ -5,6 +5,8 @@ Affiche des cartes visuelles par jour avec icônes et températures.
 
 import streamlit as st
 
+from components.html_render import esc, render_html
+
 # Mapping emoji OpenWeather (inline — pas d'import du backend)
 _EMOJI_METEO = {
     "01": "☀️", "02": "⛅", "03": "☁️", "04": "☁️",
@@ -15,40 +17,71 @@ def icone_emoji(code: str) -> str:
     return _EMOJI_METEO.get(code[:2], "🌡️")
 
 
+def html_meteo_entete(meteo: dict) -> str:
+    """Bandeau météo compact pour l'entête (mobile + desktop)."""
+    if not meteo.get("ok"):
+        return ""
+    emoji_m = icone_emoji(meteo.get("icone", "01d"))
+    temp_m  = esc(meteo.get("temp", "--"))
+    desc_m  = esc(meteo.get("description", ""))
+    hum_m   = esc(meteo.get("humidite", "--"))
+    vent_m  = esc(meteo.get("vent", "--"))
+    return (
+        "<div class='meteo-entete'>"
+        + emoji_m
+        + " <strong>" + temp_m + "°C</strong>"
+        + "<span class='meteo-entete-sep'>·</span> "
+        + desc_m
+        + "<span class='meteo-entete-sep'>·</span> "
+        + "💧" + hum_m + "%"
+        + "<span class='meteo-entete-sep'>·</span> "
+        + "💨" + vent_m + " km/h"
+        + "</div>"
+    )
+
+
+def html_meteo_carte_ia(meteo: dict) -> str:
+    """Carte météo complète (colonne IA, masquée sur mobile via CSS)."""
+    if not meteo.get("ok"):
+        return ""
+    emoji_m    = icone_emoji(meteo.get("icone", "01d"))
+    temp_m     = esc(meteo.get("temp", "--"))
+    desc_m     = esc(meteo.get("description", ""))
+    ville_m    = esc(meteo.get("ville", ""))
+    hum_m      = esc(meteo.get("humidite", "--"))
+    vent_m     = esc(meteo.get("vent", "--"))
+    ressenti_m = esc(meteo.get("ressenti", "--"))
+    return (
+        "<div class='ia-meteo-desktop'>"
+        "<div style='background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;"
+        "padding:14px;color:white;'>"
+        "<div style='font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;'>"
+        "🌤️ Météo actuelle</div>"
+        "<div style='display:flex;align-items:center;gap:12px;'>"
+        "<span style='font-size:2rem;'>" + emoji_m + "</span>"
+        "<div>"
+        "<div style='font-size:1.5rem;font-weight:900;'>" + temp_m + "°C</div>"
+        "<div style='font-size:0.78rem;opacity:0.85;'>" + desc_m + "</div>"
+        "</div></div>"
+        "<div style='margin-top:8px;font-size:0.78rem;opacity:0.9;'>"
+        "📍 " + ville_m + "</div>"
+        "<div style='margin-top:6px;font-size:0.78rem;opacity:0.88;"
+        "display:flex;gap:12px;flex-wrap:wrap;'>"
+        "<span>💧 " + hum_m + "%</span>"
+        "<span>💨 " + vent_m + " km/h</span>"
+        "<span>🌡️ " + ressenti_m + "°C</span>"
+        "</div></div></div>"
+    )
+
+
 def afficher_meteo_actuelle(meteo: dict):
     if not meteo.get("ok"):
         st.warning("⚠️ Météo indisponible")
         return
+    html = html_meteo_carte_ia(meteo)
+    if html:
+        render_html(html.replace("ia-meteo-desktop", "meteo-now-card", 1))
 
-    emoji = icone_emoji(meteo.get("icone", "01d"))
-
-    html = (
-        '<div style="background:linear-gradient(135deg,#16351c,#1f4d2c);'
-        'border-radius:18px;padding:20px 22px;color:white;'
-        'box-shadow:0 6px 22px rgba(0,0,0,0.28);'
-        'border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;">'
-
-        '<div style="display:flex;align-items:center;gap:16px;">'
-        f'<div style="font-size:3rem;line-height:1;">{emoji}</div>'
-        '<div>'
-        f'<div style="font-size:2rem;font-weight:800;line-height:1.1;">{meteo.get("temp","--")}°C</div>'
-        f'<div style="font-size:0.9rem;opacity:0.85;margin-top:3px;">{meteo.get("description","")}</div>'
-        '</div>'
-        '</div>'
-
-        f'<div style="margin-top:14px;font-size:0.88rem;opacity:0.9;">📍 {meteo.get("ville","")}</div>'
-
-        '<div style="margin-top:10px;padding-top:10px;'
-        'border-top:1px solid rgba(255,255,255,0.12);'
-        'font-size:0.85rem;opacity:0.92;display:flex;gap:18px;">'
-        f'<span>💧 {meteo.get("humidite","--")}%</span>'
-        f'<span>💨 {meteo.get("vent","--")} km/h</span>'
-        f'<span>🌡️ Ressenti {meteo.get("ressenti","--")}°C</span>'
-        '</div>'
-
-        '</div>'
-    )
-    st.markdown(html, unsafe_allow_html=True)
 
 def afficher_previsions(previsions_data: dict):
     if not previsions_data.get("ok"):
@@ -59,35 +92,42 @@ def afficher_previsions(previsions_data: dict):
     ville = previsions_data.get("ville", "")
 
     if ville:
-        st.markdown(f"<small style='color:#94a3b8'>📍 Données météo pour : <b>{ville}</b></small>",
-                    unsafe_allow_html=True)
+        render_html(
+            "<small style='color:#94a3b8'>📍 Données météo pour : <b>"
+            + esc(ville) + "</b></small>"
+        )
 
-    # Grille HTML native — responsive via CSS (5 col desktop, 2 col mobile)
-    cards_html = '<div class="previsions-grid">'
+    cards_html = "<div class='previsions-grid'>"
     for jour in liste:
         emoji     = icone_emoji(jour.get("icone", "01d"))
-        label     = jour.get("jour") or jour.get("date", "")
+        label     = esc(jour.get("jour") or jour.get("date", ""))
         temp_max  = jour.get("temp_max", "--")
         temp_min  = jour.get("temp_min", "--")
-        temp_str  = f"{temp_min}° ── {temp_max}°" if temp_max != "--" else f"{jour.get('temp', '--')}°C"
+        temp_str  = esc(f"{temp_min}° ── {temp_max}°" if temp_max != "--" else f"{jour.get('temp', '--')}°C")
         pluie     = jour.get("pluie", 0) or 0
         risque    = jour.get("risque_pluie", 0)
-        pluie_str = f"🌧 {pluie:.1f} mm" if pluie > 0 else f"☀️ {risque}% pluie" if risque > 10 else "☀️ Sec"
+        pluie_str = esc(
+            f"🌧 {pluie:.1f} mm" if pluie > 0
+            else f"☀️ {risque}% pluie" if risque > 10
+            else "☀️ Sec"
+        )
+        cards_html += (
+            "<div class='meteo-card'>"
+            "<div class='jour'>" + label + "</div>"
+            "<div class='icon'>" + emoji + "</div>"
+            "<div class='temp'>" + temp_str + "</div>"
+            "<div class='desc'>" + esc(jour.get("description", "")) + "</div>"
+            "<div class='desc' style='margin-top:6px'>"
+            "💧 " + esc(jour.get("humidite", "--")) + "% &nbsp;|&nbsp; "
+            "💨 " + esc(jour.get("vent", "--")) + " km/h"
+            "</div>"
+            "<div class='desc'>" + pluie_str + "</div>"
+            "</div>"
+        )
 
-        cards_html += f"""
-        <div class="meteo-card">
-            <div class="jour">{label}</div>
-            <div class="icon">{emoji}</div>
-            <div class="temp">{temp_str}</div>
-            <div class="desc">{jour.get('description', '')}</div>
-            <div class="desc" style="margin-top:6px">
-                💧 {jour.get('humidite', '--')}% &nbsp;|&nbsp; 💨 {jour.get('vent', '--')} km/h
-            </div>
-            <div class="desc">{pluie_str}</div>
-        </div>"""
+    cards_html += "</div>"
+    render_html(cards_html)
 
-    cards_html += '</div>'
-    st.markdown(cards_html, unsafe_allow_html=True)
 
 def afficher_alerte_meteo(previsions_data: dict) -> list:
     alertes = []
@@ -108,4 +148,3 @@ def afficher_alerte_meteo(previsions_data: dict) -> list:
             alertes.append(f"🌧️ Fortes pluies prévues le {label} ({pluie:.0f} mm) — surveiller le drainage")
 
     return alertes
-   
