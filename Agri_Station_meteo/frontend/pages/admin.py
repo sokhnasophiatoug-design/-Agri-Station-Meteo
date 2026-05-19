@@ -216,15 +216,14 @@ def page_admin():
     #  SIDEBAR — style Station_meteo
     # ══════════════════════════════════════════
     with st.sidebar:
-        st.markdown("""
-        <div style="text-align:center; padding:18px 0 12px;">
-            <div style="font-size:2.8rem;
-                        filter:drop-shadow(0 0 8px rgba(255,255,255,0.40));">🛰️</div>
-            <div style="font-family:'Sora',sans-serif; font-weight:900;
-                        font-size:1.05rem; margin-top:4px;">Station Météo</div>
-            <div style="font-size:0.75rem; opacity:0.65;">Interface Administrateur</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='text-align:center;padding:18px 0 12px;'>"
+            "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.40));'>🛰️</div>"
+            "<div style='font-family:Sora,sans-serif;font-weight:900;font-size:1.05rem;margin-top:4px;'>Station Météo</div>"
+            "<div style='font-size:0.75rem;opacity:0.65;'>Interface Administrateur</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
         st.markdown("---")
 
@@ -246,26 +245,28 @@ def page_admin():
 
         st.markdown("---")
 
-        st.markdown(f"""
-        <div class="sidebar-box">
-            <div style="font-weight:800; font-size:0.82rem; margin-bottom:8px;">📊 Réseau en Temps Réel</div>
-            <div style="font-size:0.82rem;">🛰️ {len(stations)} station(s) totale(s)</div>
-            <div style="font-size:0.82rem; color:#A5D6A7;">🟢 {nb_actives} active(s)</div>
-            <div style="font-size:0.82rem; color:#EF9A9A;">🔴 {nb_panne} en panne</div>
-            <div style="font-size:0.82rem; opacity:0.70; margin-top:4px;">👨‍🌾 {len(agriculteurs)} agriculteur(s)</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div class='sidebar-box'>"
+            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:8px;'>📊 Réseau en Temps Réel</div>"
+            "<div style='font-size:0.82rem;'>🛰️ " + str(len(stations)) + " station(s) totale(s)</div>"
+            "<div style='font-size:0.82rem;color:#A5D6A7;'>🟢 " + str(nb_actives) + " active(s)</div>"
+            "<div style='font-size:0.82rem;color:#EF9A9A;'>🔴 " + str(nb_panne) + " en panne</div>"
+            "<div style='font-size:0.82rem;opacity:0.70;margin-top:4px;'>👨\u200d🌾 " + str(len(agriculteurs)) + " agriculteur(s)</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
         st.markdown("---")
 
         if st.button("🚪 Se déconnecter", width='stretch', key="btn_deco_admin"):
             deconnexion()
 
-        st.markdown("""
-        <div style="font-size:0.68rem; opacity:0.45; text-align:center; margin-top:10px;">
-            ESP32 + SIM7600 + Firebase<br>Projet IoT Agricole
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='font-size:0.68rem;opacity:0.45;text-align:center;margin-top:10px;'>"
+            "ESP32 + SIM7600 + Firebase<br>Projet IoT Agricole"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
     # ══════════════════════════════════════════
     #  ROUTING

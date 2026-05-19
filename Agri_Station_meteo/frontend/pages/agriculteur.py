@@ -72,28 +72,28 @@ def _page_accueil(station_id, nom, station_nom, region):
         hum_m   = meteo.get("humidite", "--")
         vent_m  = meteo.get("vent", "--")
         meteo_bloc = (
-            "<div style=\"display:inline-flex;align-items:center;gap:6px;"
+            "<div style='display:inline-flex;align-items:center;gap:6px;"
             "margin-top:7px;background:rgba(255,255,255,0.10);"
             "border:1px solid rgba(255,255,255,0.18);border-radius:20px;"
             "padding:4px 12px;font-size:0.78rem;font-weight:700;"
-            "color:white;backdrop-filter:blur(4px);flex-wrap:wrap;\">"
+            "color:white;backdrop-filter:blur(4px);flex-wrap:wrap;'>"
             + emoji_m
-            + " <strong style=\"font-size:0.90rem;\">" + str(temp_m) + "°C</strong>"
-            + " <span style=\"opacity:0.45;margin:0 2px;\">·</span> "
+            + " <strong style='font-size:0.90rem;'>" + str(temp_m) + "°C</strong>"
+            + " <span style='opacity:0.45;margin:0 2px;'>·</span> "
             + str(desc_m)
-            + " <span style=\"opacity:0.45;margin:0 2px;\">·</span> "
+            + " <span style='opacity:0.45;margin:0 2px;'>·</span> "
             + "💧" + str(hum_m) + "%"
-            + " <span style=\"opacity:0.45;margin:0 2px;\">·</span> "
+            + " <span style='opacity:0.45;margin:0 2px;'>·</span> "
             + "💨" + str(vent_m) + " km/h"
             + "</div>"
         )
 
     html_entete = (
-        "<div class=\"entete fade-in\">"
+        "<div class='entete fade-in'>"
         "<div>"
         "<h1>🌾 Bonjour, " + str(nom) + "</h1>"
-        "<div class=\"sous-titre\">"
-        "<span class=\"live-dot\"></span>"
+        "<div class='sous-titre'>"
+        "<span class='live-dot'></span>"
         + str(station_nom) + " &nbsp;·&nbsp; 📍 " + str(region) + " &nbsp;·&nbsp; " + heure
         + "</div>"
         + meteo_bloc
@@ -152,16 +152,20 @@ def _page_accueil(station_id, nom, station_nom, region):
             col_reco, col_meteo = st.columns([3, 2])
 
             with col_reco:
-                st.markdown(f"""
-                <div class="reco-card fade-in">
-                    <span class="reco-icon">{reco.get('emoji', '✅')}</span>
-                    <div class="reco-titre">{reco.get('label', '')}</div>
-                    <div class="reco-desc">{reco.get('conseil', '')}</div>
-                    <div style="margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;">
-                        Confiance du modèle : {int(reco.get('confiance', 0) * 100)}%
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                reco_emoji    = reco.get('emoji', '✅')
+                reco_label    = reco.get('label', '')
+                reco_conseil  = reco.get('conseil', '')
+                reco_confiance = int(reco.get('confiance', 0) * 100)
+                st.markdown(
+                    "<div class='reco-card fade-in'>"
+                    + "<span class='reco-icon'>" + reco_emoji + "</span>"
+                    + "<div class='reco-titre'>" + reco_label + "</div>"
+                    + "<div class='reco-desc'>" + reco_conseil + "</div>"
+                    + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;'>"
+                    + "Confiance du modèle : " + str(reco_confiance) + "%"
+                    + "</div></div>",
+                    unsafe_allow_html=True
+                )
                 if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
                         resp = requests.post(f"{BACKEND}/tts",
@@ -174,32 +178,35 @@ def _page_accueil(station_id, nom, station_nom, region):
             with col_meteo:
                 if meteo.get("ok"):
                     from components.weather_card import icone_emoji
-                    emoji_m = icone_emoji(meteo.get("icone", "01d"))
-                    st.markdown(f"""
-                    <div class="ia-meteo-desktop">
-                        <div style="background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;
-                                    padding:14px;color:white;">
-                            <div style="font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;">
-                                🌤️ Météo actuelle</div>
-                            <div style="display:flex;align-items:center;gap:12px;">
-                                <span style="font-size:2rem;">{emoji_m}</span>
-                                <div>
-                                    <div style="font-size:1.5rem;font-weight:900;">{meteo.get('temp','--')}°C</div>
-                                    <div style="font-size:0.78rem;opacity:0.85;">{meteo.get('description','')}</div>
-                                </div>
-                            </div>
-                            <div style="margin-top:8px;font-size:0.78rem;opacity:0.9;">
-                                📍 {meteo.get('ville','')}
-                            </div>
-                            <div style="margin-top:6px;font-size:0.78rem;opacity:0.88;
-                                        display:flex;gap:12px;flex-wrap:wrap;">
-                                <span>💧 {meteo.get('humidite','--')}%</span>
-                                <span>💨 {meteo.get('vent','--')} km/h</span>
-                                <span>🌡️ {meteo.get('ressenti','--')}°C</span>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    emoji_m   = icone_emoji(meteo.get("icone", "01d"))
+                    temp_m    = str(meteo.get('temp', '--'))
+                    desc_m    = str(meteo.get('description', ''))
+                    ville_m   = str(meteo.get('ville', ''))
+                    hum_m     = str(meteo.get('humidite', '--'))
+                    vent_m    = str(meteo.get('vent', '--'))
+                    ressenti_m = str(meteo.get('ressenti', '--'))
+                    st.markdown(
+                        "<div class='ia-meteo-desktop'>"
+                        "<div style='background:linear-gradient(135deg,#16351c,#1f4d2c);border-radius:14px;"
+                        "padding:14px;color:white;'>"
+                        "<div style='font-size:0.75rem;font-weight:800;opacity:0.7;margin-bottom:8px;'>"
+                        "🌤️ Météo actuelle</div>"
+                        "<div style='display:flex;align-items:center;gap:12px;'>"
+                        "<span style='font-size:2rem;'>" + emoji_m + "</span>"
+                        "<div>"
+                        "<div style='font-size:1.5rem;font-weight:900;'>" + temp_m + "°C</div>"
+                        "<div style='font-size:0.78rem;opacity:0.85;'>" + desc_m + "</div>"
+                        "</div></div>"
+                        "<div style='margin-top:8px;font-size:0.78rem;opacity:0.9;'>"
+                        "📍 " + ville_m + "</div>"
+                        "<div style='margin-top:6px;font-size:0.78rem;opacity:0.88;"
+                        "display:flex;gap:12px;flex-wrap:wrap;'>"
+                        "<span>💧 " + hum_m + "%</span>"
+                        "<span>💨 " + vent_m + " km/h</span>"
+                        "<span>🌡️ " + ressenti_m + "°C</span>"
+                        "</div></div></div>",
+                        unsafe_allow_html=True
+                    )
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
     else:
@@ -211,7 +218,7 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.markdown("#### 🌤️ Prévisions météo — 5 prochains jours")
     afficher_previsions(previsions)
 
-    st.markdown('<div class="footer">Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>', unsafe_allow_html=True)
+    st.markdown("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>", unsafe_allow_html=True)
 
 
 def _page_historique(station_id):
@@ -397,18 +404,15 @@ def page_agriculteur():
     #  SIDEBAR — style Station_meteo
     # ══════════════════════════════════════════
     with st.sidebar:
-        st.markdown(f"""
-        <div style="text-align:center; padding:18px 0 12px;">
-            <div style="font-size:2.8rem;
-                        filter:drop-shadow(0 0 8px rgba(255,255,255,0.35));">🌾</div>
-            <div style="font-family:'Sora',sans-serif; font-weight:900;
-                        font-size:1.05rem; margin-top:4px;">{nom}</div>
-            <div style="font-size:0.78rem; opacity:0.65;">Agriculteur</div>
-            <div style="font-size:0.70rem; opacity:0.50; margin-top:3px;">
-                📡 {station_nom}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='text-align:center;padding:18px 0 12px;'>"
+            "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.35));'>🌾</div>"
+            "<div style='font-family:Sora,sans-serif;font-weight:900;font-size:1.05rem;margin-top:4px;'>" + nom + "</div>"
+            "<div style='font-size:0.78rem;opacity:0.65;'>Agriculteur</div>"
+            "<div style='font-size:0.70rem;opacity:0.50;margin-top:3px;'>📡 " + station_nom + "</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
         st.markdown("---")
 
@@ -436,25 +440,27 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        st.markdown(f"""
-        <div class="sidebar-box">
-            <div style="font-weight:800; font-size:0.82rem; margin-bottom:6px;">📊 Ma Station</div>
-            <div style="font-size:0.80rem; opacity:0.85;">🛰️ ID : {station_id}</div>
-            <div style="font-size:0.80rem; opacity:0.85;">📍 {region_sel}</div>
-            <div style="font-size:0.72rem; opacity:0.55; margin-top:4px;">ESP32 + SIM7600 + Firebase</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div class='sidebar-box'>"
+            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:6px;'>📊 Ma Station</div>"
+            "<div style='font-size:0.80rem;opacity:0.85;'>🛰️ ID : " + station_id + "</div>"
+            "<div style='font-size:0.80rem;opacity:0.85;'>📍 " + region_sel + "</div>"
+            "<div style='font-size:0.72rem;opacity:0.55;margin-top:4px;'>ESP32 + SIM7600 + Firebase</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
         st.markdown("---")
 
         if st.button("🚪 Se déconnecter", width='stretch', key="btn_deco_agri"):
             deconnexion()
 
-        st.markdown("""
-        <div style="font-size:0.68rem; opacity:0.45; text-align:center; margin-top:10px;">
-            Projet IoT Agricole · USSEIN Sénégal
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='font-size:0.68rem;opacity:0.45;text-align:center;margin-top:10px;'>"
+            "Projet IoT Agricole · USSEIN Sénégal"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
     # ══════════════════════════════════════════
     #  ROUTING

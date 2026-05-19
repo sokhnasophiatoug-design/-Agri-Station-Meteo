@@ -319,18 +319,16 @@ def page_login():
     _, col_c, _ = st.columns([1, 1.6, 1])
     with col_c:
         # Logo
-        st.markdown("""
-        <div style="text-align:center; padding:24px 0 16px;">
-            <div style="font-size:3.8rem; filter:drop-shadow(0 0 18px rgba(67,160,71,0.6));">🌾</div>
-            <div style="font-family:'Sora',sans-serif; font-size:1.65rem; font-weight:800;
-                        color:#ffffff; letter-spacing:-0.5px; margin-top:6px;">
-                Station Météo Agricole
-            </div>
-            <div style="color:rgba(255,255,255,0.50); font-size:0.83rem; margin-top:5px; font-weight:600;">
-                Plateforme IoT — Surveillance climatique pour agriculteurs
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='text-align:center;padding:24px 0 16px;'>"
+            "<div style='font-size:3.8rem;filter:drop-shadow(0 0 18px rgba(67,160,71,0.6));'>🌾</div>"
+            "<div style='font-family:Sora,sans-serif;font-size:1.65rem;font-weight:800;"
+            "color:#ffffff;letter-spacing:-0.5px;margin-top:6px;'>Station Météo Agricole</div>"
+            "<div style='color:rgba(255,255,255,0.50);font-size:0.83rem;margin-top:5px;font-weight:600;'>"
+            "Plateforme IoT \u2014 Surveillance climatique pour agriculteurs</div>"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
         # Switcher onglets
         tab_actuel = st.session_state["auth_tab"]
@@ -354,12 +352,13 @@ def page_login():
             _form_inscription()
         # st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("""
-        <div style="text-align:center; color:rgba(255,255,255,0.28); font-size:0.72rem; margin-top:18px;">
-            Projet IoT — Agriculture Intelligente au Sénégal<br>
-            Université du Sine Saloum El Hâdj Ibrahima Niass (USSEIN)
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            "<div style='text-align:center;color:rgba(255,255,255,0.28);font-size:0.72rem;margin-top:18px;'>"
+            "Projet IoT \u2014 Agriculture Intelligente au Sénégal<br>"
+            "Université du Sine Saloum El Hâdj Ibrahima Niass (USSEIN)"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
 
 def deconnexion():
