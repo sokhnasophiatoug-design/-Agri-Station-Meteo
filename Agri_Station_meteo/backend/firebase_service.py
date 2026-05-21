@@ -194,3 +194,33 @@ def verify_id_token(id_token: str) -> dict:
         payload["uid"] = uid
 
     return payload
+
+
+def sauvegarder_openweather(station_id: str, previsions: list):
+    """Sauvegarde les prévisions OpenWeather dans Firebase pour l'historique."""
+    try:
+        from datetime import datetime
+        ref = db.reference(f"stations/{station_id}/openweather_historique")
+        for jour in previsions:
+            ref.push({
+                "jour"              : jour.get("jour", ""),
+                "temperature_future": jour.get("temp_max", 0),
+                "humidite_future"   : jour.get("humidite", 0),
+                "vent_future"       : jour.get("vent", 0),
+                "pluie_prevue_3h"   : jour.get("pluie", 0),
+                "timestamp"         : datetime.now().isoformat(),
+            })
+    except Exception as e:
+        print(f"❌ sauvegarder_openweather : {e}")
+
+
+def get_openweather_historique(station_id: str) -> list:
+    """Retourne l'historique des prévisions OpenWeather sauvegardées."""
+    try:
+        data = db.reference(f"stations/{station_id}/openweather_historique").get()
+        if not data or not isinstance(data, dict):
+            return []
+        return list(data.values())
+    except Exception as e:
+        print(f"❌ get_openweather_historique : {e}")
+        return []

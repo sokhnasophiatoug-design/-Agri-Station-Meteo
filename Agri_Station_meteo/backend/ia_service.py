@@ -67,6 +67,22 @@ def _entrainer_modele():
     return modele
 
 
+def _regles(
+    temperature: float,
+    humidite_air: float,
+    humidite_sol: float,
+    vitesse_vent: float,
+) -> int:
+    """Calcule un label basé sur des règles simples pour le dataset de réentrainement."""
+    if vitesse_vent >= 45:
+        return 4
+    if humidite_sol <= 20:
+        return 2 if temperature >= 30 else 1
+    if humidite_air >= 80 and temperature >= 28:
+        return 3
+    return 0
+
+
 # Entraînement au démarrage du module
 _modele = _entrainer_modele()
 
@@ -102,6 +118,64 @@ def get_recommandation(
         "confiance":  round(float(proba[idx]), 3),
     }
 
+def construire_dataset(station_id: str) -> list:
+    """Fusionne historique capteurs + OpenWeather + calcule le label."""
+    from firebase_service import get_historique, get_openweather_historique
+
+    capteurs    = get_historique(station_id, limit=1000)
+    openweather = get_openweather_historique(station_id)
+
+    dataset = []
+    for mesure in capteurs:
+        # Prendre la première prévision disponible (simplification)
+        prev = openweather[0] if openweather else {}
+
+        label = _regles(
+            mesure.get("temperature",  0),
+            mesure.get("humidite_air", 0),
+            mesure.get("humidite_sol", 0),
+            mesure.get("vitesse_vent", 0),
+        )
+
+        dataset.append({
+            "temperature"       : mesure.get("temperature",  0),
+            "humidite_air"      : mesure.get("humidite_air", 0),
+            "humidite_sol"      : mesure.get("humidite_sol", 0),
+            "vitesse_vent"      : mesure.get("vitesse_vent", 0),
+            "pluie_prevue_3h"   : prev.get("pluie_prevue_3h",    0),
+            "temperature_future": prev.get("temperature_future",  0),
+            "humidite_future"   : prev.get("humidite_future",     0),
+            "vent_future"       : prev.get("vent_future",         0),
+            "label"             : label,
+        })
+    return dataset
+
+
+def reentainer_modele(station_id: str):
+    """Re-entraîne le modèle avec les données réelles si suffisantes."""
+    global _modele
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.model_selection import train_test_split
+    import pandas as pd
+
+    dataset = construire_dataset(station_id)
+
+    if len(dataset) < 100:
+        print(f"[IA] Dataset trop petit ({len(dataset)} entrées) — modèle synthétique conservé")
+        return
+
+    df = pd.DataFrame(dataset)
+    X  = df[["temperature", "humidite_air", "humidite_sol", "vitesse_vent",
+             "pluie_prevue_3h", "temperature_future", "humidite_future", "vent_future"]]
+    y  = df["label"]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    nouveau_modele = DecisionTreeClassifier(max_depth=7, random_state=42)
+    nouveau_modele.fit(X_train, y_train)
+    score = nouveau_modele.score(X_test, y_test)
+
+    _modele = nouveau_modele
+    print(f"[IA] Re-entraîné sur données réelles — précision : {score:.2%} ({len(dataset)} entrées)")
 
 def get_message_vocal(
     nom: str,

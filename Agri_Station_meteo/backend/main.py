@@ -176,16 +176,33 @@ def debug_firebase(station_id: str):
 
 
 # ── Prévisions météo ─────────────────────────────────────────────────────────
-
 @app.get("/previsions/{station_id}", tags=["Météo"])
-def get_previsions(station_id: str, region: str = "Kaolack"):
-    """Prévisions météo 5 jours — recherche par nom de ville (comme Station_meteo)."""
-    gps = firebase_service.get_station_gps(station_id)
-    lat = gps.get("latitude",  None)
-    lon = gps.get("longitude", None)
+def get_previsions(station_id: str, region: str = "Kaolack", lat: float = None, lon: float = None):
+    """Prévisions météo 5 jours + sauvegarde dans Firebase.
+
+    Comportement :
+    - si `lat` et `lon` fournis en query params, utilisation directe.
+    - sinon, tentative de lecture GPS depuis Firebase pour la station.
+    - sinon, fallback sur `region`.
+    """
+    # Priorité : params explicites > GPS station > region
+    if lat is None or lon is None:
+        gps = firebase_service.get_station_gps(station_id)
+        lat = lat or gps.get("latitude")
+        lon = lon or gps.get("longitude")
+
     result = weather_service.get_previsions_5j(region=region, lat=lat, lon=lon)
     if not result.get("ok"):
         raise HTTPException(status_code=503, detail=result.get("erreur", "Erreur météo"))
+
+    # Sauvegarder dans Firebase pour l'historique IA (si on a une liste)
+    if isinstance(result.get("liste"), list) and result.get("liste"):
+        try:
+            firebase_service.sauvegarder_openweather(station_id, result["liste"])
+        except Exception:
+            # Ne pas interrompre le flux principal si sauvegarde échoue
+            print(f"⚠️ Impossible de sauvegarder les prévisions pour {station_id}")
+
     return result
 
 # ── Météo actuelle ───────────────────────────────────────
@@ -226,6 +243,13 @@ def get_recommandation(body: RecommandationRequest):
     )
     return result
 
+
+@app.get("/ia/reentainer/{station_id}", tags=["IA"])  # permet GET pour déclencher manuellement depuis un navigateur
+@app.post("/ia/reentainer/{station_id}", tags=["IA"])
+def reentainer_ia(station_id: str):
+    """Re-entraîne le modèle IA avec les données réelles de la station."""
+    ia_service.reentainer_modele(station_id)
+    return {"statut": "ok", "message": f"Modèle IA mis à jour pour {station_id}"}
 
 # ── Synthèse vocale ──────────────────────────────────────────────────────────
 
