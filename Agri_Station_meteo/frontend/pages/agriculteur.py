@@ -143,7 +143,7 @@ def _page_accueil(station_id, nom, station_nom, region):
                     + "Confiance du modèle : " + str(reco_confiance) + "%"
                     + "".join(["</", "div", "></", "div", ">"])
                 )
-                if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
+                if st.button(" Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
                         resp = requests.post(f"{BACKEND}/tts",
                                              json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
@@ -373,7 +373,7 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        st.markdown("** Ma région**")
+        
         region_sel = st.selectbox("Région", REGIONS,
                                   index=REGIONS.index(region) if region in REGIONS else 0,
                                   label_visibility="collapsed", key="agri_region_sel")
