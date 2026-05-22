@@ -65,12 +65,12 @@ def _page_tableau(stations, agriculteurs):
 
         f'<div style="{_CARD.format(color="#1B5E20")}">'
         f'<div style="{_VAL.format(color="#1B5E20")}">{nb_stations}</div>'
-        f'<div style="{_LBL}">📡 Stations totales</div>'
+        f'<div style="{_LBL}"> Stations totales</div>'
         '</div>'
 
         f'<div style="{_CARD.format(color="#43A047")}">'
         f'<div style="{_VAL.format(color="#43A047")}">{stations_actives}</div>'
-        f'<div style="{_LBL}">✅ Stations actives</div>'
+        f'<div style="{_LBL}"> Stations actives</div>'
         '</div>'
 
         f'<div style="{_CARD.format(color="#00695C")}">'
@@ -236,22 +236,22 @@ def page_admin():
 
         st.markdown("---")
 
-        st.markdown("** Filtrer par Région**")
+        """st.markdown("** Filtrer par Région**")
         regions_dispo = ["Toutes"] + sorted({
             data.get("region", "") for data in stations.values() if data.get("region")
         })
         filtre_region = st.selectbox("Région", regions_dispo,
                                      label_visibility="collapsed", key="admin_filtre_region")
 
-        st.markdown("---")
+        st.markdown("---")"""
 
         st.markdown(
             "<div class='sidebar-box'>"
             "<div style='font-weight:800;font-size:0.82rem;margin-bottom:8px;'> Réseau en Temps Réel</div>"
-            "<div style='font-size:0.82rem;'>🛰️ " + str(len(stations)) + " station(s) totale(s)</div>"
+            "<div style='font-size:0.82rem;'> " + str(len(stations)) + " station(s) totale(s)</div>"
             "<div style='font-size:0.82rem;color:#A5D6A7;'>🟢 " + str(nb_actives) + " active(s)</div>"
             "<div style='font-size:0.82rem;color:#EF9A9A;'>🔴 " + str(nb_panne) + " en panne</div>"
-            "<div style='font-size:0.82rem;opacity:0.70;margin-top:4px;'>\u200d🌾 " + str(len(agriculteurs)) + " agriculteur(s)</div>"
+            "<div style='font-size:0.82rem;opacity:0.70;margin-top:4px;'>\u200d " + str(len(agriculteurs)) + " agriculteur(s)</div>"
             "</div>",
             unsafe_allow_html=True
         )

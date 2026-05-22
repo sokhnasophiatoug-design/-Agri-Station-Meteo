@@ -69,10 +69,10 @@ def _page_accueil(station_id, nom, station_nom, region):
     html_entete = (
         "<div class='entete fade-in'>"
         "<div>"
-        "<h1>🌾 Bonjour, " + esc(nom) + "</h1>"
+        "<h1> Bonjour, " + esc(nom) + "</h1>"
         "<div class='sous-titre'>"
         "<span class='live-dot'></span>"
-        + esc(station_nom) + " &nbsp;·&nbsp; 📍 " + esc(region) + " &nbsp;·&nbsp; " + heure
+        + esc(station_nom) + " &nbsp;·&nbsp;  " + esc(region) + " &nbsp;·&nbsp; " + heure
         + "</div>"
         + meteo_bloc
         + "</div></div>"
@@ -86,7 +86,7 @@ def _page_accueil(station_id, nom, station_nom, region):
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
 
     if not mesures:
-        st.error("❌ Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
+        st.error(" Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
         return
 
     temp    = mesures.get("temperature",  "--")
@@ -355,7 +355,7 @@ def page_agriculteur():
     with st.sidebar:
         st.markdown(
             "<div style='text-align:center;padding:18px 0 12px;'>"
-            "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.35));'>🌾</div>"
+            "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.35));'></div>"
             "<div style='font-family:Sora,sans-serif;font-weight:900;font-size:1.05rem;margin-top:4px;'>" + nom + "</div>"
             "<div style='font-size:0.78rem;opacity:0.65;'>Agriculteur</div>"
             "<div style='font-size:0.70rem;opacity:0.50;margin-top:3px;'> " + station_nom + "</div>"

@@ -230,7 +230,7 @@ def _trad_signup(msg):
 
 
 def _form_connexion():
-    st.markdown('<div class="info-box">🌿 Connectez-vous pour accéder aux données météo de votre parcelle.</div>',
+    st.markdown('<div class="info-box"> Connectez-vous pour accéder aux données météo de votre parcelle.</div>',
                 unsafe_allow_html=True)
     with st.form("form_login", clear_on_submit=False):
         email    = st.text_input(" Adresse email",  placeholder="votre@email.com")
@@ -315,7 +315,7 @@ def page_login():
         # Logo
         st.markdown(
             "<div style='text-align:center;padding:24px 0 16px;'>"
-            "<div style='font-size:3.8rem;filter:drop-shadow(0 0 18px rgba(67,160,71,0.6));'>🌾</div>"
+            "<div style='font-size:3.8rem;filter:drop-shadow(0 0 18px rgba(67,160,71,0.6));'></div>"
             "<div style='font-family:Sora,sans-serif;font-size:1.65rem;font-weight:800;"
             "color:#ffffff;letter-spacing:-0.5px;margin-top:6px;'>Station Météo Agricole</div>"
             "<div style='color:rgba(255,255,255,0.50);font-size:0.83rem;margin-top:5px;font-weight:600;'>"
