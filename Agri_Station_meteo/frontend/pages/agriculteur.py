@@ -23,9 +23,7 @@ from components.auth         import deconnexion
 BACKEND = "https://agri-station-meteo.onrender.com"
 
 REGIONS = [
-    "Dakar", "Thiès", "Kaolack", "Saint-Louis", "Fatick",
-    "Diourbel", "Ziguinchor", "Tambacounda", "Louga", "Matam",
-    "Kaffrine", "Kédougou", "Kolda", "Sédhiou",
+    "Kaolack",
 ]
 
 
@@ -99,22 +97,22 @@ def _page_accueil(station_id, nom, station_nom, region):
 
     alertes = _calculer_alertes(mesures, seuils) + afficher_alerte_meteo(previsions)
     if alertes:
-        with st.expander(f"🚨 {len(alertes)} alerte(s) active(s)", expanded=True):
+        with st.expander(f" {len(alertes)} alerte(s) active(s)", expanded=True):
             for al in alertes: st.warning(al)
 
     st.markdown("---")
-    st.markdown("#### 📡 Mesures en temps réel")
+    st.markdown("####  Mesures en temps réel")
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.metric("🌡️ Température",  f"{temp}°C"    if isinstance(temp,    (int, float)) else temp,    delta="⚠️ Élevé" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
-    with c2: st.metric("💧 Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
-    with c3: st.metric("🌱 Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="⚠️ Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
-    with c4: st.metric("💨 Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
-    st.caption(f"🕐 Dernière mesure : {ts}")
+    with c1: st.metric(" Température",  f"{temp}°C"    if isinstance(temp,    (int, float)) else temp,    delta="Élevé" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
+    with c2: st.metric(" Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
+    with c3: st.metric(" Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta=" Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
+    with c4: st.metric(" Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
+    st.caption(f" Dernière mesure : {ts}")
 
     st.markdown("---")
-    st.markdown("#### 📈 Historique des mesures")
+    st.markdown("####  Historique des mesures")
     if historique:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌡️ Température", "💧 Humidité air", "🌱 Humidité sol", "💨 Vent", "📊 Vue globale"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([" Température", " Humidité air", " Humidité sol", " Vent", " Vue globale"])
         with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
         with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
         with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
@@ -123,7 +121,7 @@ def _page_accueil(station_id, nom, station_nom, region):
     else:
         st.info("Aucun historique disponible pour le moment.")
 
-    st.markdown("#### 🤖 Conseil de votre assistant agricole IA")
+    st.markdown("####  Conseil de votre assistant agricole IA")
     if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
         reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
@@ -132,7 +130,7 @@ def _page_accueil(station_id, nom, station_nom, region):
             col_reco, col_meteo = st.columns([3, 2])
 
             with col_reco:
-                reco_emoji    = reco.get('emoji', '✅')
+                reco_emoji    = reco.get('emoji', '')
                 reco_label     = esc(reco.get('label', ''))
                 reco_conseil   = esc(reco.get('conseil', ''))
                 reco_confiance = int(reco.get('confiance', 0) * 100)
@@ -166,18 +164,18 @@ def _page_accueil(station_id, nom, station_nom, region):
         st.info("Données capteurs insuffisantes pour générer une recommandation.")
 
     st.markdown("---")
-    st.markdown("#### 🌤️ Prévisions météo — 5 prochains jours")
+    st.markdown("####  Prévisions météo — 5 prochains jours")
     afficher_previsions(previsions)
 
     render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
 
 
 def _page_historique(station_id):
-    st.markdown("#### 📋 Historique complet")
+    st.markdown("####  Historique complet")
     historique = _get(f"/historique/{station_id}?limit=200", default={}).get("historique", [])
     if not historique:
         st.info("Aucun historique disponible."); return
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌡️ Température", "💧 Humidité air", "🌱 Humidité sol", "💨 Vent", "📊 Vue globale"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([" Température", " Humidité air", " Humidité sol", " Vent", " Vue globale"])
     with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
     with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
     with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
@@ -186,7 +184,7 @@ def _page_historique(station_id):
 
 
 def _page_previsions(station_id, region):
-    st.markdown("#### 🌤️ Prévisions météo — 5 prochains jours")
+    st.markdown("####  Prévisions météo — 5 prochains jours")
     previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
     afficher_previsions(previsions)
 
@@ -360,7 +358,7 @@ def page_agriculteur():
             "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.35));'>🌾</div>"
             "<div style='font-family:Sora,sans-serif;font-weight:900;font-size:1.05rem;margin-top:4px;'>" + nom + "</div>"
             "<div style='font-size:0.78rem;opacity:0.65;'>Agriculteur</div>"
-            "<div style='font-size:0.70rem;opacity:0.50;margin-top:3px;'>📡 " + station_nom + "</div>"
+            "<div style='font-size:0.70rem;opacity:0.50;margin-top:3px;'> " + station_nom + "</div>"
             "</div>",
             unsafe_allow_html=True
         )
@@ -368,14 +366,14 @@ def page_agriculteur():
         st.markdown("---")
 
         page = st.radio("Navigation", [
-            "🏠 Accueil",
-            "📋 Historique",
-            "🌤️ Prévisions",
+            " Accueil",
+            " Historique",
+            " Prévisions",
         ], label_visibility="collapsed")
 
         st.markdown("---")
 
-        st.markdown("**📍 Ma région**")
+        st.markdown("** Ma région**")
         region_sel = st.selectbox("Région", REGIONS,
                                   index=REGIONS.index(region) if region in REGIONS else 0,
                                   label_visibility="collapsed", key="agri_region_sel")
@@ -383,9 +381,9 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        auto = st.checkbox("🔄 Actualisation auto (30s)", value=False)
+        auto = st.checkbox(" Actualisation auto (30s)", value=False)
         if auto:
-            st.info("🔄 Actualisation dans 30s…")
+            st.info(" Actualisation dans 30s…")
             time.sleep(30)
             st.rerun()
 
@@ -393,9 +391,9 @@ def page_agriculteur():
 
         st.markdown(
             "<div class='sidebar-box'>"
-            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:6px;'>📊 Ma Station</div>"
-            "<div style='font-size:0.80rem;opacity:0.85;'>🛰️ ID : " + station_id + "</div>"
-            "<div style='font-size:0.80rem;opacity:0.85;'>📍 " + region_sel + "</div>"
+            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:6px;'> Ma Station</div>"
+            "<div style='font-size:0.80rem;opacity:0.85;'> ID : " + station_id + "</div>"
+            "<div style='font-size:0.80rem;opacity:0.85;'> " + region_sel + "</div>"
             "<div style='font-size:0.72rem;opacity:0.55;margin-top:4px;'>ESP32 + SIM7600 + Firebase</div>"
             "</div>",
             unsafe_allow_html=True
@@ -403,7 +401,7 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        if st.button("🚪 Se déconnecter", width='stretch', key="btn_deco_agri"):
+        if st.button(" Se déconnecter", width='stretch', key="btn_deco_agri"):
             deconnexion()
 
         st.markdown(

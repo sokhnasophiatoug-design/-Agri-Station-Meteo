@@ -39,7 +39,7 @@ def _page_tableau(stations, agriculteurs):
     st.markdown(f"""
     <div class="entete-admin fade-in">
         <div>
-            <h1>🛰️ Tableau de Bord Administrateur</h1>
+            <h1> Tableau de Bord Administrateur</h1>
             <div class="sous-titre">
                 <span class="live-dot"></span>
                 Supervision globale — {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
@@ -75,7 +75,7 @@ def _page_tableau(stations, agriculteurs):
 
         f'<div style="{_CARD.format(color="#00695C")}">'
         f'<div style="{_VAL.format(color="#00695C")}">{nb_agriculteurs}</div>'
-        f'<div style="{_LBL}">👨‍🌾 Agriculteurs</div>'
+        f'<div style="{_LBL}"> Agriculteurs</div>'
         '</div>'
 
         '</div>'
@@ -83,7 +83,7 @@ def _page_tableau(stations, agriculteurs):
     st.markdown(html_kpi, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("#### 🗺️ Carte interactive des stations météo")
+    st.markdown("####  Carte GPS")
     if stations:
         afficher_carte_stations(stations)
     else:
@@ -94,16 +94,16 @@ def _page_tableau(stations, agriculteurs):
         m = data.get("mesures", {})
         s = data.get("seuils", {"temp_max": 40, "hum_sol_min": 25, "vent_max": 45})
         t, hs, v = m.get("temperature"), m.get("humidite_sol"), m.get("vitesse_vent")
-        if t  and isinstance(t,  (int, float)) and t  > s.get("temp_max",    40): alertes_globales.append(f"🌡️ [{st_id}] Température critique : {t:.1f}°C")
-        if hs and isinstance(hs, (int, float)) and hs < s.get("hum_sol_min", 25): alertes_globales.append(f"🌱 [{st_id}] Sol très sec : {hs:.1f}%")
-        if v  and isinstance(v,  (int, float)) and v  > s.get("vent_max",    45): alertes_globales.append(f"💨 [{st_id}] Vent fort : {v:.1f} km/h")
+        if t  and isinstance(t,  (int, float)) and t  > s.get("temp_max",    40): alertes_globales.append(f" [{st_id}] Température critique : {t:.1f}°C")
+        if hs and isinstance(hs, (int, float)) and hs < s.get("hum_sol_min", 25): alertes_globales.append(f" [{st_id}] Sol très sec : {hs:.1f}%")
+        if v  and isinstance(v,  (int, float)) and v  > s.get("vent_max",    45): alertes_globales.append(f" [{st_id}] Vent fort : {v:.1f} km/h")
     if alertes_globales:
-        with st.expander(f"🚨 {len(alertes_globales)} alerte(s) réseau", expanded=True):
+        with st.expander(f" {len(alertes_globales)} alerte(s) réseau", expanded=True):
             for al in alertes_globales: st.warning(al)
 
 
 def _page_donnees(stations):
-    st.markdown("#### 📊 Mesures actuelles de toutes les stations")
+    st.markdown("####  Mesures actuelles de toutes les stations")
     if not stations:
         st.info("Aucune donnée disponible."); return
     rows = []
@@ -116,7 +116,7 @@ def _page_donnees(stations):
 
 
 def _page_agriculteurs(agriculteurs):
-    st.markdown("#### 👨‍🌾 Liste des agriculteurs enregistrés")
+    st.markdown("####  Liste des agriculteurs enregistrés")
     if not agriculteurs:
         st.info("Aucun agriculteur enregistré."); return
     rows = []
@@ -124,32 +124,32 @@ def _page_agriculteurs(agriculteurs):
         rows.append({"UID": uid[:12] + "...", "Nom": info.get("nom", "N/A"), "Email": info.get("email", "N/A"),
                      "Région": info.get("region", "N/A"), "Station": info.get("station_id", "N/A"),
                      "Station nom": info.get("station_nom", "N/A"), "Téléphone": info.get("telephone", "N/A"),
-                     "Actif": "✅" if info.get("actif", True) else "❌",
+                     "Actif": "" if info.get("actif", True) else "",
                      "Créé le": info.get("date_creation", "N/A")[:10] if info.get("date_creation") else "N/A"})
     st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
 
 def _page_seuils(stations):
-    st.markdown("#### ⚙️ Seuils d'alerte globaux")
-    st.info("ℹ️ Ces seuils s'appliquent à toutes les stations du réseau.")
+    st.markdown("####  Seuils d'alerte globaux")
+    st.info(" Ces seuils s'appliquent à toutes les stations du réseau.")
 
     seuils_actuels = _get("/seuils", default={"temp_max": 40.0, "temp_min": 15.0, "hum_sol_min": 25.0, "vent_max": 45.0})
 
     with st.form("form_seuils"):
         sc1, sc2 = st.columns(2)
         with sc1:
-            temp_max    = st.number_input("🌡️ Temp. max (°C)",    value=float(seuils_actuels.get("temp_max",    40.0)), step=0.5)
-            hum_sol_min = st.number_input("🌱 Hum. sol min (%)", value=float(seuils_actuels.get("hum_sol_min", 25.0)), step=1.0)
+            temp_max    = st.number_input(" Temp. max (°C)",    value=float(seuils_actuels.get("temp_max",    40.0)), step=0.5)
+            hum_sol_min = st.number_input(" Hum. sol min (%)", value=float(seuils_actuels.get("hum_sol_min", 25.0)), step=1.0)
         with sc2:
             temp_min = st.number_input("❄️ Temp. min (°C)",   value=float(seuils_actuels.get("temp_min",   15.0)), step=0.5)
-            vent_max = st.number_input("💨 Vent max (km/h)",  value=float(seuils_actuels.get("vent_max",   45.0)), step=1.0)
-        submitted = st.form_submit_button("💾 Enregistrer les seuils globaux", width='stretch')
+            vent_max = st.number_input(" Vent max (km/h)",  value=float(seuils_actuels.get("vent_max",   45.0)), step=1.0)
+        submitted = st.form_submit_button(" Enregistrer les seuils globaux", width='stretch')
 
     if submitted:
         ok, resp = _post("/seuils", {"station_id": "", "temp_max": temp_max,
                                       "temp_min": temp_min, "hum_sol_min": hum_sol_min, "vent_max": vent_max})
-        if ok: st.success("✅ Seuils globaux mis à jour pour toutes les stations")
-        else:  st.error(f"❌ Erreur : {resp.get('detail', 'Inconnue')}")
+        if ok: st.success(" Seuils globaux mis à jour pour toutes les stations")
+        else:  st.error(f" Erreur : {resp.get('detail', 'Inconnue')}")
         
 # ── Page principale avec sidebar ──────────────────────────────────────────────
 
@@ -218,7 +218,7 @@ def page_admin():
     with st.sidebar:
         st.markdown(
             "<div style='text-align:center;padding:18px 0 12px;'>"
-            "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.40));'>🛰️</div>"
+            "<div style='font-size:2.8rem;filter:drop-shadow(0 0 8px rgba(255,255,255,0.40));'></div>"
             "<div style='font-family:Sora,sans-serif;font-weight:900;font-size:1.05rem;margin-top:4px;'>Station Météo</div>"
             "<div style='font-size:0.75rem;opacity:0.65;'>Interface Administrateur</div>"
             "</div>",
@@ -228,15 +228,15 @@ def page_admin():
         st.markdown("---")
 
         section = st.radio("Navigation", [
-            "🏠 Tableau de Bord",
-            "📊 Données Temps Réel",
-            "👨‍🌾 Gestion Agriculteurs",
-            "⚙️ Seuils d'Alerte",
+            " Tableau de Bord",
+            " Données Temps Réel",
+            " Gestion Agriculteurs",
+            " Seuils d'Alerte",
         ], label_visibility="collapsed")
 
         st.markdown("---")
 
-        st.markdown("**📍 Filtrer par Région**")
+        st.markdown("** Filtrer par Région**")
         regions_dispo = ["Toutes"] + sorted({
             data.get("region", "") for data in stations.values() if data.get("region")
         })
@@ -247,18 +247,18 @@ def page_admin():
 
         st.markdown(
             "<div class='sidebar-box'>"
-            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:8px;'>📊 Réseau en Temps Réel</div>"
+            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:8px;'> Réseau en Temps Réel</div>"
             "<div style='font-size:0.82rem;'>🛰️ " + str(len(stations)) + " station(s) totale(s)</div>"
             "<div style='font-size:0.82rem;color:#A5D6A7;'>🟢 " + str(nb_actives) + " active(s)</div>"
             "<div style='font-size:0.82rem;color:#EF9A9A;'>🔴 " + str(nb_panne) + " en panne</div>"
-            "<div style='font-size:0.82rem;opacity:0.70;margin-top:4px;'>👨\u200d🌾 " + str(len(agriculteurs)) + " agriculteur(s)</div>"
+            "<div style='font-size:0.82rem;opacity:0.70;margin-top:4px;'>\u200d🌾 " + str(len(agriculteurs)) + " agriculteur(s)</div>"
             "</div>",
             unsafe_allow_html=True
         )
 
         st.markdown("---")
 
-        if st.button("🚪 Se déconnecter", width='stretch', key="btn_deco_admin"):
+        if st.button(" Se déconnecter", width='stretch', key="btn_deco_admin"):
             deconnexion()
 
         st.markdown(

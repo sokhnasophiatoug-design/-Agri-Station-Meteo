@@ -18,17 +18,11 @@ FIREBASE_SIGNUP_URL  = (
 BACKEND_URL = "https://agri-station-meteo.onrender.com"
 
 REGIONS = [
-    "Dakar", "Thiès", "Kaolack", "Saint-Louis", "Fatick",
-    "Diourbel", "Ziguinchor", "Tambacounda", "Louga", "Matam",
-    "Kaffrine", "Kédougou", "Kolda", "Sédhiou",
+     "Kaolack",
 ]
 
 STATIONS_DISPO = {
-    "ST001": "Station Thiès Nord",
     "ST002": "Station Kaolack Centre",
-    "ST003": "Station Saint-Louis Sud",
-    "ST004": "Station Fatick Est",
-    "ST005": "Station Louga Ouest",
 }
 
 
@@ -261,7 +255,7 @@ def _form_connexion():
         st.session_state.station_id    = role.get("station_id", "")
         st.session_state.station_nom   = role.get("station_nom", "")
         st.session_state.region        = role.get("region", "")
-        st.success(f"✅ Bienvenue, {st.session_state.nom} !")
+        st.success(f" Bienvenue, {st.session_state.nom} !")
         st.rerun()
 
 
@@ -305,8 +299,8 @@ def _form_inscription():
             })
             if not profil["ok"]: st.error(f"{profil['erreur']}"); return
 
-        st.success("✅ Compte créé ! Vous pouvez maintenant vous connecter.")
-        st.info("ℹ️ Un administrateur activera votre accès sous peu.")
+        st.success(" Compte créé ! Vous pouvez maintenant vous connecter.")
+        st.info(" Un administrateur activera votre accès sous peu.")
         st.session_state["auth_tab"] = "connexion"
         st.rerun()
 
@@ -348,7 +342,7 @@ def page_login():
             st.markdown("### Connexion à votre espace")
             _form_connexion()
         else:
-            st.markdown("### 🌱 Créer un compte agriculteur")
+            st.markdown("###  Créer un compte agriculteur")
             _form_inscription()
         # st.markdown("</div>", unsafe_allow_html=True)
 
