@@ -236,14 +236,14 @@ def page_admin():
 
         st.markdown("---")
 
-        """st.markdown("** Filtrer par Région**")
+        st.markdown("** Filtrer par Région**")
         regions_dispo = ["Toutes"] + sorted({
             data.get("region", "") for data in stations.values() if data.get("region")
         })
         filtre_region = st.selectbox("Région", regions_dispo,
                                      label_visibility="collapsed", key="admin_filtre_region")
 
-        st.markdown("---")"""
+        st.markdown("---")
 
         st.markdown(
             "<div class='sidebar-box'>"
@@ -272,7 +272,7 @@ def page_admin():
     #  ROUTING
     # ══════════════════════════════════════════
     stations_aff = {k: v for k, v in stations.items() if v.get("region") == filtre_region} \
-                   if filtre_region != "Toutes" else stations
+                  if filtre_region != "Toutes" else stations
 
     if   "Tableau de Bord"       in section: _page_tableau(stations_aff, agriculteurs)
     elif "Données Temps Réel"    in section: _page_donnees(stations_aff)
