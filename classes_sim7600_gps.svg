@@ -1,0 +1,1975 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 680 980"
+   role="img"
+   style=""
+   version="1.1"
+   id="svg197"
+   sodipodi:docname="classes_sim7600_gps.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview197"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.0265306"
+     inkscape:cx="313.67793"
+     inkscape:cy="326.82903"
+     inkscape:window-width="1366"
+     inkscape:window-height="705"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg197" />
+  <title
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="title1">Diagramme de classes – IoT agricole avec SIM7600 et GPS</title>
+  <desc
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="desc1">Classes Dispositif, ModuleGPS, SIM7600, Capteur, Mesure, Alerte, Utilisateur, PlateformeWeb, BrokerMQTT avec relations</desc>
+  <defs
+     id="defs100">
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="context-stroke"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="diam"
+       viewBox="0 0 14 10"
+       refX="1"
+       refY="5"
+       markerWidth="10"
+       markerHeight="8"
+       orient="auto">
+      <polygon
+         points="7,1 13,5 7,9 1,5"
+         fill="none"
+         stroke="context-stroke"
+         stroke-width="1.2"
+         id="polygon1" />
+    </marker>
+    <marker
+       id="diamf"
+       viewBox="0 0 14 10"
+       refX="1"
+       refY="5"
+       markerWidth="10"
+       markerHeight="8"
+       orient="auto">
+      <polygon
+         points="7,1 13,5 7,9 1,5"
+         fill="var(--color-text-secondary)"
+         stroke="var(--color-text-secondary)"
+         stroke-width="1"
+         id="polygon2" />
+    </marker>
+    <mask
+       id="imagine-text-gaps-90p48o"
+       maskUnits="userSpaceOnUse">
+      <rect
+         x="0"
+         y="0"
+         width="680"
+         height="980"
+         fill="white"
+         id="rect2" />
+      <rect
+         x="105.3203125"
+         y="5"
+         width="469.359375"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect3" />
+      <rect
+         x="72.2421875"
+         y="52.5"
+         width="119.515625"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect4" />
+      <rect
+         x="47"
+         y="82"
+         width="117.65625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect5" />
+      <rect
+         x="47"
+         y="98"
+         width="119.578125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect6" />
+      <rect
+         x="47"
+         y="114"
+         width="151.767578125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect7" />
+      <rect
+         x="47"
+         y="130"
+         width="87.640625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect8" />
+      <rect
+         x="47"
+         y="146"
+         width="104.859375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect9" />
+      <rect
+         x="48"
+         y="186"
+         width="107.25"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect10" />
+      <rect
+         x="48"
+         y="202"
+         width="150.0625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect11" />
+      <rect
+         x="48"
+         y="218"
+         width="125.28515625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect12" />
+      <rect
+         x="48"
+         y="234"
+         width="114.59375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect13" />
+      <rect
+         x="90.7109375"
+         y="312.5"
+         width="82.9443359375"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect14" />
+      <rect
+         x="47"
+         y="342"
+         width="94.548828125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect15" />
+      <rect
+         x="47"
+         y="358"
+         width="105.265625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect16" />
+      <rect
+         x="47"
+         y="374"
+         width="94.548828125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect17" />
+      <rect
+         x="47"
+         y="390"
+         width="154.03515625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect18" />
+      <rect
+         x="48"
+         y="432"
+         width="127.015625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect19" />
+      <rect
+         x="48"
+         y="448"
+         width="155.3125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect20" />
+      <rect
+         x="48"
+         y="464"
+         width="137.609375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect21" />
+      <rect
+         x="134"
+         y="274"
+         width="14.46875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect22" />
+      <rect
+         x="75.7421875"
+         y="524.5"
+         width="112.7353515625"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect23" />
+      <rect
+         x="47"
+         y="554"
+         width="110.40625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect24" />
+      <rect
+         x="47"
+         y="570"
+         width="147.291015625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect25" />
+      <rect
+         x="47"
+         y="586"
+         width="101.046875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect26" />
+      <rect
+         x="47"
+         y="602"
+         width="120.119140625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect27" />
+      <rect
+         x="47"
+         y="618"
+         width="113.390625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect28" />
+      <rect
+         x="48"
+         y="660"
+         width="131.630859375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect29" />
+      <rect
+         x="48"
+         y="676"
+         width="147.4375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect30" />
+      <rect
+         x="48"
+         y="692"
+         width="142.943359375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect31" />
+      <rect
+         x="20"
+         y="225"
+         width="14.46875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect32" />
+      <rect
+         x="324.8984375"
+         y="52.5"
+         width="59.021484375"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect33" />
+      <rect
+         x="272"
+         y="82"
+         width="110.328125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect34" />
+      <rect
+         x="272"
+         y="98"
+         width="163.884765625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect35" />
+      <rect
+         x="272"
+         y="114"
+         width="104.24609375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect36" />
+      <rect
+         x="272"
+         y="130"
+         width="106.162109375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect37" />
+      <rect
+         x="273"
+         y="172"
+         width="111.900390625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect38" />
+      <rect
+         x="273"
+         y="188"
+         width="143.396484375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect39" />
+      <rect
+         x="273"
+         y="204"
+         width="114.2109375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect40" />
+      <rect
+         x="230"
+         y="127"
+         width="14.46875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect41" />
+      <rect
+         x="246"
+         y="127"
+         width="24.6875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect42" />
+      <rect
+         x="326.453125"
+         y="278.5"
+         width="55.6416015625"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect43" />
+      <rect
+         x="272"
+         y="308"
+         width="107.8125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect44" />
+      <rect
+         x="272"
+         y="324"
+         width="147.640625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect45" />
+      <rect
+         x="272"
+         y="340"
+         width="119.955078125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect46" />
+      <rect
+         x="272"
+         y="356"
+         width="101.50390625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect47" />
+      <rect
+         x="272"
+         y="372"
+         width="113.64453125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect48" />
+      <rect
+         x="272"
+         y="388"
+         width="94.548828125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect49" />
+      <rect
+         x="272"
+         y="404"
+         width="105.265625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect50" />
+      <rect
+         x="273"
+         y="430"
+         width="141.5"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect51" />
+      <rect
+         x="273"
+         y="446"
+         width="114.322265625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect52" />
+      <rect
+         x="273"
+         y="462"
+         width="125.65625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect53" />
+      <rect
+         x="356"
+         y="242"
+         width="24.6875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect54" />
+      <rect
+         x="224"
+         y="366"
+         width="47.986328125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect55" />
+      <rect
+         x="329.75"
+         y="528.5"
+         width="48.0556640625"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect56" />
+      <rect
+         x="272"
+         y="558"
+         width="99.875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect57" />
+      <rect
+         x="272"
+         y="574"
+         width="112.09375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect58" />
+      <rect
+         x="272"
+         y="590"
+         width="132.01953125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect59" />
+      <rect
+         x="272"
+         y="606"
+         width="116.50390625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect60" />
+      <rect
+         x="272"
+         y="622"
+         width="127.322265625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect61" />
+      <rect
+         x="273"
+         y="664"
+         width="116.3125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect62" />
+      <rect
+         x="273"
+         y="680"
+         width="96.578125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect63" />
+      <rect
+         x="273"
+         y="696"
+         width="144.78125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect64" />
+      <rect
+         x="355"
+         y="496"
+         width="44.203125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect65" />
+      <rect
+         x="533.5078125"
+         y="52.5"
+         width="73.80078125"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect66" />
+      <rect
+         x="487"
+         y="82"
+         width="121.96875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect67" />
+      <rect
+         x="487"
+         y="98"
+         width="82.625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect68" />
+      <rect
+         x="487"
+         y="114"
+         width="86.984375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect69" />
+      <rect
+         x="487"
+         y="130"
+         width="156.5546875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect70" />
+      <rect
+         x="488"
+         y="172"
+         width="144.884765625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect71" />
+      <rect
+         x="488"
+         y="188"
+         width="143.515625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect72" />
+      <rect
+         x="488"
+         y="204"
+         width="135.390625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect73" />
+      <rect
+         x="516.59375"
+         y="278.5"
+         width="107.37109375"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect74" />
+      <rect
+         x="487"
+         y="308"
+         width="72.328125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect75" />
+      <rect
+         x="487"
+         y="324"
+         width="144.34375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect76" />
+      <rect
+         x="487"
+         y="340"
+         width="141.25"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect77" />
+      <rect
+         x="487"
+         y="356"
+         width="150.97265625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect78" />
+      <rect
+         x="488"
+         y="414"
+         width="155.8125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect79" />
+      <rect
+         x="488"
+         y="430"
+         width="147.359375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect80" />
+      <rect
+         x="488"
+         y="446"
+         width="120.3984375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect81" />
+      <rect
+         x="488"
+         y="462"
+         width="131.302734375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect82" />
+      <rect
+         x="572"
+         y="242"
+         width="39.66796875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect83" />
+      <rect
+         x="525.875"
+         y="528.5"
+         width="88.515625"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect84" />
+      <rect
+         x="487"
+         y="558"
+         width="98.53125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect85" />
+      <rect
+         x="487"
+         y="574"
+         width="88.455078125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect86" />
+      <rect
+         x="487"
+         y="590"
+         width="97.390625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect87" />
+      <rect
+         x="487"
+         y="606"
+         width="120.009765625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect88" />
+      <rect
+         x="488"
+         y="648"
+         width="147.484375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect89" />
+      <rect
+         x="488"
+         y="664"
+         width="119.625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect90" />
+      <rect
+         x="488"
+         y="680"
+         width="129.322265625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect91" />
+      <rect
+         x="310"
+         y="685"
+         width="78.111328125"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect92" />
+      <rect
+         x="481"
+         y="521"
+         width="62.919921875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect93" />
+      <rect
+         x="443"
+         y="369"
+         width="42.857421875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect94" />
+      <rect
+         x="52"
+         y="759"
+         width="69.421875"
+         height="23"
+         fill="black"
+         rx="2"
+         id="rect95" />
+      <rect
+         x="168"
+         y="778"
+         width="75.884765625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect96" />
+      <rect
+         x="303"
+         y="778"
+         width="68.4296875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect97" />
+      <rect
+         x="431"
+         y="778"
+         width="69.513671875"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect98" />
+      <rect
+         x="556"
+         y="778"
+         width="75.31640625"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect99" />
+      <rect
+         x="70.546875"
+         y="789"
+         width="539.4375"
+         height="20"
+         fill="black"
+         rx="2"
+         id="rect100" />
+    </mask>
+  </defs>
+  <!-- Titre -->
+  <text
+     x="340"
+     y="22"
+     text-anchor="middle"
+     font-size="14"
+     style="fill:rgb(20, 20, 19);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:auto"
+     id="text100">Diagramme de classes — Système IoT agricole (ESP32 + SIM7600 + GPS)</text>
+  <!-- ════════════════════════════
+  CLASSE Dispositif (ESP32)
+  x=40 y=44 w=185 h=210
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g101">
+    <rect
+       x="40"
+       y="44"
+       width="185"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(225, 245, 238);stroke:rgb(15, 110, 86);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect101" />
+    <text
+       x="132"
+       y="64"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(8, 80, 65);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text101">Dispositif (ESP32)</text>
+  </g>
+  <rect
+     x="40"
+     y="74"
+     width="185"
+     height="104"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect102" />
+  <text
+     x="52"
+     y="92"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text102">– idDispositif : String</text>
+  <text
+     x="52"
+     y="108"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text103">– nomStation : String</text>
+  <text
+     x="52"
+     y="124"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text104">– dateMiseEnService : Date</text>
+  <text
+     x="52"
+     y="140"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text105">– statut : Enum</text>
+  <text
+     x="52"
+     y="156"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text106">– firmware : String</text>
+  <rect
+     x="40"
+     y="178"
+     width="185"
+     height="90"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect106" />
+  <text
+     x="52"
+     y="196"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text107">+ demarrer() : void</text>
+  <text
+     x="52"
+     y="212"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text108">+ collecterDonnees() : void</text>
+  <text
+     x="52"
+     y="228"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text109">+ pretraiter() : Mesure</text>
+  <text
+     x="52"
+     y="244"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text110">+ gererVeille() : void</text>
+  <!-- ════════════════════════════
+  CLASSE ModuleGPS   ← NOUVEAU
+  x=40 y=304 w=185 h=186
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g111">
+    <rect
+       x="40"
+       y="304"
+       width="185"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(234, 243, 222);stroke:rgb(59, 109, 17);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect110" />
+    <text
+       x="132"
+       y="324"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(39, 80, 10);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text111">ModuleGPS</text>
+  </g>
+  <rect
+     x="40"
+     y="334"
+     width="185"
+     height="90"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect111" />
+  <text
+     x="52"
+     y="352"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text112">– latitude : Float</text>
+  <text
+     x="52"
+     y="368"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text113">– longitude : Float</text>
+  <text
+     x="52"
+     y="384"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text114">– altitude : Float</text>
+  <text
+     x="52"
+     y="400"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text115">– protocole : String {NMEA}</text>
+  <rect
+     x="40"
+     y="424"
+     width="185"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect115" />
+  <text
+     x="52"
+     y="442"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text116">+ lirePosition() : Coord</text>
+  <text
+     x="52"
+     y="458"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text117">+ getCoordonnees() : String</text>
+  <text
+     x="52"
+     y="474"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text118">+ enrichirMesure() : void</text>
+  <!-- Composition Dispositif ◆──> ModuleGPS -->
+  <line
+     x1="132"
+     y1="268"
+     x2="132"
+     y2="301.98978"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-start="url(#diamf)"
+     marker-end="url(#arrow)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#000000;stroke:#3d3d3a;stroke-width:0.999849px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="line118" />
+  <text
+     x="138"
+     y="289"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text119">1</text>
+  <!-- ════════════════════════════
+  CLASSE SIM7600     ← NOUVEAU
+  x=40 y=516 w=185 h=186
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g120">
+    <rect
+       x="40"
+       y="516"
+       width="185"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(250, 238, 218);stroke:rgb(133, 79, 11);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect119" />
+    <text
+       x="132"
+       y="536"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(99, 56, 6);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text120">ModuleSIM7600</text>
+  </g>
+  <rect
+     x="40"
+     y="546"
+     width="185"
+     height="106"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect120" />
+  <text
+     x="52"
+     y="564"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text121">– operateur : String</text>
+  <text
+     x="52"
+     y="580"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text122">– typeTech : Enum {4G,3G}</text>
+  <text
+     x="52"
+     y="596"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text123">– simIccid : String</text>
+  <text
+     x="52"
+     y="612"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text124">– signalRSSI : Integer</text>
+  <text
+     x="52"
+     y="628"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text125">– apnConfig : String</text>
+  <rect
+     x="40"
+     y="652"
+     width="185"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect125" />
+  <text
+     x="52"
+     y="670"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text126">+ connecter() : Boolean</text>
+  <text
+     x="52"
+     y="686"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text127">+ envoyerDonnees() : void</text>
+  <text
+     x="52"
+     y="702"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text128">+ verifierSignal() : Integer</text>
+  <!-- Composition Dispositif ◆──> SIM7600 -->
+  <path
+     d="M 40 200 L 20 200 L 20 582 L 38 582"
+     fill="none"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-start="url(#diamf)"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="fill:none;stroke:rgb(61, 61, 58);color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="path128" />
+  <text
+     x="24"
+     y="240"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text129">1</text>
+  <!-- ════════════════════════════
+  CLASSE Capteur
+  x=265 y=44 w=178 h=186
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g130">
+    <rect
+       x="265"
+       y="44"
+       width="178"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(225, 245, 238);stroke:rgb(15, 110, 86);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect129" />
+    <text
+       x="354"
+       y="64"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(8, 80, 65);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text130">Capteur</text>
+  </g>
+  <rect
+     x="265"
+     y="74"
+     width="178"
+     height="90"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect130" />
+  <text
+     x="277"
+     y="92"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text131">– idCapteur : String</text>
+  <text
+     x="277"
+     y="108"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text132">– type : Enum {DHT22,ANEM}</text>
+  <text
+     x="277"
+     y="124"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text133">– plageMin : Float</text>
+  <text
+     x="277"
+     y="140"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text134">– plageMax : Float</text>
+  <rect
+     x="265"
+     y="164"
+     width="178"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect134" />
+  <text
+     x="277"
+     y="182"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text135">+ lireValeur() : Float</text>
+  <text
+     x="277"
+     y="198"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text136">+ validerPlage() : Boolean</text>
+  <text
+     x="277"
+     y="214"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text137">+ horodater() : Date</text>
+  <!-- Composition Dispositif ◆──> Capteur -->
+  <line
+     x1="225"
+     y1="148"
+     x2="263"
+     y2="148"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-start="url(#diam)"
+     marker-end="url(#arrow)"
+     style="fill:rgb(0, 0, 0);stroke:rgb(61, 61, 58);color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="line137" />
+  <text
+     x="234"
+     y="142"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text138">1</text>
+  <text
+     x="250"
+     y="142"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text139">1..*</text>
+  <!-- ════════════════════════════
+  CLASSE Mesure  (enrichie GPS)
+  x=265 y=270 w=178 h=210
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g140">
+    <rect
+       x="265"
+       y="270"
+       width="178"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(238, 237, 254);stroke:rgb(83, 74, 183);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect139" />
+    <text
+       x="354"
+       y="290"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(60, 52, 137);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text140">Mesure</text>
+  </g>
+  <rect
+     x="265"
+     y="300"
+     width="178"
+     height="122"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect140" />
+  <text
+     x="277"
+     y="318"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text141">– idMesure : String</text>
+  <text
+     x="277"
+     y="334"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text142">– horodatage : Timestamp</text>
+  <text
+     x="277"
+     y="350"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text143">– temperature : Float</text>
+  <text
+     x="277"
+     y="366"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text144">– humidite : Float</text>
+  <text
+     x="277"
+     y="382"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text145">– vitesseVent : Float</text>
+  <text
+     x="277"
+     y="398"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text146">– latitude : Float</text>
+  <text
+     x="277"
+     y="414"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text147">– longitude : Float</text>
+  <rect
+     x="265"
+     y="422"
+     width="178"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect147" />
+  <text
+     x="277"
+     y="440"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text148">+ serialiserJSON() : String</text>
+  <text
+     x="277"
+     y="456"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text149">+ valider() : Boolean</text>
+  <text
+     x="277"
+     y="472"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text150">+ getPayload() : String</text>
+  <!-- Capteur ──> Mesure -->
+  <line
+     x1="354"
+     y1="238"
+     x2="354"
+     y2="266.06696"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-end="url(#arrow)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#000000;stroke:#3d3d3a;stroke-width:0.967246px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="line150" />
+  <text
+     x="360"
+     y="257"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text151">1..*</text>
+  <!-- ModuleGPS enrichit Mesure -->
+  <path
+     d="m 225,386 h 23 v 10 h 15"
+     fill="none"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     stroke-dasharray="5 3"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:none;stroke:#3d3d3a;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:5px, 3px"
+     id="path151"
+     transform="matrix(0.58429237,0,0,1.4111202,93.732947,-158.79566)" />
+  <text
+     x="228"
+     y="381"
+     font-style="italic"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;font-style:italic;text-anchor:start;dominant-baseline:auto"
+     id="text152">enrichit</text>
+  <!-- ════════════════════════════
+  CLASSE Alerte
+  x=265 y=520 w=178 h=186
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g153">
+    <rect
+       x="265"
+       y="520"
+       width="178"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(250, 236, 231);stroke:rgb(153, 60, 29);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect152" />
+    <text
+       x="354"
+       y="540"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(113, 43, 19);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text153">Alerte</text>
+  </g>
+  <rect
+     x="265"
+     y="550"
+     width="178"
+     height="106"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect153" />
+  <text
+     x="277"
+     y="568"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text154">– idAlerte : String</text>
+  <text
+     x="277"
+     y="584"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text155">– typeAlerte : Enum</text>
+  <text
+     x="277"
+     y="600"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text156">– valeurMesuree : Float</text>
+  <text
+     x="277"
+     y="616"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text157">– seuilFranchi : Float</text>
+  <text
+     x="277"
+     y="632"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text158">– estResolue : Boolean</text>
+  <rect
+     x="265"
+     y="656"
+     width="178"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect158" />
+  <text
+     x="277"
+     y="674"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text159">+ declencher() : void</text>
+  <text
+     x="277"
+     y="690"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text160">+ notifier() : void</text>
+  <text
+     x="277"
+     y="706"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text161">+ marquerResolue() : void</text>
+  <!-- Mesure génère Alerte -->
+  <line
+     x1="354"
+     y1="494.0517"
+     x2="354"
+     y2="515.09473"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     stroke-dasharray="5 3"
+     marker-end="url(#arrow)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#000000;stroke:#3d3d3a;stroke-width:0.978009px;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:4.89005px, 2.93403px"
+     id="line161" />
+  <text
+     x="360"
+     y="511"
+     font-style="italic"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;font-style:italic;text-anchor:start;dominant-baseline:auto"
+     id="text162">génère</text>
+  <!-- ════════════════════════════
+  CLASSE Utilisateur
+  x=480 y=44 w=180 h=186
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g163">
+    <rect
+       x="480"
+       y="44"
+       width="180"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(230, 241, 251);stroke:rgb(24, 95, 165);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect162" />
+    <text
+       x="570"
+       y="64"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(12, 68, 124);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text163">Utilisateur</text>
+  </g>
+  <rect
+     x="480"
+     y="74"
+     width="180"
+     height="90"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect163" />
+  <text
+     x="492"
+     y="92"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text164">– idUtilisateur : String</text>
+  <text
+     x="492"
+     y="108"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text165">– nom : String</text>
+  <text
+     x="492"
+     y="124"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text166">– email : String</text>
+  <text
+     x="492"
+     y="140"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text167">– role : Enum {AGRI,ADMIN}</text>
+  <rect
+     x="480"
+     y="164"
+     width="180"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect167" />
+  <text
+     x="492"
+     y="182"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text168">+ seConnecter() : Boolean</text>
+  <text
+     x="492"
+     y="198"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text169">+ configurerSeuils() : void</text>
+  <text
+     x="492"
+     y="214"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text170">+ consulterCarte() : void</text>
+  <!-- ════════════════════════════
+  CLASSE PlateformeWeb
+  x=480 y=270 w=180 h=202
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g171">
+    <rect
+       x="480"
+       y="270"
+       width="180"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(230, 241, 251);stroke:rgb(24, 95, 165);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect170" />
+    <text
+       x="570"
+       y="290"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(12, 68, 124);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text171">PlateformeWeb</text>
+  </g>
+  <rect
+     x="480"
+     y="300"
+     width="180"
+     height="106"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect171" />
+  <text
+     x="492"
+     y="318"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text172">– url : String</text>
+  <text
+     x="492"
+     y="334"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text173">– baseDeDonnees : String</text>
+  <text
+     x="492"
+     y="350"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text174">– sessionActive : Boolean</text>
+  <text
+     x="492"
+     y="366"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text175">– cartographieActive : Bool</text>
+  <rect
+     x="480"
+     y="406"
+     width="180"
+     height="90"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect175" />
+  <text
+     x="492"
+     y="424"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text176">+ afficherDashboard() : void</text>
+  <text
+     x="492"
+     y="440"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text177">+ afficherCarteGPS() : void</text>
+  <text
+     x="492"
+     y="453.49106"
+     dominant-baseline="central"
+     style="color:#000000;font-weight:400;font-size:12px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:central;text-anchor:start;opacity:1;fill:#3d3d3a;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="text179">+ envoyerNotification()</text>
+  <!-- Utilisateur utilise PlateformeWeb -->
+  <line
+     x1="570"
+     y1="238"
+     x2="570"
+     y2="267.9866"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-end="url(#arrow)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#000000;stroke:#3d3d3a;stroke-width:0.999776px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="line179" />
+  <text
+     x="576"
+     y="257"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text180">utilise</text>
+  <!-- ════════════════════════════
+  CLASSE BrokerMQTT
+  x=480 y=520 w=180 h=186
+════════════════════════════ -->
+  <g
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="g181">
+    <rect
+       x="480"
+       y="520"
+       width="180"
+       height="30"
+       rx="4"
+       stroke-width="0.5"
+       style="fill:rgb(250, 238, 218);stroke:rgb(133, 79, 11);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+       id="rect180" />
+    <text
+       x="570"
+       y="540"
+       text-anchor="middle"
+       dominant-baseline="central"
+       style="fill:rgb(99, 56, 6);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central"
+       id="text181">BrokerMQTT</text>
+  </g>
+  <rect
+     x="480"
+     y="550"
+     width="180"
+     height="90"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect181" />
+  <text
+     x="492"
+     y="568"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text182">– adresse : String</text>
+  <text
+     x="492"
+     y="584"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text183">– port : Integer</text>
+  <text
+     x="492"
+     y="600"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text184">– topics : String[]</text>
+  <text
+     x="492"
+     y="616"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text185">– qos : Integer {0,1,2}</text>
+  <rect
+     x="480"
+     y="640"
+     width="180"
+     height="74"
+     fill="none"
+     stroke="var(--color-border-primary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.4);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect185" />
+  <text
+     x="492"
+     y="658"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text186">+ recevoirMessage() : void</text>
+  <text
+     x="492"
+     y="674"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text187">+ redistribuer() : void</text>
+  <text
+     x="492"
+     y="690"
+     dominant-baseline="central"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central"
+     id="text188">+ gererAbonnements()</text>
+  <!-- SIM7600 publie vers Broker -->
+  <path
+     d="M 225,686 H 443 V 580 h 35"
+     fill="none"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:none;stroke:#3d3d3a;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="path188"
+     transform="matrix(0.40695156,0,0,0.95921721,283.59989,26.254664)" />
+  <text
+     x="310.12921"
+     y="728.25049"
+     font-style="italic"
+     style="color:#000000;font-style:italic;font-weight:400;font-size:12px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#3d3d3a;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="text189">publie via 4G</text>
+  <!-- Broker redistribue vers PlateformeWeb -->
+  <line
+     x1="559.88074"
+     y1="517.39563"
+     x2="559.88074"
+     y2="495.66574"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     stroke-dasharray="5 3"
+     marker-end="url(#arrow)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#000000;stroke:#3d3d3a;stroke-width:0.541892px;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:2.70946px, 1.62567px"
+     id="line189" />
+  <text
+     x="485"
+     y="536"
+     font-style="italic"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;font-style:italic;text-anchor:start;dominant-baseline:auto"
+     id="text190">redistribue</text>
+  <!-- PlateformeWeb affiche Mesure -->
+  <line
+     x1="480"
+     y1="390"
+     x2="452.69434"
+     y2="390"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     stroke-dasharray="5 3"
+     marker-end="url(#arrow)"
+     style="color:#000000;font-weight:400;font-size:16px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#000000;stroke:#3d3d3a;stroke-width:0.883268px;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:4.41634px, 2.6498px"
+     id="line190" />
+  <text
+     x="447.00015"
+     y="383.99985"
+     font-style="italic"
+     style="color:#000000;font-style:italic;font-weight:400;font-size:12px;font-family:'Anthropic Sans', '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;dominant-baseline:auto;text-anchor:start;opacity:1;fill:#3d3d3a;stroke:none;stroke-width:0.999999px;stroke-linecap:butt;stroke-linejoin:miter"
+     id="text191">affiche</text>
+  <!-- ══ LÉGENDE ══ -->
+  <rect
+     x="40"
+     y="758"
+     width="620"
+     height="52"
+     rx="6"
+     fill="none"
+     stroke="var(--color-border-tertiary)"
+     stroke-width="0.8"
+     style="fill:none;stroke:rgba(31, 30, 29, 0.15);color:rgb(0, 0, 0);stroke-width:0.8px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect191" />
+  <text
+     x="56"
+     y="776"
+     style="fill:rgb(20, 20, 19);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:start;dominant-baseline:auto"
+     id="text192">Légende :</text>
+  <line
+     x1="126"
+     y1="789"
+     x2="166"
+     y2="789"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-start="url(#diamf)"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="fill:rgb(0, 0, 0);stroke:rgb(61, 61, 58);color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="line192" />
+  <text
+     x="172"
+     y="793"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text193">Composition</text>
+  <line
+     x1="262"
+     y1="789"
+     x2="302"
+     y2="789"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-start="url(#diam)"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="fill:rgb(0, 0, 0);stroke:rgb(61, 61, 58);color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="line193" />
+  <text
+     x="308"
+     y="793"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text194">Agrégation</text>
+  <line
+     x1="390"
+     y1="789"
+     x2="430"
+     y2="789"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="fill:rgb(0, 0, 0);stroke:rgb(61, 61, 58);color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="line194" />
+  <text
+     x="436"
+     y="793"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text195">Association</text>
+  <line
+     x1="514"
+     y1="789"
+     x2="554"
+     y2="789"
+     stroke="var(--color-text-secondary)"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arrow)"
+     mask="url(#imagine-text-gaps-90p48o)"
+     style="fill:rgb(0, 0, 0);stroke:rgb(61, 61, 58);color:rgb(0, 0, 0);stroke-width:1px;stroke-dasharray:4px, 3px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="line195" />
+  <text
+     x="560"
+     y="793"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="text196">Dépendance</text>
+  <text
+     x="340"
+     y="804"
+     text-anchor="middle"
+     font-style="italic"
+     style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;font-style:italic;text-anchor:middle;dominant-baseline:auto"
+     id="text197">Nouveautés : ModuleGPS (lat/lon/alt NMEA) et ModuleSIM7600 (4G/3G) composent le Dispositif ESP32</text>
+</svg>

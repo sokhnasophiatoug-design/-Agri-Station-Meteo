@@ -5,6 +5,7 @@ Style : Sidebar vert foncé Station_meteo
 
 import streamlit as st
 import requests
+from components.http import http_get, http_post
 import time
 from datetime import datetime
 
@@ -29,7 +30,7 @@ REGIONS = [
 
 def _get(endpoint, default=None):
     try:
-        r = requests.get(f"{BACKEND}{endpoint}", timeout=60)
+        r = http_get(f"{BACKEND}{endpoint}", timeout=60)
         return r.json() if r.status_code == 200 else default
     except Exception:
         return default
@@ -37,7 +38,7 @@ def _get(endpoint, default=None):
 
 def _post(endpoint, body, default=None):
     try:
-        r = requests.post(f"{BACKEND}{endpoint}", json=body, timeout=60)
+        r = http_post(f"{BACKEND}{endpoint}", json=body, timeout=60)
         return r.json() if r.status_code == 200 else default
     except Exception:
         return default
@@ -143,11 +144,11 @@ def _page_accueil(station_id, nom, station_nom, region):
                     + "Confiance du modèle : " + str(reco_confiance) + "%"
                     + "".join(["</", "div", "></", "div", ">"])
                 )
-                if st.button(" Écouter le conseil", width='stretch', key="btn_tts"):
+                if st.button("   Écouter le conseil", width='stretch', key="btn_tts"):
                     try:
-                        resp = requests.post(f"{BACKEND}/tts",
-                                             json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
-                                                   "lent": False}, timeout=15)
+                        resp = http_post(f"{BACKEND}/tts",
+                                     json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
+                                         "lent": False}, timeout=15)
                         if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
                         else: st.error("Erreur lors de la génération audio")
                     except Exception as e: st.error(f"Service vocal indisponible : {e}")

@@ -5,6 +5,7 @@ Style : Sidebar vert foncé Station_meteo
 
 import streamlit as st
 import requests
+from components.http import http_get, http_post
 import pandas as pd
 from datetime import datetime
 
@@ -19,7 +20,7 @@ BACKEND = "https://agri-station-meteo.onrender.com"
 
 def _get(endpoint, default=None):
     try:
-        r = requests.get(f"{BACKEND}{endpoint}", timeout=60)
+        r = http_get(f"{BACKEND}{endpoint}", timeout=60)
         return r.json() if r.status_code == 200 else default
     except Exception:
         return default
@@ -27,7 +28,7 @@ def _get(endpoint, default=None):
 
 def _post(endpoint, body):
     try:
-        r = requests.post(f"{BACKEND}{endpoint}", json=body, timeout=60)
+        r = http_post(f"{BACKEND}{endpoint}", json=body, timeout=60)
         return r.status_code == 200, r.json()
     except Exception as e:
         return False, {"detail": str(e)}

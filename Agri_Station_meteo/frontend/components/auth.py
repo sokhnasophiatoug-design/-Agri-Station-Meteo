@@ -5,6 +5,7 @@ Style : Verts très foncés (Station_meteo)
 
 import streamlit as st
 import requests
+from components.http import http_post, http_get
 
 FIREBASE_WEB_API_KEY = "AIzaSyBTgmYJn7WnhcXpKw0Yv8txfXTMKEYqmgo"
 FIREBASE_SIGNIN_URL  = (
@@ -161,8 +162,8 @@ def _css_login():
 
 def _login_firebase(email, password):
     try:
-        resp = requests.post(FIREBASE_SIGNIN_URL,
-                             json={"email": email, "password": password, "returnSecureToken": True}, timeout=30)
+        resp = http_post(FIREBASE_SIGNIN_URL,
+                         json={"email": email, "password": password, "returnSecureToken": True}, timeout=30)
         data = resp.json()
         if "idToken" in data:
             return {"ok": True, "idToken": data["idToken"]}
@@ -175,8 +176,8 @@ def _login_firebase(email, password):
 
 def _signup_firebase(email, password):
     try:
-        resp = requests.post(FIREBASE_SIGNUP_URL,
-                             json={"email": email, "password": password, "returnSecureToken": True}, timeout=30)
+        resp = http_post(FIREBASE_SIGNUP_URL,
+                         json={"email": email, "password": password, "returnSecureToken": True}, timeout=30)
         data = resp.json()
         if "idToken" in data:
             return {"ok": True, "idToken": data["idToken"], "uid": data["localId"]}
@@ -189,24 +190,28 @@ def _signup_firebase(email, password):
 
 def _verify_role(id_token):
     try:
-        resp = requests.post(f"{BACKEND_URL}/auth/verify", json={"id_token": id_token}, timeout=10)
+        resp = http_post(f"{BACKEND_URL}/auth/verify", json={"id_token": id_token}, timeout=20)
         if resp.status_code == 200:
             return {"ok": True, **resp.json()}
         return {"ok": False, "erreur": resp.json().get("detail", "Accès refusé")}
     except requests.ConnectionError:
         return {"ok": False, "erreur": f"Backend inaccessible ({BACKEND_URL}). Vérifiez qu'il est démarré."}
+    except requests.Timeout:
+        return {"ok": False, "erreur": f"Délai dépassé vers le backend ({BACKEND_URL}). Réessayez."}
     except Exception as e:
         return {"ok": False, "erreur": str(e)}
 
 
 def _inscrire_agriculteur(payload):
     try:
-        resp = requests.post(f"{BACKEND_URL}/auth/register", json=payload, timeout=10)
+        resp = http_post(f"{BACKEND_URL}/auth/register", json=payload, timeout=20)
         if resp.status_code == 200:
             return {"ok": True, **resp.json()}
         return {"ok": False, "erreur": resp.json().get("detail", "Erreur d'inscription")}
     except requests.ConnectionError:
         return {"ok": False, "erreur": f"Backend inaccessible ({BACKEND_URL})."}
+    except requests.Timeout:
+        return {"ok": False, "erreur": "Délai dépassé — vérifiez votre connexion ou le backend."}
     except Exception as e:
         return {"ok": False, "erreur": str(e)}
 
