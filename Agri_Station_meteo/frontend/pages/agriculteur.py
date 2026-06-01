@@ -159,10 +159,10 @@ def _page_accueil(station_id, nom, station_nom, region):
 
         else:
             st.info("Recommandation IA indisponible — vérifiez le backend.")
-    else:
+    """else:
         if meteo.get("ok"):
             afficher_meteo_actuelle(meteo)
-        st.info("Données capteurs insuffisantes pour générer une recommandation.")
+        st.info("Données capteurs insuffisantes pour générer une recommandation.")"""
 
     st.markdown("---")
     st.markdown("####  Prévisions météo — 5 prochains jours")
