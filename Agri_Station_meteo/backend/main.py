@@ -39,12 +39,19 @@ class TokenRequest(BaseModel):
     id_token: str
 
 class RecommandationRequest(BaseModel):
+    # ── Capteurs ESP32 (temps réel) ──
     temperature:  float
     humidite_air: float
     humidite_sol: float
     vitesse_vent: float
-    nom:          Optional[str] = "Agriculteur"
-    region:       Optional[str] = ""
+    # ── Prévisions OpenWeather ────────
+    pluie_prevue_3h:    Optional[float] = 0.0
+    temperature_future: Optional[float] = 0.0
+    humidite_future:    Optional[float] = 0.0
+    vent_future:        Optional[float] = 0.0
+    # ── Métadonnées vocales ───────────
+    nom:    Optional[str] = "Agriculteur"
+    region: Optional[str] = ""
 
 class TTSRequest(BaseModel):
     texte: str
@@ -225,14 +232,22 @@ def meteo_actuelle(region: str = "Kaolack"):
 
 @app.post("/recommandation", tags=["IA"])
 def get_recommandation(body: RecommandationRequest):
-    """Retourne la recommandation de l'arbre de décision agricole."""
+    """
+    Retourne la recommandation IA basée sur 8 features :
+      - 4 capteurs ESP32 temps réel (temperature, humidite_air, humidite_sol, vitesse_vent)
+      - 4 prévisions OpenWeather    (pluie_prevue_3h, temperature_future, humidite_future, vent_future)
+    """
     result = ia_service.get_recommandation(
         temperature=body.temperature,
         humidite_air=body.humidite_air,
         humidite_sol=body.humidite_sol,
         vitesse_vent=body.vitesse_vent,
+        pluie_prevue_3h=body.pluie_prevue_3h    or 0.0,
+        temperature_future=body.temperature_future or 0.0,
+        humidite_future=body.humidite_future    or 0.0,
+        vent_future=body.vent_future            or 0.0,
     )
-    # Message vocal
+    # Message vocal adapté aux agriculteurs peu alphabétisés
     result["message_vocal"] = ia_service.get_message_vocal(
         nom=body.nom,
         region=body.region,
@@ -240,16 +255,48 @@ def get_recommandation(body: RecommandationRequest):
         humidite_air=body.humidite_air,
         humidite_sol=body.humidite_sol,
         vitesse_vent=body.vitesse_vent,
+        pluie_prevue_3h=body.pluie_prevue_3h    or 0.0,
+        temperature_future=body.temperature_future or 0.0,
+        humidite_future=body.humidite_future    or 0.0,
+        vent_future=body.vent_future            or 0.0,
     )
     return result
 
 
-@app.get("/ia/reentainer/{station_id}", tags=["IA"])  # permet GET pour déclencher manuellement depuis un navigateur
+@app.get("/ia/predire/{station_id}", tags=["IA"])
+def predire_auto(station_id: str, region: str = "Kaolack"):
+    """
+    Recommandation automatique pour demain — aucun paramètre à passer.
+
+    Le backend va chercher lui-même :
+      1. La DERNIÈRE mesure réelle ESP32 depuis Firebase (temperature, humidite_air, humidite_sol, vitesse_vent)
+      2. Les prévisions OpenWeather actuelles (pluie_prevue_3h, temperature_future, humidite_future, vent_future)
+
+    Puis applique l'arbre de décision et retourne la recommandation.
+    Fonctionne dès la première mesure reçue — aucune attente.
+    """
+    result = ia_service.predire_depuis_firebase(station_id, region=region)
+    if not result.get("succes"):
+        raise HTTPException(status_code=404, detail=result.get("erreur", "Aucune donnée"))
+    return result
+
+
+@app.get("/ia/reentainer/{station_id}", tags=["IA"])  # GET pour déclencher depuis le navigateur
 @app.post("/ia/reentainer/{station_id}", tags=["IA"])
 def reentainer_ia(station_id: str):
-    """Re-entraîne le modèle IA avec les données réelles de la station."""
-    ia_service.reentainer_modele(station_id)
-    return {"statut": "ok", "message": f"Modèle IA mis à jour pour {station_id}"}
+    """
+    Re-entraîne le modèle IA avec les données réelles de Firebase.
+    Fusionne historique capteurs + OpenWeather, génère les labels via les règles,
+    puis remplace le modèle CSV par le modèle Firebase.
+    Le badge passe de 'CSV' à 'Firebase' dans l'interface.
+    """
+    resultat = ia_service.reentainer_modele(station_id)
+    return {
+        "statut":       "ok" if resultat["succes"] else "insuffisant",
+        "message":      resultat["message"],
+        "nb_entrees":   resultat["nb_entrees"],
+        "source_modele": ia_service.get_source_modele(),
+    }
 
 # ── Synthèse vocale ──────────────────────────────────────────────────────────
 
