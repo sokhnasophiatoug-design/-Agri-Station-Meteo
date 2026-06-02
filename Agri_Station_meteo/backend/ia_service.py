@@ -265,7 +265,7 @@ def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
     # 2. Prévisions OpenWeather (prochain créneau 3h)
     try:
         snap = weather_service.snapshot_openweather_ia(region=region)
-        p    = float(snap.get("pluie_future",       0))
+        p    = float(snap.get("pluie_prevue_3h",    0))
         tf   = float(snap.get("temperature_future", t))
         hf   = float(snap.get("humidite_future",    ha))
         vf   = float(snap.get("vent_future",        0))
@@ -339,7 +339,7 @@ def reentainer_modele(station_id: str) -> dict:
         f"({len(dataset)} mesures{score_str})"
     )
     print(f"[IA] {msg}")
-    return {"succes": True, "message": msg, "nb_entrees": len(dataset)}
+    return {"statut": "regles", "message": msg, "nb_entrees": len(dataset), "score": None}
 
 
 # ── Message vocal agriculteur ────────────────────────────────────────────────

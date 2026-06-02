@@ -197,12 +197,18 @@ def verify_id_token(id_token: str) -> dict:
 
 
 def sauvegarder_openweather(station_id: str, previsions: list):
-    """Sauvegarde les prévisions OpenWeather dans Firebase pour l'historique."""
+    """
+    Sauvegarde les prévisions OpenWeather dans Firebase.
+    Une entrée PAR JOUR (clé = date YYYY-MM-DD) — pas de doublons.
+    Si /previsions est appelé 20 fois dans la journée : toujours 5 entrées.
+    """
     try:
-        from datetime import datetime
+        from datetime import datetime, date, timedelta
         ref = db.reference(f"stations/{station_id}/openweather_historique")
-        for jour in previsions:
-            ref.push({
+        today = date.today()
+        for idx, jour in enumerate(previsions):
+            date_cle = (today + timedelta(days=idx)).isoformat()  # "2026-06-03"
+            ref.child(date_cle).set({
                 "jour"              : jour.get("jour", ""),
                 "temperature_future": jour.get("temp_max", 0),
                 "humidite_future"   : jour.get("humidite", 0),
@@ -212,6 +218,19 @@ def sauvegarder_openweather(station_id: str, previsions: list):
             })
     except Exception as e:
         print(f"❌ sauvegarder_openweather : {e}")
+
+
+def sauvegarder_dataset(station_id: str, entree: dict):
+    """
+    Trace UNE décision IA dans stations/{station_id}/dataset/.
+    Appelée après chaque prédiction. Non bloquant.
+    """
+    try:
+        from datetime import datetime
+        entree_a_sauver = {**entree, "timestamp": datetime.now().isoformat()}
+        db.reference(f"stations/{station_id}/dataset").push(entree_a_sauver)
+    except Exception as e:
+        print(f"⚠️ sauvegarder_dataset ({station_id}) : {e}")
 
 
 def get_openweather_historique(station_id: str) -> list:

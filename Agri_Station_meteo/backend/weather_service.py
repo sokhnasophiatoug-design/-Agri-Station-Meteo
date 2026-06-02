@@ -186,16 +186,14 @@ def snapshot_openweather_ia(region: str = "Kaolack", lat: float = None, lon: flo
     item = items[1]
 
     return {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "forecast_for": item.get("dt_txt"),
-
-        "temperature_future": round(item["main"]["temp"], 1),
-        "humidite_future": item["main"]["humidity"],
-        "vent_future": round(item["wind"]["speed"] * 3.6, 1),
-        "pluie_future": round(float(item.get("pop", 0)) * 100, 1),
-
-        "source": "openweather"
-    }
+    "timestamp"         : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    "forecast_for"      : item.get("dt_txt"),
+    "temperature_future": round(item["main"]["temp"], 1),
+    "humidite_future"   : item["main"]["humidity"],
+    "vent_future"       : round(item["wind"]["speed"] * 3.6, 1),
+    "pluie_prevue_3h"   : round(float(item.get("rain", {}).get("3h", 0)), 1),
+    "source"            : "openweather"
+}
 
 def save_openweather_to_firebase(db, station_id: str, snapshot: dict):
     if not snapshot:

@@ -50,6 +50,7 @@ class RecommandationRequest(BaseModel):
     humidite_future:    Optional[float] = 0.0
     vent_future:        Optional[float] = 0.0
     # ── Métadonnées vocales ───────────
+    station_id:   Optional[str]   = "ST002"  
     nom:    Optional[str] = "Agriculteur"
     region: Optional[str] = ""
 
@@ -229,37 +230,58 @@ def meteo_actuelle(region: str = "Kaolack"):
     return result
 
 # ── Recommandation IA ────────────────────────────────────────────────────────
-
 @app.post("/recommandation", tags=["IA"])
 def get_recommandation(body: RecommandationRequest):
     """
     Retourne la recommandation IA basée sur 8 features :
       - 4 capteurs ESP32 temps réel (temperature, humidite_air, humidite_sol, vitesse_vent)
       - 4 prévisions OpenWeather    (pluie_prevue_3h, temperature_future, humidite_future, vent_future)
+    Trace chaque décision dans stations/{station_id}/dataset/ (traçabilité).
     """
+    p  = body.pluie_prevue_3h    or 0.0
+    tf = body.temperature_future or 0.0
+    hf = body.humidite_future    or 0.0
+    vf = body.vent_future        or 0.0
+
     result = ia_service.get_recommandation(
-        temperature=body.temperature,
-        humidite_air=body.humidite_air,
-        humidite_sol=body.humidite_sol,
-        vitesse_vent=body.vitesse_vent,
-        pluie_prevue_3h=body.pluie_prevue_3h    or 0.0,
-        temperature_future=body.temperature_future or 0.0,
-        humidite_future=body.humidite_future    or 0.0,
-        vent_future=body.vent_future            or 0.0,
+        temperature        = body.temperature,
+        humidite_air       = body.humidite_air,
+        humidite_sol       = body.humidite_sol,
+        vitesse_vent       = body.vitesse_vent,
+        pluie_prevue_3h    = p,
+        temperature_future = tf,
+        humidite_future    = hf,
+        vent_future        = vf,
     )
-    # Message vocal adapté aux agriculteurs peu alphabétisés
+
     result["message_vocal"] = ia_service.get_message_vocal(
-        nom=body.nom,
-        region=body.region,
-        temperature=body.temperature,
-        humidite_air=body.humidite_air,
-        humidite_sol=body.humidite_sol,
-        vitesse_vent=body.vitesse_vent,
-        pluie_prevue_3h=body.pluie_prevue_3h    or 0.0,
-        temperature_future=body.temperature_future or 0.0,
-        humidite_future=body.humidite_future    or 0.0,
-        vent_future=body.vent_future            or 0.0,
+        nom                = body.nom,
+        region             = body.region,
+        temperature        = body.temperature,
+        humidite_air       = body.humidite_air,
+        humidite_sol       = body.humidite_sol,
+        vitesse_vent       = body.vitesse_vent,
+        pluie_prevue_3h    = p,
+        temperature_future = tf,
+        humidite_future    = hf,
+        vent_future        = vf,
     )
+
+    # Traçabilité dataset — non bloquant
+    firebase_service.sauvegarder_dataset(body.station_id or "ST002", {
+        "temperature"       : body.temperature,
+        "humidite_air"      : body.humidite_air,
+        "humidite_sol"      : body.humidite_sol,
+        "vitesse_vent"      : body.vitesse_vent,
+        "pluie_prevue_3h"   : p,
+        "temperature_future": tf,
+        "humidite_future"   : hf,
+        "vent_future"       : vf,
+        "label_idx"         : result["label_idx"],
+        "label"             : result["label"],
+        "source"            : result["source"],
+    })
+
     return result
 
 
@@ -292,11 +314,12 @@ def reentainer_ia(station_id: str):
     """
     resultat = ia_service.reentainer_modele(station_id)
     return {
-        "statut":       "ok" if resultat["succes"] else "insuffisant",
-        "message":      resultat["message"],
-        "nb_entrees":   resultat["nb_entrees"],
-        "source_modele": ia_service.get_source_modele(),
-    }
+    "statut"    : "ok" if resultat.get("statut") == "firebase" else "insuffisant",
+    "message"   : resultat.get("message", ""),
+    "nb_entrees": resultat.get("nb_entrees", 0),
+    "score"     : resultat.get("score"),
+    "source"    : ia_service.get_source_modele(),
+}
 
 # ── Synthèse vocale ──────────────────────────────────────────────────────────
 
