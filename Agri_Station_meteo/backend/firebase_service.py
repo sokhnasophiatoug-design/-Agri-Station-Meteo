@@ -232,7 +232,6 @@ def sauvegarder_dataset(station_id: str, entree: dict):
     except Exception as e:
         print(f"⚠️ sauvegarder_dataset ({station_id}) : {e}")
 
-
 def get_openweather_historique(station_id: str) -> list:
     """Retourne l'historique des prévisions OpenWeather sauvegardées."""
     try:
@@ -243,3 +242,40 @@ def get_openweather_historique(station_id: str) -> list:
     except Exception as e:
         print(f"❌ get_openweather_historique : {e}")
         return []
+    
+def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str):
+    """
+    Écrit la recommandation à envoyer par SMS dans Firebase.
+    L'ESP32 lira ce nœud et enverra le SMS via SIM7600E.
+    """
+    try:
+        from datetime import datetime
+        db.reference(f"stations/{station_id}/sms_a_envoyer").set({
+            "message"  : message,
+            "telephone": telephone,
+            "timestamp": datetime.now().isoformat(),
+            "envoye"   : False,
+        })
+        print(f"[SMS] Message écrit dans Firebase pour {station_id}")
+    except Exception as e:
+        print(f"❌ ecrire_sms_a_envoyer : {e}")
+
+
+def get_telephone_agriculteur(station_id: str) -> str:
+    """
+    Retourne le numéro de téléphone de l'agriculteur
+    rattaché à cette station.
+    """
+    try:
+        agriculteurs = db.reference("agriculteurs").get()
+        if not agriculteurs:
+            return ""
+        for uid, data in agriculteurs.items():
+            if data.get("station_id") == station_id and data.get("actif"):
+                tel = data.get("telephone", "")
+                if tel:
+                    return tel
+        return ""
+    except Exception as e:
+        print(f"❌ get_telephone_agriculteur : {e}")
+        return ""    

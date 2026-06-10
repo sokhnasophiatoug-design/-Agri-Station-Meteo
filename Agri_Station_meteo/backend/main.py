@@ -302,6 +302,101 @@ def predire_auto(station_id: str, region: str = "Kaolack"):
         raise HTTPException(status_code=404, detail=result.get("erreur", "Aucune donnée"))
     return result
 
+@app.post("/sms/recommandation/{station_id}", tags=["SMS"])
+@app.get("/sms/recommandation/{station_id}",  tags=["SMS"])
+def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
+    """
+    1. Lit le dataset Firebase (mesures + prévisions fusionnées)
+    2. Calcule la recommandation IA
+    3. Récupère le téléphone de l'agriculteur
+    4. Écrit le SMS dans Firebase → l'ESP32 l'envoie via SIM7600E
+    """
+    # 1. Lire le dataset fusionné depuis Firebase
+    try:
+        from firebase_admin import db
+        dataset_raw = db.reference(f"stations/{station_id}/dataset").get()
+        if not dataset_raw or not isinstance(dataset_raw, dict):
+            raise HTTPException(status_code=404,
+                detail="Dataset vide — attendez que l'ESP32 envoie des mesures")
+
+        # Prendre la dernière entrée triée par timestamp
+        entrees = list(dataset_raw.values())
+        entrees_valides = [e for e in entrees if isinstance(e, dict)]
+        if not entrees_valides:
+            raise HTTPException(status_code=404, detail="Dataset vide")
+        
+        # Trier par timestamp pour prendre la plus récente
+        try:
+            entrees_valides.sort(
+                key=lambda x: x.get("timestamp", ""),
+                reverse=True
+            )
+        except Exception:
+            pass
+        
+        derniere = entrees_valides[0]
+
+        temperature        = float(derniere.get("temperature",        0) or 0)
+        humidite_air       = float(derniere.get("humidite_air",       0) or 0)
+        humidite_sol       = float(derniere.get("humidite_sol",       0) or 0)
+        vitesse_vent       = float(derniere.get("vitesse_vent",       0) or 0)
+        pluie_prevue_3h    = float(derniere.get("pluie_prevue_3h",    0) or 0)
+        temperature_future = float(derniere.get("temperature_future",  0) or 0)
+        humidite_future    = float(derniere.get("humidite_future",     0) or 0)
+        vent_future        = float(derniere.get("vent_future",         0) or 0)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # 2. Recommandation IA
+    reco = ia_service.get_recommandation(
+        temperature        = temperature,
+        humidite_air       = humidite_air,
+        humidite_sol       = humidite_sol,
+        vitesse_vent       = vitesse_vent,
+        pluie_prevue_3h    = pluie_prevue_3h,
+        temperature_future = temperature_future,
+        humidite_future    = humidite_future,
+        vent_future        = vent_future,
+    )
+
+    # 3. Téléphone agriculteur
+    telephone = firebase_service.get_telephone_agriculteur(station_id)
+    if not telephone:
+        raise HTTPException(status_code=404,
+            detail="Aucun agriculteur actif trouvé pour cette station")
+
+    # Format international Sénégal
+    if not telephone.startswith("+"):
+        telephone = "+221" + telephone
+
+    # 4. Construire le message SMS (court — max 160 caractères)
+    emoji   = reco["emoji"]
+    conseil = reco["conseil"][:100]   # tronquer si trop long
+    
+    # SMS sans emojis — compatibilité maximale GSM
+    message = (
+        f"Agri Meteo {station_id}\n"
+        f"{reco['label']}\n"
+        f"{conseil[:80]}\n"
+        f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}km/h"
+    )
+    # Limiter à 160 caractères (1 SMS)
+    message = message[:160]
+
+    # 5. Écrire dans Firebase → ESP32 enverra le SMS
+    firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
+
+    return {
+        "statut"    : "ok",
+        "message"   : "SMS programmé dans Firebase",
+        "telephone" : telephone,
+        "sms"       : message,
+        "reco"      : reco,
+    }
+
 
 @app.get("/ia/reentainer/{station_id}", tags=["IA"])  # GET pour déclencher depuis le navigateur
 @app.post("/ia/reentainer/{station_id}", tags=["IA"])
