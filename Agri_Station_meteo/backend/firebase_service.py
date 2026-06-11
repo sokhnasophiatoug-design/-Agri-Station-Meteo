@@ -220,29 +220,60 @@ def sauvegarder_openweather(station_id: str, previsions: list):
         print(f"❌ sauvegarder_openweather : {e}")
 
 
-def sauvegarder_dataset(station_id: str, entree: dict):
+def sauvegarder_dataset(station_id: str, entree):
     """
-    Trace UNE décision IA dans stations/{station_id}/dataset/.
-    Appelée après chaque prédiction. Non bloquant.
+    Écrit dans stations/{station_id}/dataset.
+
+    Si `entree` est un dictionnaire, on trace une seule décision IA.
+    Si `entree` est une liste, on remplace le dataset complet par les entrées fusionnées.
     """
     try:
         from datetime import datetime
+        ref = db.reference(f"stations/{station_id}/dataset")
+
+        if isinstance(entree, list):
+            # Remplacer le dataset existant par le dataset fusionné historique + OpenWeather
+            ref.set({})
+            for idx, row in enumerate(entree, start=1):
+                entree_a_sauver = {
+                    **row,
+                    "timestamp": row.get("timestamp") or datetime.now().isoformat(),
+                }
+                ref.child(f"{idx:04d}").set(entree_a_sauver)
+            print(f"✅ Dataset complet sauvegardé pour {station_id} ({len(entree)} entrées)")
+            return
+
         entree_a_sauver = {**entree, "timestamp": datetime.now().isoformat()}
-        db.reference(f"stations/{station_id}/dataset").push(entree_a_sauver)
+        ref.push(entree_a_sauver)
     except Exception as e:
         print(f"⚠️ sauvegarder_dataset ({station_id}) : {e}")
 
 def get_openweather_historique(station_id: str) -> list:
-    """Retourne l'historique des prévisions OpenWeather sauvegardées."""
     try:
         data = db.reference(f"stations/{station_id}/openweather_historique").get()
         if not data or not isinstance(data, dict):
             return []
-        return list(data.values())
+
+        entrees = []
+        for cle, valeur in data.items():
+            if not isinstance(valeur, dict):
+                continue
+            # Ignorer les anciennes clés push Firebase (commencent par -)
+            # Garder uniquement les clés date format YYYY-MM-DD
+            if cle.startswith("-"):
+                print(f"[OW] Clé push ignorée : {cle}")
+                continue
+            entrees.append(valeur)
+
+        # Trier par timestamp — plus récent en dernier
+        entrees.sort(key=lambda x: x.get("timestamp", ""))
+        print(f"[OW] {len(entrees)} prévisions valides chargées pour {station_id}")
+        return entrees
+
     except Exception as e:
         print(f"❌ get_openweather_historique : {e}")
         return []
-    
+
 def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str):
     """
     Écrit la recommandation à envoyer par SMS dans Firebase.

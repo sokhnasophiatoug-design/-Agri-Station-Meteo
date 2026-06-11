@@ -17,7 +17,7 @@
 #include <time.h>
 
 // ============================================================
-// ⚙️  CONFIGURATION — MODIFIER ICI UNIQUEMENT
+// ⚙️  CONFIGURATION 
 // ============================================================
 #define WIFI_SSID       "Ussein_LS"
 #define WIFI_PASSWORD   "Ussein@12345"

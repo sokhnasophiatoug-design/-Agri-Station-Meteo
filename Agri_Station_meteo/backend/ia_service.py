@@ -235,6 +235,29 @@ def construire_dataset(station_id: str) -> list:
     return dataset
 
 
+def generer_dataset_sur_firebase(station_id: str) -> dict:
+    """
+    Génère le dataset fusionné depuis Firebase et l'écrit dans
+    stations/{station_id}/dataset.
+    """
+    from firebase_service import sauvegarder_dataset
+
+    dataset = construire_dataset(station_id)
+    if not dataset:
+        return {
+            "succes": False,
+            "message": "Aucun dataset à sauvegarder — historique ou OpenWeather vide.",
+            "nb_entrees": 0,
+        }
+
+    sauvegarder_dataset(station_id, dataset)
+    return {
+        "succes": True,
+        "message": "Dataset fusionné sauvegardé dans Firebase.",
+        "nb_entrees": len(dataset),
+    }
+
+
 # ── Ré-entraînement depuis Firebase ─────────────────────────────────────────
 
 def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
@@ -305,6 +328,16 @@ def reentainer_modele(station_id: str) -> dict:
     global _classifieur
 
     dataset = construire_dataset(station_id)
+
+    # Générer ou créer le dataset complet dans Firebase pour assurer
+    # que la branche stations/{station_id}/dataset existe et contient
+    # le dataset fusionné historique + OpenWeather.
+    try:
+        from firebase_service import sauvegarder_dataset
+        if dataset:
+            sauvegarder_dataset(station_id, dataset)
+    except Exception as e:
+        print(f"⚠️ Impossible de sauvegarder le dataset complet pour {station_id} : {e}")
 
     if len(dataset) < 5:
         msg = (

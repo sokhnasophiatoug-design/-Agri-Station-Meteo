@@ -302,6 +302,20 @@ def predire_auto(station_id: str, region: str = "Kaolack"):
         raise HTTPException(status_code=404, detail=result.get("erreur", "Aucune donnée"))
     return result
 
+
+@app.post("/ia/dataset/{station_id}", tags=["IA"])
+@app.get("/ia/dataset/{station_id}", tags=["IA"])
+def generer_dataset(station_id: str):
+    """
+    Génère le dataset fusionné historique + OpenWeather et l'écrit dans Firebase.
+    Utile pour forcer la création de stations/{station_id}/dataset.
+    """
+    resultat = ia_service.generer_dataset_sur_firebase(station_id)
+    if not resultat.get("succes"):
+        raise HTTPException(status_code=404, detail=resultat.get("message", "Impossible de générer le dataset"))
+    return resultat
+
+
 @app.post("/sms/recommandation/{station_id}", tags=["SMS"])
 @app.get("/sms/recommandation/{station_id}",  tags=["SMS"])
 def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
