@@ -383,7 +383,7 @@ bool initSIM7600() {
     delay(3000);
   }
 
-  envoyerAT("AT+CNMP=38", 2000);   // LTE uniquement
+  envoyerAT("AT+CNMP=2", 2000);   // Mode automatique (LTE, WCDMA, GSM) — permet l'envoi de SMS (CSFB)
   delay(500);
   envoyerAT("AT+CGDCONT=1,\"IP\",\"" + String(APN) + "\"", 3000);
   delay(500);
@@ -439,8 +439,8 @@ bool envoyerFirebase4G(float temp, float humAir,
   String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // Timeout interne SIM7600E = 70s (> notre attente de 60s dans le loop)
-  envoyerAT("AT+HTTPPARA=\"TIMEOUT\",70000", 2000);
+  // Timeout interne SIM7600E = 70s (l'unité est la seconde, pas la milliseconde !)
+  envoyerAT("AT+HTTPPARA=\"TIMEOUT\",70", 2000);
 
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
