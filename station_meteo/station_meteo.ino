@@ -439,8 +439,8 @@ bool envoyerFirebase4G(float temp, float humAir,
   String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // Timeout SIM7600E en SECONDES (pas ms) — /push répond en ~2s désormais
-  envoyerAT("AT+HTTPPARA=\"TIMEOUT\",30", 2000);
+  // NOTE : AT+HTTPPARA="TIMEOUT" n'est pas supporté par ce firmware SIM7600E
+  // /push répond en ~2s donc le timeout par défaut du module (120s) suffit
 
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
@@ -875,7 +875,9 @@ void envoyerSMS(String telephone, String message) {
     return;
   }
 
-  envoyerAT("AT+CSCS=\"GSM\"", 2000);  // encodage GSM-7bit (160 car. max)
+  // NOTE : Ne PAS utiliser AT+CSCS="GSM" — remplace [ par Ä, ] par Ñ
+  // et corromprait les bytes UTF-8 des accents français.
+  // Le sanitiseur ci-dessous gère le nettoyage manuellement.
   envoyerAT("AT+CMGF=1", 2000);   // mode texte
   delay(300);
 
@@ -911,45 +913,84 @@ void envoyerSMS(String telephone, String message) {
 
   Serial.println("[SMS] Prompt > recu - envoi du message...");
 
-  // ── Nettoyage du message pour GSM-7bit ──────────────────────────────────
-  // Le tiret long — (UTF-8: 0xE2 0x80 0x94) cause +CMS ERROR
-  // Remplacer octet par octet les séquences UTF-8 non-GSM
+  // ── Nettoyage du message : remplace tous les caractères non-ASCII ──────────────
+  // Le message vient de Firebase en UTF-8. On décode octet par octet.
+  // Règles :
+  //   0xE2 0x80 0x94  = — (tiret long)          → '-'
+  //   0xC3 0xA9       = é                         → 'e'
+  //   0xC3 0xA0       = à                         → 'a'
+  //   0xC3 0xA8       = è                         → 'e'
+  //   ... (tous les accents français)
   String msgPropre = "";
   int mLen = (int)message.length();
   for (int i = 0; i < mLen; ) {
-    unsigned char c = (unsigned char)message.charAt(i);
+    unsigned char c  = (unsigned char)message.charAt(i);
+
+    // ── Séquences 3 octets (0xE2) ──
     if (c == 0xE2 && i + 2 < mLen) {
       unsigned char c2 = (unsigned char)message.charAt(i+1);
       unsigned char c3 = (unsigned char)message.charAt(i+2);
       if (c2 == 0x80) {
-        if (c3 == 0x94 || c3 == 0x93 || c3 == 0x92) { // — – ’
-          msgPropre += '-'; i += 3; continue;
-        }
-        if (c3 == 0x98 || c3 == 0x99) {  // ‘ ’
-          msgPropre += '\'' ; i += 3; continue;
-        }
-        if (c3 == 0x9C || c3 == 0x9D) {  // “ ”
-          msgPropre += '"'; i += 3; continue;
-        }
-        if (c3 == 0xA6) {  // …
-          msgPropre += '.'; i += 3; continue;
-        }
+        if      (c3 == 0x94 || c3 == 0x93) { msgPropre += '-'; }  // — –
+        else if (c3 == 0x99 || c3 == 0x98) { msgPropre += '\''; } // ’ ‘
+        else if (c3 == 0x9C || c3 == 0x9D) { msgPropre += '"'; }  // “ ”
+        else if (c3 == 0xA6)               { msgPropre += '.'; }   // …
+        // autres séquences E2-80-xx : ignorer
       }
-      // Autre séquence 0xE2... non reconnue -> sauter
       i += 3; continue;
     }
-    if (c >= 0x80) {
-      // Autre octet multi-byte (0xC3 pour é,à,è etc.) : passer tel quel
-      // Le SIM avec AT+CSCS="GSM" les interprète correctement
-      msgPropre += (char)c;
-    } else {
-      msgPropre += (char)c;
+
+    // ── Séquences 2 octets (0xC3) : accents français ──
+    if (c == 0xC3 && i + 1 < mLen) {
+      unsigned char c2 = (unsigned char)message.charAt(i+1);
+      switch (c2) {
+        // Minuscules
+        case 0xA0: case 0xA1: case 0xA2: case 0xA3:  // àáâã
+        case 0xA4: case 0xA5:                         // äå
+          msgPropre += 'a'; break;
+        case 0xA7: msgPropre += 'c'; break;           // ç
+        case 0xA8: case 0xA9: case 0xAA: case 0xAB:  // èéêë
+          msgPropre += 'e'; break;
+        case 0xAC: case 0xAD: case 0xAE: case 0xAF:  // ìíîï
+          msgPropre += 'i'; break;
+        case 0xB1: msgPropre += 'n'; break;           // ñ
+        case 0xB2: case 0xB3: case 0xB4: case 0xB5:  // òóôõ
+        case 0xB6:                                    // ö
+          msgPropre += 'o'; break;
+        case 0xB9: case 0xBA: case 0xBB: case 0xBC:  // ùúûü
+          msgPropre += 'u'; break;
+        case 0xBD: case 0xBE: msgPropre += 'y'; break; // ýþ
+        // Majuscules
+        case 0x80: case 0x81: case 0x82: case 0x83:  // ÀÁÂÃ
+        case 0x84: case 0x85:                         // ÄÅ
+          msgPropre += 'A'; break;
+        case 0x87: msgPropre += 'C'; break;           // Ç
+        case 0x88: case 0x89: case 0x8A: case 0x8B:  // ÈÉÊË
+          msgPropre += 'E'; break;
+        case 0x8C: case 0x8D: case 0x8E: case 0x8F:  // ÌÍÎÏ
+          msgPropre += 'I'; break;
+        case 0x91: msgPropre += 'N'; break;           // Ñ
+        case 0x92: case 0x93: case 0x94: case 0x95:  // ÒÓÔÕ
+        case 0x96:                                    // Ö
+          msgPropre += 'O'; break;
+        case 0x99: case 0x9A: case 0x9B: case 0x9C:  // ÙÚÛÜ
+          msgPropre += 'U'; break;
+        default: /* ignorer */ break;
+      }
+      i += 2; continue;
     }
+
+    // ── Autres bytes multi-octets inconnus → ignorer ──
+    if (c >= 0x80) { i++; continue; }
+
+    // ── ASCII pur → passer tel quel ──
+    msgPropre += (char)c;
     i++;
   }
-  // Limite stricte : 155 octets
+
+  // Limite stricte : 155 octets (pure ASCII après nettoyage)
   if ((int)msgPropre.length() > 155) msgPropre = msgPropre.substring(0, 155);
-  Serial.println("[SMS] Message propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre.substring(0, 60));
+  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.)");
 
   simSerial.print(msgPropre);
   delay(300);
