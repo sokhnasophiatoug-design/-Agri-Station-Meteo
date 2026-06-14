@@ -383,7 +383,7 @@ bool initSIM7600() {
     delay(3000);
   }
 
-  envoyerAT("AT+CNMP=2", 2000);   // Mode automatique (LTE, WCDMA, GSM) — requis pour le SMS via 3G/2G (CSFB) si 4G LTE détache le SMS
+  envoyerAT("AT+CNMP=14", 2000);   // Forcer le mode 3G (WCDMA) uniquement pour s'affranchir de la signalisation 4G LTE (EMM) et valider le SMS CS
   delay(500);
   envoyerAT("AT+CGSMS=0", 2000);   // Forcer l'envoi de SMS via le domaine Circuit Switched (3G/2G) pour contourner EMM detached
   delay(500);
