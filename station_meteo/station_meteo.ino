@@ -418,39 +418,46 @@ bool envoyerFirebase4G(float temp, float humAir,
   // POST  → historique.json   : crée une entrée (clé push Firebase) ✅ confirmé
   // POST+override → mesures.json : SET les mesures temps réel
 
-  // ── 1. HISTORIQUE ─────────────────────────────────────────────────────────
+  // -- 1. HISTORIQUE ----------------------------------------------------
   bool okHisto = false;
-  {
+  for (int tentHisto = 0; tentHisto < 2 && !okHisto; tentHisto++) {
+    if (tentHisto > 0) { Serial.println("[4G] Historique retry..."); delay(2000); }
     envoyerAT("AT+HTTPTERM", 1000); delay(500);
-    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-      delay(800);  // Le module HTTP a besoin d'une pause après HTTPINIT
-      String url = "https://" + String(FIREBASE_HOST)
-                 + "/stations/" + STATION_ID + "/historique.json"
-                 + "?auth=" + String(FIREBASE_AUTH);
-      // Retry sur URL si ERROR (module pas encore prêt)
-      String repUrl = envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
-      if (repUrl.indexOf("OK") == -1) {
-        Serial.println("[4G] URL historique retry...");
-        delay(1500);
-        envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
-      }
-      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) continue;
+    delay(1200);  // Le module SSL met ~1s a s initialiser apres HTTPINIT
 
-      simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
-      if (attendreReponse("DOWNLOAD", 8000)) {
-        simSerial.print(json); delay(2000);
-        simSerial.println("AT+HTTPACTION=1");  // POST
-        String rep = ""; unsigned long t = millis();
-        while (millis() - t < 15000) {
-          while (simSerial.available()) rep += (char)simSerial.read();
-          if (rep.indexOf("+HTTPACTION") != -1) break;
-          if (rep.indexOf("ERROR")       != -1) break;
-        }
-        okHisto = rep.indexOf(",200,") != -1 || rep.indexOf(",201,") != -1;
-        Serial.println("[4G] POST historique : " + String(okHisto ? "OK ✅" : "ECHEC") + " | " + rep.substring(0,40));
-      }
-      envoyerAT("AT+HTTPTERM", 2000);
+    String url = "https://" + String(FIREBASE_HOST)
+               + "/stations/" + STATION_ID + "/historique.json"
+               + "?auth=" + String(FIREBASE_AUTH);
+
+    String repUrl = envoyerAT("AT+HTTPPARA=\"URL\"," + url + "\"", 3000);
+    if (repUrl.indexOf("OK") == -1) {
+      Serial.println("[4G] URL historique retry...");
+      delay(1500);
+      repUrl = envoyerAT("AT+HTTPPARA=\"URL\"," + url + "\"", 3000);
+      if (repUrl.indexOf("OK") == -1) { envoyerAT("AT+HTTPTERM", 1000); continue; }
     }
+    envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+
+    // Vider le buffer UART avant HTTPDATA
+    while (simSerial.available()) simSerial.read();
+    simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
+    if (attendreReponse("DOWNLOAD", 10000)) {
+      simSerial.print(json); delay(2500);
+      while (simSerial.available()) simSerial.read();  // flush residus
+      simSerial.println("AT+HTTPACTION=1");  // POST
+      String rep = ""; unsigned long t = millis();
+      while (millis() - t < 20000) {
+        while (simSerial.available()) rep += (char)simSerial.read();
+        if (rep.indexOf("+HTTPACTION") != -1) break;
+        if (rep.indexOf("ERROR")       != -1) break;
+      }
+      okHisto = rep.indexOf(",200,") != -1 || rep.indexOf(",201,") != -1;
+      Serial.println("[4G] POST historique : " + String(okHisto ? "OK OK" : "ECHEC") + " | " + rep.substring(0,40));
+    } else {
+      Serial.println("[4G] Historique : timeout DOWNLOAD");
+    }
+    envoyerAT("AT+HTTPTERM", 2000);
   }
 
   // ── 2. MESURES (temps réel) ───────────────────────────────────────────────
@@ -858,11 +865,20 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
     if (fin > debut) {
       message = body.substring(debut, fin);
       // Remplacer \n JSON par espace (le LF 0x0A brut cause CMS ERROR sur Orange SN)
-      message.replace("\\n", " ");
-      message.replace("\\u2014", "-");   // tiret long —
-      message.replace("\\u00e9", "e");   // e
-      message.replace("\\u00e0", "a");   // a
-      message.replace("\\u00e8", "e");   // e
+      message.replace("\\n", " ");         // LF JSON -> espace
+      message.replace("\\u2014", "-");     // tiret long
+      message.replace("\\u2013", "-");     // tiret court
+      message.replace("\\u00e9", "e");     // e accent aigu
+      message.replace("\\u00e8", "e");     // e accent grave
+      message.replace("\\u00ea", "e");     // e accent circonflexe
+      message.replace("\\u00e0", "a");     // a accent grave
+      message.replace("\\u00e2", "a");     // a accent circonflexe
+      message.replace("\\u00f4", "o");     // o accent circonflexe
+      message.replace("\\u00f9", "u");     // u accent grave
+      message.replace("\\u00fb", "u");     // u accent circonflexe
+      message.replace("\\u00ef", "i");     // i trema
+      message.replace("\\u00ee", "i");     // i accent circonflexe
+      message.replace("\\u00e7", "c");     // c cedille
     }
   }
 
@@ -881,24 +897,25 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
 }
 
 void envoyerSMS(String telephone, String message) {
-  Serial.println("[SMS] Envoi → " + telephone);
+  Serial.println("[SMS] Envoi -> " + telephone);
   Serial.println("[SMS] Message : " + message.substring(0, 80));
 
-  // ── Vérifier l'enregistrement réseau ────────────────────────────────────
-  String creg = envoyerAT("AT+CREG?", 2000);
+  // Verifier l enregistrement reseau
+  String creg = envoyerAT("AT+CREG?", 3000);
   if (creg.indexOf(",1") == -1 && creg.indexOf(",5") == -1) {
-    Serial.println("[SMS] Module non enregistre reseau — SMS annule");
+    Serial.println("[SMS] Module non enregistre reseau - SMS annule");
     return;
   }
-  // Attendre 3s pour que le service SMS soit stable après un éventuel reinit
-  delay(3000);
 
-  // IRA = International Reference Alphabet = ASCII pur
-  // CSCS="IRA" : [ reste [, ] reste ], pas de corruption
-  // CSCS="GSM" : [ → Ä, ] → Ñ (interdit !)
-  envoyerAT("AT+CSCS=\"IRA\"", 2000);
-  envoyerAT("AT+CMGF=1", 2000);
+  // Reinit mode SMS proprement
+  delay(1000);
+  while (simSerial.available()) simSerial.read();
+  envoyerAT("AT+CMGF=1", 3000);
   delay(500);
+  // GSM charset 100% compatible Orange SN
+  // (IRA cause problemes sur certains firmware SIM7600E)
+  envoyerAT("AT+CSCS=\"GSM\"", 2000);
+  delay(300);
 
   // Format international
   String numTel = telephone;
@@ -907,7 +924,8 @@ void envoyerSMS(String telephone, String message) {
   }
   Serial.println("[SMS] Numero : " + numTel);
 
-  // ── Nettoyage UTF-8 → ASCII pur ─────────────────────────────────────────
+  // -- Nettoyage UTF-8 -> ASCII 7bit strict ----------------------------
+  // C3 xx = Latin-1 (accents francais), E2 80 xx = ponctuation typo
   String msgPropre = "";
   int mLen = (int)message.length();
   for (int i = 0; i < mLen; ) {
@@ -916,11 +934,12 @@ void envoyerSMS(String telephone, String message) {
       unsigned char c2 = (unsigned char)message.charAt(i+1);
       unsigned char c3 = (unsigned char)message.charAt(i+2);
       if (c2 == 0x80) {
-        if      (c3==0x94||c3==0x93)          { msgPropre+='-'; }
-        else if (c3==0x99||c3==0x98)          { msgPropre+='\''; }
-        else if (c3==0x9C||c3==0x9D)          { msgPropre+='"'; }
-        else if (c3==0xA6)                    { msgPropre+='.'; }
-      }
+        if      (c3==0x94||c3==0x93) { msgPropre+='-'; }
+        else if (c3==0x99||c3==0x98) { msgPropre+='\'';}
+        else if (c3==0x9C||c3==0x9D) { msgPropre+='"'; }
+        else if (c3==0xA6)           { msgPropre+='.'; }
+        else                         { msgPropre+=' '; }
+      } else { msgPropre+=' '; }
       i+=3; continue;
     }
     if (c == 0xC3 && i + 1 < mLen) {
@@ -940,72 +959,83 @@ void envoyerSMS(String telephone, String message) {
         case 0x91: msgPropre+='N'; break;
         case 0x92:case 0x93:case 0x94:case 0x95:case 0x96: msgPropre+='O'; break;
         case 0x99:case 0x9A:case 0x9B:case 0x9C: msgPropre+='U'; break;
-        default: break;
+        default: msgPropre+=' '; break;
       }
       i+=2; continue;
     }
     if (c >= 0x80) { i++; continue; }
-    msgPropre += (char)c;
+    // LF (0x0A) cause CMS ERROR sur Orange SN -> remplacer par espace
+    if (c == 0x0A) { msgPropre += ' '; }
+    else            { msgPropre += (char)c; }
     i++;
   }
   if ((int)msgPropre.length() > 155) msgPropre = msgPropre.substring(0, 155);
-  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre.substring(0,60));
+  msgPropre.trim();
+  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre.substring(0,80));
 
-  // ── Envoi avec retry (2 tentatives) ─────────────────────────────────────
-  for (int tentative = 0; tentative < 2; tentative++) {
+  // -- Envoi avec retry (3 tentatives) ---------------------------------
+  for (int tentative = 0; tentative < 3; tentative++) {
     if (tentative > 0) {
-      Serial.println("[SMS] Retry " + String(tentative) + "/2...");
-      delay(5000);
+      Serial.println("[SMS] Retry " + String(tentative) + "/3...");
+      delay(8000);  // SMSC Orange SN peut etre lent
       while (simSerial.available()) simSerial.read();
-      envoyerAT("AT+CMGF=1", 2000);
+      envoyerAT("AT+CMGF=1", 3000);
+      envoyerAT("AT+CSCS=\"GSM\"", 2000);
       delay(500);
     }
 
     while (simSerial.available()) simSerial.read();
     simSerial.println("AT+CMGS=\"" + numTel + "\"");
-    delay(1200);
 
-    // Attendre prompt >
+    // Attendre prompt > (12s - Orange SN est lent)
     unsigned long tPr = millis();
     bool promptOk = false;
     String repPr = "";
-    while (millis() - tPr < 8000) {
+    while (millis() - tPr < 12000) {
       while (simSerial.available()) {
-        char c = simSerial.read();
-        repPr += c;
-        if (c == '>') { promptOk = true; break; }
+        char ch = simSerial.read();
+        repPr += ch;
+        if (ch == '>') { promptOk = true; break; }
       }
       if (promptOk) break;
+      delay(50);
     }
     if (!promptOk) {
-      Serial.println("[SMS] Pas de prompt > : " + repPr.substring(0,30));
+      Serial.println("[SMS] Pas de prompt > (" + String(millis()-tPr) + "ms)");
+      simSerial.write(27);  // ESC - annuler CMGS en cours
+      delay(500);
       continue;
     }
 
-    Serial.println("[SMS] Prompt > recu - envoi...");
+    Serial.println("[SMS] Prompt > recu - envoi du message...");
+    delay(100);             // micro-pause avant le texte
     simSerial.print(msgPropre);
-    delay(300);
-    simSerial.write(26);  // Ctrl+Z
+    delay(500);             // laisser le module bufferiser
+    simSerial.write(26);    // Ctrl+Z = fin du message
 
-    // Attendre confirmation reseau (15s max)
+    // Attendre confirmation reseau (25s max - SMSC Orange SN lent)
     String repCmgs = "";
     unsigned long tCmgs = millis();
-    while (millis() - tCmgs < 15000) {
+    while (millis() - tCmgs < 25000) {
       while (simSerial.available()) repCmgs += (char)simSerial.read();
       if (repCmgs.indexOf("+CMGS")      != -1) break;
       if (repCmgs.indexOf("+CMS ERROR") != -1) break;
       if (repCmgs.indexOf("ERROR")      != -1) break;
+      delay(100);
     }
-    Serial.println("[SMS] Reponse : " + repCmgs.substring(0,50));
+    Serial.println("[SMS] Reponse : " + repCmgs.substring(0,60));
 
     if (repCmgs.indexOf("+CMGS") != -1) {
-      Serial.println("[SMS] SMS confirme par le reseau !");
+      Serial.println("[SMS] OK SMS confirme par le reseau !");
       marquerSmsEnvoye();
       return;  // succes
     }
+    if (repCmgs.indexOf("+CMS ERROR") != -1) {
+      Serial.println("[SMS] CMS ERROR - num. incorrect, SMS desactive, ou msg trop long");
+    }
     Serial.println("[SMS] Tentative " + String(tentative+1) + " echouee");
   }
-  Serial.println("[SMS] SMS non envoye apres 2 tentatives");
+  Serial.println("[SMS] SMS non envoye apres 3 tentatives");
 }
 
 
