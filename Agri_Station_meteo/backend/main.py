@@ -148,24 +148,97 @@ class PushMesuresRequest(BaseModel):
 def push_mesures(station_id: str, body: PushMesuresRequest):
     """
     L'ESP32 envoie ses capteurs ici (HTTP POST simple, pas de PUT/PATCH Firebase).
-    Le backend écrit dans Firebase via Admin SDK :
-      - SET stations/{station_id}/mesures      (données temps réel)
-      - PUSH stations/{station_id}/historique  (historique permanent)
-      - SET stations/{station_id}/gps          (si GPS fix disponible)
+    Le backend effectue en séquence :
+      1. SET stations/{station_id}/mesures      (données temps réel)
+      2. PUSH stations/{station_id}/historique  (historique permanent)
+      3. SET stations/{station_id}/gps          (si GPS fix disponible)
+      4. Calcul recommandation IA + écriture SMS dans Firebase
+         → l'ESP32 n'a plus besoin d'appeler /sms/recommandation séparément.
     """
-    payload = body.dict()
-    payload["station_id"] = station_id  # priorité au path param
+    from datetime import datetime
 
+    payload = body.dict()
+    payload["station_id"] = station_id
+
+    # ── 1-3. Écriture Firebase ───────────────────────────────────────────────
     result = firebase_service.push_mesures_et_historique(station_id, payload)
     if not result.get("succes"):
         raise HTTPException(status_code=500, detail=result.get("erreur", "Erreur Firebase"))
 
+    # ── 4. Recommandation IA + SMS (non bloquant si erreur) ─────────────────
+    sms_statut = "skipped"
+    try:
+        # Prévisions OpenWeather
+        gps    = firebase_service.get_station_gps(station_id)
+        prev   = weather_service.get_previsions_5j(
+            region = "Kaolack",
+            lat    = gps.get("latitude"),
+            lon    = gps.get("longitude"),
+        )
+        if prev.get("ok") and prev.get("liste"):
+            firebase_service.sauvegarder_openweather(station_id, prev["liste"])
+
+        # Recommandation IA sur les capteurs reçus
+        p  = float(prev.get("liste", [{}])[0].get("pluie",    0) if prev.get("ok") else 0)
+        tf = float(prev.get("liste", [{}])[0].get("temp_max", body.temperature) if prev.get("ok") else body.temperature)
+        hf = float(prev.get("liste", [{}])[0].get("humidite", body.humidite_air) if prev.get("ok") else body.humidite_air)
+        vf = float(prev.get("liste", [{}])[0].get("vent",     0) if prev.get("ok") else 0)
+
+        reco = ia_service.get_recommandation(
+            temperature        = body.temperature,
+            humidite_air       = body.humidite_air,
+            humidite_sol       = body.humidite_sol,
+            vitesse_vent       = body.vitesse_vent,
+            pluie_prevue_3h    = p,
+            temperature_future = tf,
+            humidite_future    = hf,
+            vent_future        = vf,
+        )
+
+        # Téléphone agriculteur
+        telephone = firebase_service.get_telephone_agriculteur(station_id)
+        if not telephone:
+            sms_statut = "no_phone"
+        else:
+            if not telephone.startswith("+"):
+                telephone = "+221" + telephone
+            conseil = reco["conseil"][:80]
+            message = (
+                f"Agri Meteo {station_id} "
+                f"[{reco['label'][:30]}]\n"
+                f"{conseil}\n"
+                f"Temp:{body.temperature:.0f}C Sol:{body.humidite_sol:.0f}% Vent:{body.vitesse_vent:.0f}km/h"
+            )[:160]
+            firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
+            sms_statut = "ok"
+            print(f"[PUSH] 📱 SMS écrit pour {station_id} → {telephone}")
+
+        # Traçabilité dataset
+        firebase_service.sauvegarder_dataset(station_id, {
+            "temperature"       : body.temperature,
+            "humidite_air"      : body.humidite_air,
+            "humidite_sol"      : body.humidite_sol,
+            "vitesse_vent"      : body.vitesse_vent,
+            "pluie_prevue_3h"   : p,
+            "temperature_future": tf,
+            "humidite_future"   : hf,
+            "vent_future"       : vf,
+            "label_idx"         : reco["label_idx"],
+            "label"             : reco["label"],
+            "source"            : reco["source"],
+        })
+
+    except Exception as e:
+        print(f"[PUSH] ⚠️ Erreur pipeline SMS : {e}")
+        sms_statut = f"error: {str(e)[:60]}"
+
     return {
-        "statut"    : "ok",
-        "station_id": station_id,
-        "timestamp" : payload.get("timestamp"),
-        "temperature": body.temperature,
+        "statut"      : "ok",
+        "station_id"  : station_id,
+        "timestamp"   : payload.get("timestamp"),
+        "temperature" : body.temperature,
         "humidite_sol": body.humidite_sol,
+        "sms_statut"  : sms_statut,
     }
 
 

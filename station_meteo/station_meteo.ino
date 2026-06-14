@@ -460,42 +460,42 @@ bool envoyerFirebase4G(float temp, float humAir,
   }
 
   bool okPush = repPush.indexOf(",200,") != -1 || repPush.indexOf(",201,") != -1;
-  Serial.println("[4G] Push backend : " + String(okPush ? "OK" : "ECHEC") + " | " + repPush);
+  Serial.println("[4G] Push backend : " + String(okPush ? "OK" : "ECHEC") + " | " + repPush.substring(0, 50));
 
-  // Lire la réponse pour confirmer
+  // ── Lire la réponse JSON du backend ──────────────────────────────────
+  // /push renvoie {statut, sms_statut, temperature, ...}
   if (okPush) {
     delay(300);
     while (simSerial.available()) simSerial.read();
     simSerial.println("AT+HTTPREAD");
-    String repRead = "";
+    String rawResp = "";
     unsigned long tRead = millis();
     while (millis() - tRead < 8000) {
-      while (simSerial.available()) repRead += (char)simSerial.read();
-      if (repRead.indexOf("OK") != -1) break;
-      if (repRead.indexOf("ERROR") != -1) break;
+      while (simSerial.available()) rawResp += (char)simSerial.read();
+      // Attendre le marqueur DATA puis la fermeture }
+      if (rawResp.indexOf("+HTTPREAD: DATA") != -1 && rawResp.lastIndexOf("}") != -1) break;
+      if (rawResp.indexOf("ERROR") != -1) break;
     }
-    Serial.println("[4G] Reponse backend : " + repRead.substring(0, 120));
+    // Extraire le JSON après le marqueur
+    String repRead = rawResp;
+    int dm = rawResp.indexOf("+HTTPREAD: DATA");
+    if (dm != -1) {
+      int js = rawResp.indexOf("\r\n", dm) + 2;
+      if (js > 1) repRead = rawResp.substring(js);
+    }
+    Serial.println("[4G] Backend reponse : " + repRead.substring(0, 120));
+    // Afficher le statut SMS calculé par le backend
+    if (repRead.indexOf("\"sms_statut\":\"ok\"") != -1)
+      Serial.println("[4G] ✅ SMS ecrit dans Firebase par le backend");
+    else if (repRead.indexOf("\"sms_statut\":\"no_phone\"") != -1)
+      Serial.println("[4G] ⚠️ Pas de telephone agriculteur enregistre");
+    else
+      Serial.println("[4G] ℹ️ SMS statut : " + repRead.substring(repRead.indexOf("sms_statut"), repRead.indexOf("sms_statut") + 40));
   }
   envoyerAT("AT+HTTPTERM", 2000);
 
-  // ── ÉTAPE 2 : Recommandation SMS (appel backend séparé) ───────────────
-  delay(1000);
-  envoyerAT("AT+HTTPTERM", 1000);
-  delay(500);
-  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-    String urlSms = "https://agri-station-meteo.onrender.com/sms/recommandation/" + String(STATION_ID);
-    envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlSms + "\"", 3000);
-    while (simSerial.available()) simSerial.read();
-    simSerial.println("AT+HTTPACTION=0");  // GET
-    String repSms = "";
-    unsigned long tSms = millis();
-    while (millis() - tSms < 60000) {
-      while (simSerial.available()) repSms += (char)simSerial.read();
-      if (repSms.indexOf("+HTTPACTION") != -1) break;
-    }
-    Serial.println("[4G] Recommandation SMS → " + repSms.substring(0, 60));
-    envoyerAT("AT+HTTPTERM");
-  }
+  // NOTE : La recommandation SMS est calculée directement par /push
+  // Plus besoin d'appeler /sms/recommandation séparément.
 
   return okPush;
 }
@@ -741,11 +741,9 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
 
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
 
-  // Vider le buffer avant la requête
   while (simSerial.available()) simSerial.read();
   simSerial.println("AT+HTTPACTION=0");
 
-  // Attendre uniquement le signal +HTTPACTION
   String repAction = "";
   unsigned long t = millis();
   while (millis() - t < 20000) {
@@ -760,8 +758,7 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
     return false;
   }
 
-  // ── Parser la taille du body depuis "+HTTPACTION: 0,200,270" ──────────
-  // Sur SIM7600E ce firmware exige AT+HTTPREAD=0,<length>
+  // ── Taille du body depuis "+HTTPACTION: 0,200,270" ────────────────────
   int dataLen = 0;
   {
     int lastComma = repAction.lastIndexOf(",");
@@ -774,34 +771,58 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
   Serial.println("[SMS] Taille body : " + String(dataLen) + " octets");
 
   // ── Lire le body JSON ─────────────────────────────────────────────────
+  // IMPORTANT : AT+HTTPREAD=0,N renvoie d'abord \r\nOK\r\n AVANT les données
+  // sous forme +HTTPREAD: DATA,N\r\n<json>\r\nOK
+  // → ne pas s'arrêter sur le premier OK, attendre le marqueur DATA.
   delay(300);
-  while (simSerial.available()) simSerial.read();  // vider résidus
-  // Utiliser AT+HTTPREAD=0,N si la taille est connue, sinon fallback
+  while (simSerial.available()) simSerial.read();
+
   if (dataLen > 0) {
     simSerial.println("AT+HTTPREAD=0," + String(dataLen));
   } else {
     simSerial.println("AT+HTTPREAD");
   }
-  String body = "";
-  t = millis();
-  // Attendre suffisamment longtemps pour recevoir tout le body
-  while (millis() - t < 10000) {
-    while (simSerial.available()) body += (char)simSerial.read();
-    if (body.indexOf("\r\nOK") != -1) break;
-    if (body.indexOf("ERROR") != -1) break;
-    // Si on a reçu au moins dataLen octets de JSON, on peut s'arrêter
-    if (dataLen > 0 && (int)body.length() >= dataLen + 20) break;
-  }
-  Serial.println("[SMS] Body recu (" + String(body.length()) + ") : " + body);
 
+  String raw = "";
+  t = millis();
+  while (millis() - t < 12000) {
+    while (simSerial.available()) raw += (char)simSerial.read();
+    // Attendre que le marqueur DATA soit présent
+    int dataMarker = raw.indexOf("+HTTPREAD: DATA");
+    if (dataMarker != -1) {
+      int jsonStart = raw.indexOf("\r\n", dataMarker) + 2;
+      if (jsonStart > 1) {
+        int bytesApresHeader = (int)raw.length() - jsonStart;
+        // Arrêt dès qu'on a tous les octets attendus
+        if (dataLen > 0 && bytesApresHeader >= dataLen) break;
+        // Ou dès que le JSON est fermé (})
+        if (raw.lastIndexOf("}") > jsonStart) break;
+      }
+    }
+    if (raw.indexOf("ERROR") != -1) break;
+  }
+
+  // ── Extraire uniquement la partie JSON (après le marqueur DATA) ────────
+  String body = raw;
+  int dataMarker = raw.indexOf("+HTTPREAD: DATA");
+  if (dataMarker != -1) {
+    int jsonStart = raw.indexOf("\r\n", dataMarker) + 2;
+    if (jsonStart > 1) {
+      body = raw.substring(jsonStart);
+      // Supprimer le \r\nOK final s'il est présent
+      int trailOk = body.lastIndexOf("\r\nOK");
+      if (trailOk != -1) body = body.substring(0, trailOk);
+    }
+  }
+
+  Serial.println("[SMS] Body JSON (" + String(body.length()) + ") : " + body.substring(0, 100));
   envoyerAT("AT+HTTPTERM");
 
   // ─── Vérifier si un SMS est EN ATTENTE (envoye = false) ───────────────
-  // Firebase peut retourner "envoye":false  OU  "envoye": false  (avec espace)
   bool smsEnAttente = (body.indexOf("\"envoye\":false")  != -1)
                    || (body.indexOf("\"envoye\": false") != -1);
   if (!smsEnAttente) {
-    Serial.println("[SMS] Aucun SMS en attente (envoye=true ou noeud absent)");
+    Serial.println("[SMS] Aucun SMS en attente");
     return false;
   }
 
@@ -809,10 +830,21 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
   int idxMsg = body.indexOf("\"message\":\"");
   if (idxMsg != -1) {
     int debut = idxMsg + 11;
-    int fin   = body.indexOf("\"", debut);
+    // Chercher le " fermant en sautant les \" échappés
+    int fin = debut;
+    while (true) {
+      fin = body.indexOf("\"", fin);
+      if (fin == -1) break;               // pas trouvé
+      if (body.charAt(fin - 1) != '\\') break;  // vrai guillemet fermant
+      fin++;                              // guillemet échappé → continuer
+    }
     if (fin > debut) {
       message = body.substring(debut, fin);
-      message.replace("\\n", "\n");   // remplacer \n littéral par vrai saut
+      message.replace("\\n", "\n");
+      message.replace("\\u2014", "-");   // tiret long —
+      message.replace("\\u00e9", "e");   // é
+      message.replace("\\u00e0", "a");   // à
+      message.replace("\\u00e8", "e");   // è
     }
   }
 
@@ -821,13 +853,11 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
   if (idxTel != -1) {
     int debut = idxTel + 13;
     int fin   = body.indexOf("\"", debut);
-    if (fin > debut) {
-      telephone = body.substring(debut, fin);
-    }
+    if (fin > debut) telephone = body.substring(debut, fin);
   }
 
-  Serial.println("[SMS] Message parse  : " + message);
-  Serial.println("[SMS] Telephone parse : " + telephone);
+  Serial.println("[SMS] Message  : " + message.substring(0, 80));
+  Serial.println("[SMS] Telephone: " + telephone);
 
   return (message.length() > 0 && telephone.length() > 0);
 }
@@ -870,7 +900,8 @@ void envoyerSMS(String telephone, String message) {
 
 
 void marquerSmsEnvoye() {
-  // ─── PUT /stations/ST002/sms_a_envoyer/envoye.json  ← true ───────────
+  // ─── Appel backend GET /sms/marquer-envoye/ST002 ──────────────────────
+  // Plus fiable qu'un PUT direct Firebase REST (pas de problème d'override)
   envoyerAT("AT+HTTPTERM", 1000);
   delay(500);
   if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) {
@@ -878,30 +909,20 @@ void marquerSmsEnvoye() {
     return;
   }
 
-  String url = "https://" + String(FIREBASE_HOST)
-             + "/stations/" + STATION_ID + "/sms_a_envoyer/envoye.json"
-             + "?auth=" + String(FIREBASE_AUTH);
-
-  String jsonTrue = "true";
+  String url = "https://agri-station-meteo.onrender.com/sms/marquer-envoye/" + String(STATION_ID);
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
-  envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // Firebase REST : utiliser PUT via POST + override
-  envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
 
-  simSerial.println("AT+HTTPDATA=" + String(jsonTrue.length()) + ",5000");
-  if (attendreReponse("DOWNLOAD", 5000)) {
-    simSerial.print(jsonTrue);
-    delay(2000);
-    simSerial.println("AT+HTTPACTION=1");  // POST (override en PUT)
-    String repMark = "";
-    unsigned long t = millis();
-    while (millis() - t < 10000) {
-      while (simSerial.available()) repMark += (char)simSerial.read();
-      if (repMark.indexOf("+HTTPACTION") != -1) break;
-    }
-    bool ok = repMark.indexOf("200") != -1;
-    Serial.println("[SMS] Marque comme envoye : " + String(ok ? "OK" : "ECHEC") + " " + repMark);
+  while (simSerial.available()) simSerial.read();
+  simSerial.println("AT+HTTPACTION=0");  // GET
+
+  String repMark = "";
+  unsigned long t = millis();
+  while (millis() - t < 30000) {
+    while (simSerial.available()) repMark += (char)simSerial.read();
+    if (repMark.indexOf("+HTTPACTION") != -1) break;
   }
+  bool ok = repMark.indexOf("200") != -1;
+  Serial.println("[SMS] Marque envoye : " + String(ok ? "OK" : "ECHEC") + " " + repMark.substring(0,40));
   envoyerAT("AT+HTTPTERM");
 }
 
