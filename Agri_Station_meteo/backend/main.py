@@ -242,6 +242,148 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
     }
 
 
+# ── Forcer la mise à jour de TOUTES les branches Firebase ────────────────────
+
+@app.get("/forcer-maj/{station_id}", tags=["Administration"])
+def forcer_mise_a_jour(station_id: str):
+    """
+    🔄 Déclenche manuellement la mise à jour de toutes les branches Firebase :
+      - mesures      → dernier enregistrement de historique
+      - gps          → coordonnées du dernier enregistrement
+      - dataset      → nouvel échantillon ajouté (IA)
+      - sms_a_envoyer→ nouveau message GSM-7bit calculé par l'IA
+
+    Utile quand l'ESP32 n'est pas connecté ou quand le backend vient de démarrer.
+    Appeler depuis le navigateur :
+      https://agri-station-meteo.onrender.com/forcer-maj/ST002
+    """
+    from datetime import datetime
+    rapport = {
+        "station_id": station_id,
+        "timestamp" : datetime.now().isoformat(),
+        "mesures"   : "skipped",
+        "gps"       : "skipped",
+        "dataset"   : "skipped",
+        "sms"       : "skipped",
+    }
+
+    # ── 1. Lire le dernier enregistrement de l'historique ────────────────────
+    historique = firebase_service.get_historique(station_id, limit=1)
+    if not historique:
+        return {"erreur": "Aucun historique trouvé pour " + station_id, **rapport}
+
+    dernier = historique[0]
+    temperature  = float(dernier.get("temperature",  0))
+    humidite_air = float(dernier.get("humidite_air", 0))
+    humidite_sol = float(dernier.get("humidite_sol", 0))
+    vitesse_vent = float(dernier.get("vitesse_vent", 0))
+    ts           = dernier.get("timestamp", datetime.now().isoformat())
+
+    print(f"[MAJ] Dernier historique : T={temperature} Sol={humidite_sol} @ {ts}")
+
+    # ── 2. Mettre à jour mesures ─────────────────────────────────────────────
+    try:
+        db_ref = firebase_service.db
+        db_ref.reference(f"stations/{station_id}/mesures").set({
+            "temperature" : temperature,
+            "humidite_air": humidite_air,
+            "humidite_sol": humidite_sol,
+            "vitesse_vent": vitesse_vent,
+            "station_id"  : station_id,
+            "timestamp"   : ts,
+            "latitude"    : dernier.get("latitude"),
+            "longitude"   : dernier.get("longitude"),
+            "gps_fix"     : dernier.get("gps_fix", False),
+        })
+        rapport["mesures"] = f"ok - T={temperature}C Sol={humidite_sol}% @ {ts}"
+        print(f"[MAJ] ✅ mesures mis a jour")
+    except Exception as e:
+        rapport["mesures"] = f"erreur: {str(e)[:60]}"
+
+    # ── 3. Mettre à jour GPS ─────────────────────────────────────────────────
+    try:
+        lat = dernier.get("latitude")
+        lon = dernier.get("longitude")
+        if lat and lon:
+            firebase_service.db.reference(f"stations/{station_id}/gps").set({
+                "latitude" : lat,
+                "longitude": lon,
+                "altitude" : dernier.get("altitude", 0),
+                "timestamp": ts,
+            })
+            rapport["gps"] = f"ok - {lat},{lon}"
+            print(f"[MAJ] ✅ GPS mis a jour : {lat},{lon}")
+        else:
+            rapport["gps"] = "skipped - pas de coordonnees dans l'historique"
+    except Exception as e:
+        rapport["gps"] = f"erreur: {str(e)[:60]}"
+
+    # ── 4. Prévisions météo + dataset ────────────────────────────────────────
+    p = tf = hf = vf = 0.0
+    try:
+        gps  = firebase_service.get_station_gps(station_id)
+        prev = weather_service.get_previsions_5j(
+            region="Kaolack",
+            lat=gps.get("latitude"),
+            lon=gps.get("longitude"),
+        )
+        if prev.get("ok") and prev.get("liste"):
+            firebase_service.sauvegarder_openweather(station_id, prev["liste"])
+            p  = float(prev["liste"][0].get("pluie",    0))
+            tf = float(prev["liste"][0].get("temp_max", temperature))
+            hf = float(prev["liste"][0].get("humidite", humidite_air))
+            vf = float(prev["liste"][0].get("vent",     0))
+
+        reco = ia_service.get_recommandation(
+            temperature=temperature, humidite_air=humidite_air,
+            humidite_sol=humidite_sol, vitesse_vent=vitesse_vent,
+            pluie_prevue_3h=p, temperature_future=tf,
+            humidite_future=hf, vent_future=vf,
+        )
+
+        firebase_service.sauvegarder_dataset(station_id, {
+            "temperature"       : temperature,
+            "humidite_air"      : humidite_air,
+            "humidite_sol"      : humidite_sol,
+            "vitesse_vent"      : vitesse_vent,
+            "pluie_prevue_3h"   : p,
+            "temperature_future": tf,
+            "humidite_future"   : hf,
+            "vent_future"       : vf,
+            "label_idx"         : reco["label_idx"],
+            "label"             : reco["label"],
+            "source"            : reco["source"],
+        })
+        rapport["dataset"] = f"ok - label={reco['label']} (conf={reco.get('confiance','?')})"
+        print(f"[MAJ] ✅ dataset mis a jour : {reco['label']}")
+
+        # ── 5. SMS ───────────────────────────────────────────────────────────
+        telephone = firebase_service.get_telephone_agriculteur(station_id)
+        if not telephone:
+            rapport["sms"] = "skipped - pas de telephone agriculteur"
+        else:
+            if not telephone.startswith("+"):
+                telephone = "+221" + telephone
+            conseil = reco["conseil"][:80]
+            message = (
+                f"Agri Meteo {station_id} [{reco['label'][:30]}]\n"
+                f"{conseil}\n"
+                f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}km/h"
+            )
+            message = firebase_service._sms_clean(message)
+            firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
+            rapport["sms"] = f"ok - {len(message)} car. → {telephone}"
+            print(f"[MAJ] ✅ SMS ecrit : {message[:60]}")
+
+    except Exception as e:
+        rapport["dataset"] = f"erreur: {str(e)[:80]}"
+        rapport["sms"]     = "skipped (erreur dataset)"
+        print(f"[MAJ] ❌ Erreur : {e}")
+
+    print(f"[MAJ] Rapport final : {rapport}")
+    return rapport
+
+
 # ── Historique ───────────────────────────────────────────────────────────────
 
 @app.get("/historique/{station_id}", tags=["Données"])
