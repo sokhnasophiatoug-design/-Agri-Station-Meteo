@@ -423,10 +423,17 @@ bool envoyerFirebase4G(float temp, float humAir,
   {
     envoyerAT("AT+HTTPTERM", 1000); delay(500);
     if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
+      delay(800);  // Le module HTTP a besoin d'une pause après HTTPINIT
       String url = "https://" + String(FIREBASE_HOST)
                  + "/stations/" + STATION_ID + "/historique.json"
                  + "?auth=" + String(FIREBASE_AUTH);
-      envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+      // Retry sur URL si ERROR (module pas encore prêt)
+      String repUrl = envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+      if (repUrl.indexOf("OK") == -1) {
+        Serial.println("[4G] URL historique retry...");
+        delay(1500);
+        envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+      }
       envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
 
       simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
@@ -454,7 +461,7 @@ bool envoyerFirebase4G(float temp, float humAir,
     if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
       String url = "https://" + String(FIREBASE_HOST)
                  + "/stations/" + STATION_ID + "/mesures.json"
-                 + "?auth=" + String(FIREBASE_AUTH);
+                 + "?auth=" + FIREBASE_AUTH;
       envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
       envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
       envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
@@ -483,7 +490,7 @@ bool envoyerFirebase4G(float temp, float humAir,
     if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
       String urlGPS = "https://" + String(FIREBASE_HOST)
                     + "/stations/" + STATION_ID + "/gps.json"
-                    + "?auth=" + String(FIREBASE_AUTH);
+                    + "?auth=" + FIREBASE_AUTH;
       String jsonGPS = "{\"latitude\":"  + String(gpsLatitude,  6)
                      + ",\"longitude\":" + String(gpsLongitude, 6)
                      + ",\"altitude\":"  + String(gpsAltitude,  1)
@@ -850,11 +857,12 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
     }
     if (fin > debut) {
       message = body.substring(debut, fin);
-      message.replace("\\n", "\n");
+      // Remplacer \n JSON par espace (le LF 0x0A brut cause CMS ERROR sur Orange SN)
+      message.replace("\\n", " ");
       message.replace("\\u2014", "-");   // tiret long —
-      message.replace("\\u00e9", "e");   // é
-      message.replace("\\u00e0", "a");   // à
-      message.replace("\\u00e8", "e");   // è
+      message.replace("\\u00e9", "e");   // e
+      message.replace("\\u00e0", "a");   // a
+      message.replace("\\u00e8", "e");   // e
     }
   }
 
@@ -885,8 +893,10 @@ void envoyerSMS(String telephone, String message) {
   // Attendre 3s pour que le service SMS soit stable après un éventuel reinit
   delay(3000);
 
-  // Mode texte
-  while (simSerial.available()) simSerial.read();  // vider le buffer
+  // IRA = International Reference Alphabet = ASCII pur
+  // CSCS="IRA" : [ reste [, ] reste ], pas de corruption
+  // CSCS="GSM" : [ → Ä, ] → Ñ (interdit !)
+  envoyerAT("AT+CSCS=\"IRA\"", 2000);
   envoyerAT("AT+CMGF=1", 2000);
   delay(500);
 
