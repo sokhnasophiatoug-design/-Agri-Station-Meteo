@@ -893,10 +893,9 @@ void envoyerSMS(String telephone, String message) {
   while (simSerial.available()) simSerial.read();
   envoyerAT("AT+CMGF=1", 3000);   // Mode texte
   delay(500);
-  // IRA = International Reference Alphabet = ASCII pur
-  // [IMPORTANT] Ne PAS utiliser CSCS=GSM : en GSM charset, '[' (0x5B)=A-umlaut
-  // et ']' (0x5D)=N-tilde, ce qui fait rejeter le message par le SMSC Orange SN
-  envoyerAT("AT+CSCS=\"IRA\"", 2000);
+  // CSCS="GSM" est requis par le réseau Orange SN pour accepter l'envoi.
+  // Les crochets [ et ] sont convertis en ( et ) pour éviter les caractères Ä et Ñ.
+  envoyerAT("AT+CSCS=\"GSM\"", 2000);
   delay(300);
   // Diagnostics reseau SMS
   String csca = envoyerAT("AT+CSCA?", 2000);
@@ -971,7 +970,7 @@ void envoyerSMS(String telephone, String message) {
       delay(8000);  // SMSC Orange SN peut etre lent
       while (simSerial.available()) simSerial.read();
       envoyerAT("AT+CMGF=1", 3000);
-      envoyerAT("AT+CSCS=\"IRA\"", 2000);
+      envoyerAT("AT+CSCS=\"GSM\"", 2000);
       delay(500);
     }
 
