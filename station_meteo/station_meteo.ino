@@ -383,7 +383,7 @@ bool initSIM7600() {
     delay(3000);
   }
 
-  envoyerAT("AT+CNMP=38", 2000);   // LTE uniquement (mode qui a permis d'envoyer les SMS avec succès)
+  envoyerAT("AT+CNMP=2", 2000);   // Mode automatique (LTE, WCDMA, GSM) — requis pour le SMS via 3G/2G (CSFB) si 4G LTE détache le SMS
   delay(500);
   envoyerAT("AT+CGDCONT=1,\"IP\",\"" + String(APN) + "\"", 3000);
   delay(500);
