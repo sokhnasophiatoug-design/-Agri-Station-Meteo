@@ -52,6 +52,59 @@ def get_mesures(station_id: str) -> dict:
         return {"error": str(e)}
 
 
+def push_mesures_et_historique(station_id: str, payload: dict) -> dict:
+    """
+    Reçoit les données capteurs de l'ESP32 et les écrit dans Firebase
+    via Admin SDK (pas de problème PUT/PATCH REST).
+
+    - SET sur stations/{station_id}/mesures      → données temps réel
+    - PUSH sur stations/{station_id}/historique  → nouvelle entrée horodatée
+
+    Met aussi à jour le nœud GPS si latitude/longitude sont présents.
+    """
+    from datetime import datetime
+
+    ts = payload.get("timestamp") or datetime.now().isoformat()
+
+    entree = {
+        "temperature" : payload.get("temperature"),
+        "humidite_air": payload.get("humidite_air"),
+        "humidite_sol": payload.get("humidite_sol"),
+        "vitesse_vent": payload.get("vitesse_vent"),
+        "station_id"  : station_id,
+        "timestamp"   : ts,
+        "latitude"    : payload.get("latitude"),
+        "longitude"   : payload.get("longitude"),
+        "gps_fix"     : payload.get("gps_fix", False),
+    }
+    # Supprimer les clés None pour ne pas polluer Firebase
+    entree = {k: v for k, v in entree.items() if v is not None}
+
+    try:
+        # 1. Mesures courantes — SET (écrase le nœud, équivalent PUT)
+        db.reference(f"stations/{station_id}/mesures").set(entree)
+
+        # 2. Historique — PUSH (crée une entrée unique)
+        db.reference(f"stations/{station_id}/historique").push(entree)
+
+        # 3. GPS séparé (si fix disponible)
+        if payload.get("gps_fix") and payload.get("latitude") and payload.get("longitude"):
+            db.reference(f"stations/{station_id}/gps").set({
+                "latitude" : payload["latitude"],
+                "longitude": payload["longitude"],
+                "altitude" : payload.get("altitude", 0),
+                "timestamp": ts,
+            })
+
+        print(f"[PUSH] ✅ {station_id} — T={entree.get('temperature')}°C "
+              f"Sol={entree.get('humidite_sol')}% Vent={entree.get('vitesse_vent')}km/h")
+        return {"succes": True}
+
+    except Exception as e:
+        print(f"❌ push_mesures_et_historique({station_id}) : {e}")
+        return {"succes": False, "erreur": str(e)}
+
+
 # ── Historique ───────────────────────────────────────────────────────────────
 
 def get_historique(station_id: str, limit: int = 50) -> list:

@@ -129,6 +129,46 @@ def get_mesures(station_id: str):
 
         return {"error": str(e)}
 
+
+# ── Push ESP32 → Backend → Firebase (contourne les limites REST 4G) ──────────
+
+class PushMesuresRequest(BaseModel):
+    temperature:  float
+    humidite_air: float
+    humidite_sol: float
+    vitesse_vent: float
+    station_id:   Optional[str]   = None
+    timestamp:    Optional[str]   = None
+    latitude:     Optional[float] = None
+    longitude:    Optional[float] = None
+    altitude:     Optional[float] = None
+    gps_fix:      Optional[bool]  = False
+
+@app.post("/push/{station_id}", tags=["ESP32"])
+def push_mesures(station_id: str, body: PushMesuresRequest):
+    """
+    L'ESP32 envoie ses capteurs ici (HTTP POST simple, pas de PUT/PATCH Firebase).
+    Le backend écrit dans Firebase via Admin SDK :
+      - SET stations/{station_id}/mesures      (données temps réel)
+      - PUSH stations/{station_id}/historique  (historique permanent)
+      - SET stations/{station_id}/gps          (si GPS fix disponible)
+    """
+    payload = body.dict()
+    payload["station_id"] = station_id  # priorité au path param
+
+    result = firebase_service.push_mesures_et_historique(station_id, payload)
+    if not result.get("succes"):
+        raise HTTPException(status_code=500, detail=result.get("erreur", "Erreur Firebase"))
+
+    return {
+        "statut"    : "ok",
+        "station_id": station_id,
+        "timestamp" : payload.get("timestamp"),
+        "temperature": body.temperature,
+        "humidite_sol": body.humidite_sol,
+    }
+
+
 # ── Historique ───────────────────────────────────────────────────────────────
 
 @app.get("/historique/{station_id}", tags=["Données"])

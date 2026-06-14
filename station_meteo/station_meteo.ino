@@ -410,16 +410,19 @@ bool initSIM7600() {
 bool envoyerFirebase4G(float temp, float humAir,
                        float vent, float humSol) {
 
- String ts = obtenirTimestamp4G();
-
+  String ts = obtenirTimestamp4G();
   String json = construireJSON(temp, humAir, vent, humSol, ts);
   Serial.println("[4G] JSON : " + json);
 
-  // ── PUT mesures actuelles ──────────────────────────────────
-  // Reset HTTP complet avant chaque session
-  envoyerAT("AT+HTTPTERM", 3000);
-  delay(2000);
-  // Retry HTTPINIT jusqu'à 3 fois
+  // ── ÉTAPE 1 : Envoyer au backend Render (POST /push/ST002) ────────────
+  // Le backend écrit dans Firebase via Admin SDK → pas de problème PUT/REST
+  // C'est le même mécanisme que l'appel SMS qui fonctionne déjà.
+  // ──────────────────────────────────────────────────────────────────────
+
+  // Reset + init HTTP
+  envoyerAT("AT+HTTPTERM", 2000);
+  delay(1000);
+
   bool httpOk = false;
   for (int r = 0; r < 3; r++) {
     if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
@@ -433,73 +436,35 @@ bool envoyerFirebase4G(float temp, float humAir,
     Serial.println("[4G] HTTPINIT échoué"); return false;
   }
 
-  String urlMesures = "https://" + String(FIREBASE_HOST)
-                    + "/stations/" + STATION_ID + "/mesures.json"
-                    + "?auth=" + String(FIREBASE_AUTH);
-
-  envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlMesures + "\"", 3000);
+  String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
+  envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // Pas de USERDATA override — on utilise AT+HTTPACTION=3 (PUT natif SIM7600E)
 
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
+    Serial.println("[4G] HTTPDATA pas de DOWNLOAD — abandon");
     envoyerAT("AT+HTTPTERM"); return false;
   }
   delay(200);
   simSerial.print(json);
   delay(3000);
 
-  simSerial.println("AT+HTTPACTION=3");  // 3 = PUT natif SIM7600E
-  String repAction = "";
-  unsigned long t = millis();
-  while (millis() - t < 40000) {
-    while (simSerial.available()) repAction += (char)simSerial.read();
-    if (repAction.indexOf("+HTTPACTION") != -1) break;
-    if (repAction.indexOf("ERROR") != -1) break;
-  }
-  envoyerAT("AT+HTTPTERM");
-
-  bool okMesures = repAction.indexOf("+HTTPACTION") != -1;
-  Serial.println("[4G] PUT mesures : " + String(okMesures ? "OK" : "ECHEC"));
-
-  // ── POST historique ────────────────────────────────────────
-  delay(1000);
-  envoyerAT("AT+HTTPTERM", 1000);
-  delay(500);
-
-  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) return okMesures;
-
-  String urlHisto = "https://" + String(FIREBASE_HOST)
-                  + "/stations/" + STATION_ID + "/historique.json"
-                  + "?auth=" + String(FIREBASE_AUTH);
-
-  envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlHisto + "\"", 3000);
-  envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // AT+HTTPACTION=1 = POST → Firebase génère une clé push unique
-
-  simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
-  if (!attendreReponse("DOWNLOAD", 10000)) {
-    envoyerAT("AT+HTTPTERM"); return okMesures;
-  }
-  delay(200);
-  simSerial.print(json);
-  delay(3000);
-
   simSerial.println("AT+HTTPACTION=1");  // POST
-  repAction = "";
-  t = millis();
-  while (millis() - t < 40000) {
-    while (simSerial.available()) repAction += (char)simSerial.read();
-    if (repAction.indexOf("+HTTPACTION") != -1) break;
-    if (repAction.indexOf("ERROR") != -1) break;
+  String repPush = "";
+  unsigned long t = millis();
+  // Render peut être lent à répondre (cold start) → 60 secondes
+  while (millis() - t < 60000) {
+    while (simSerial.available()) repPush += (char)simSerial.read();
+    if (repPush.indexOf("+HTTPACTION") != -1) break;
+    if (repPush.indexOf("ERROR") != -1)       break;
   }
 
-  bool okHisto = repAction.indexOf("+HTTPACTION") != -1;
-  Serial.println("[4G] POST historique : " + String(okHisto ? "OK" : "ECHEC"));
+  bool okPush = repPush.indexOf(",200,") != -1 || repPush.indexOf(",201,") != -1;
+  Serial.println("[4G] Push backend : " + String(okPush ? "OK" : "ECHEC") + " | " + repPush);
 
-  // Lire la réponse Firebase AVANT de fermer la session
-  if (okHisto) {
-    delay(500);
+  // Lire la réponse pour confirmer
+  if (okPush) {
+    delay(300);
     while (simSerial.available()) simSerial.read();
     simSerial.println("AT+HTTPREAD");
     String repRead = "";
@@ -509,73 +474,32 @@ bool envoyerFirebase4G(float temp, float humAir,
       if (repRead.indexOf("OK") != -1) break;
       if (repRead.indexOf("ERROR") != -1) break;
     }
-    Serial.println("[4G] Cle Firebase : " + repRead.substring(0, 100));
-    // Si Firebase a créé une entrée → réponse contient "name"
-    if (repRead.indexOf("name") != -1) {
-      Serial.println("[4G] Nouvelle entree historique creee ✅");
-    } else {
-      Serial.println("[4G] ATTENTION : pas de cle push dans la reponse");
-      Serial.println("[4G] Reponse complete : " + repRead);
-    }
+    Serial.println("[4G] Reponse backend : " + repRead.substring(0, 120));
   }
-
-  // Fermer la session HTTP seulement après lecture
   envoyerAT("AT+HTTPTERM", 2000);
 
-  // ── Déclencher le calcul de recommandation SMS sur le backend ──
+  // ── ÉTAPE 2 : Recommandation SMS (appel backend séparé) ───────────────
   delay(1000);
   envoyerAT("AT+HTTPTERM", 1000);
   delay(500);
   if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-    // AT+HTTPSSL=1 non supporté sur ce firmware — l'HTTPS est auto via https://
     String urlSms = "https://agri-station-meteo.onrender.com/sms/recommandation/" + String(STATION_ID);
     envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlSms + "\"", 3000);
-    while (simSerial.available()) simSerial.read();  // vider buffer
+    while (simSerial.available()) simSerial.read();
     simSerial.println("AT+HTTPACTION=0");  // GET
-    // Attendre la réponse du backend (peut prendre 10-15s sur Render)
     String repSms = "";
     unsigned long tSms = millis();
-    while (millis() - tSms < 20000) {
+    while (millis() - tSms < 60000) {
       while (simSerial.available()) repSms += (char)simSerial.read();
       if (repSms.indexOf("+HTTPACTION") != -1) break;
     }
-    Serial.println("[4G] Recommandation SMS → " + repSms);
+    Serial.println("[4G] Recommandation SMS → " + repSms.substring(0, 60));
     envoyerAT("AT+HTTPTERM");
   }
-  // ── GPS via 4G ────────────────────────────────────────────
-  if (gpsFixOk) {
-    delay(1000);
-    envoyerAT("AT+HTTPTERM", 1000);
-    delay(500);
 
-    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-      String urlGPS = "https://" + String(FIREBASE_HOST)
-                    + "/stations/" + STATION_ID + "/gps.json"
-                    + "?auth=" + String(FIREBASE_AUTH);
-      String jsonGPS = "{\"latitude\":" + String(gpsLatitude, 6)
-                     + ",\"longitude\":" + String(gpsLongitude, 6)
-                     + ",\"altitude\":" + String(gpsAltitude, 1)
-                     + ",\"timestamp\":\"" + ts + "\"}";
-
-      envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlGPS + "\"", 3000);
-      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-      envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
-
-      simSerial.println("AT+HTTPDATA=" + String(jsonGPS.length()) + ",15000");
-      if (attendreReponse("DOWNLOAD", 10000)) {
-        delay(200);
-        simSerial.print(jsonGPS);
-        delay(2000);
-        simSerial.println("AT+HTTPACTION=1");
-        delay(8000);
-        Serial.println("[4G] GPS sauvegardé");
-      }
-      envoyerAT("AT+HTTPTERM");
-    }
-  }
-
-  return okMesures || okHisto;
+  return okPush;
 }
+
 
 
 // ============================================================
