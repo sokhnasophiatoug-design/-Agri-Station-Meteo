@@ -348,6 +348,18 @@ def _sms_clean(texte: str, max_car: int = 155) -> str:
         '\u00ab': '"',   # guillemet français «
         '\u00bb': '"',   # guillemet français »
         '\u00a0': ' ',   # espace insécable
+        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+        'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+        'à': 'a', 'â': 'a', 'ä': 'a',
+        'À': 'A', 'Â': 'A', 'Ä': 'A',
+        'î': 'i', 'ï': 'i',
+        'Î': 'I', 'Ï': 'I',
+        'ô': 'o', 'ö': 'o',
+        'Ô': 'O', 'Ö': 'O',
+        'ù': 'u', 'û': 'u', 'ü': 'u',
+        'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+        'ç': 'c', 'Ç': 'C',
+        '[': '(', ']': ')',
     }
     for char, remplacement in remplacements.items():
         texte = texte.replace(char, remplacement)

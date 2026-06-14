@@ -383,12 +383,17 @@ bool initSIM7600() {
     delay(3000);
   }
 
-  envoyerAT("AT+CNMP=2", 2000);   // Mode automatique (LTE, WCDMA, GSM) — permet l'envoi de SMS (CSFB)
+  envoyerAT("AT+CNMP=38", 2000);   // LTE uniquement (mode qui a permis d'envoyer les SMS avec succès)
   delay(500);
   envoyerAT("AT+CGDCONT=1,\"IP\",\"" + String(APN) + "\"", 3000);
   delay(500);
   envoyerAT("AT+CGACT=1,1", 10000);
   delay(2000);
+
+  // Configuration SSL pour HTTPS (évite l'erreur 715 Handshake Failed)
+  envoyerAT("AT+CSSLCFG=\"sslversion\",0,4", 2000);
+  envoyerAT("AT+CSSLCFG=\"authmode\",0,0", 2000);
+  envoyerAT("AT+CSSLCFG=\"enableSNI\",0,1", 2000);
 
   // ── Synchronisation horloge réseau ──────────────────────────
   envoyerAT("AT+CTZU=1", 2000);    // sync auto horloge via réseau
@@ -439,8 +444,9 @@ bool envoyerFirebase4G(float temp, float humAir,
   String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // Timeout interne SIM7600E = 70s (l'unité est la seconde, pas la milliseconde !)
-  envoyerAT("AT+HTTPPARA=\"TIMEOUT\",70", 2000);
+  envoyerAT("AT+HTTPPARA=\"SSLCFG\",0", 2000);    // Associer au contexte SSL 0
+  envoyerAT("AT+HTTPPARA=\"CONNECTTO\",60", 2000); // Connect timeout 60s
+  envoyerAT("AT+HTTPPARA=\"RECVTO\",20", 2000);    // Receive timeout 20s
 
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
@@ -745,6 +751,7 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
              + "?auth=" + String(FIREBASE_AUTH);
 
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+  envoyerAT("AT+HTTPPARA=\"SSLCFG\",0", 2000);    // Associer au contexte SSL 0
 
   while (simSerial.available()) simSerial.read();
   simSerial.println("AT+HTTPACTION=0");
@@ -1032,35 +1039,27 @@ void envoyerSMS(String telephone, String message) {
 
 
 void marquerSmsEnvoye() {
-  // POST → Firebase sms_a_envoyer/envoye.json avec override PUT
-  // (Firebase direct — pas de Render, pas de cold start)
+  // GET → Render backend qui met à jour Firebase (évite les soucis de PUT/Override)
   envoyerAT("AT+HTTPTERM", 1000); delay(500);
   if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) {
     Serial.println("[SMS] marquerSmsEnvoye : HTTPINIT echoue");
     return;
   }
 
-  String url = "https://" + String(FIREBASE_HOST)
-             + "/stations/" + STATION_ID + "/sms_a_envoyer/envoye.json"
-             + "?auth=" + String(FIREBASE_AUTH);
-
+  String url = "https://agri-station-meteo.onrender.com/sms/marquer-envoye/" + String(STATION_ID);
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
-  envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
+  envoyerAT("AT+HTTPPARA=\"SSLCFG\",0", 2000);    // Associer au contexte SSL 0
 
-  String jsonTrue = "true";
-  simSerial.println("AT+HTTPDATA=" + String(jsonTrue.length()) + ",5000");
-  if (attendreReponse("DOWNLOAD", 5000)) {
-    simSerial.print(jsonTrue); delay(2000);
-    simSerial.println("AT+HTTPACTION=1");
-    String repMark = ""; unsigned long t = millis();
-    while (millis() - t < 10000) {
-      while (simSerial.available()) repMark += (char)simSerial.read();
-      if (repMark.indexOf("+HTTPACTION") != -1) break;
-    }
-    bool ok = repMark.indexOf(",200,") != -1;
-    Serial.println("[SMS] Marque envoye : " + String(ok ? "OK \u2705" : "ECHEC") + " " + repMark.substring(0,30));
+  while (simSerial.available()) simSerial.read();
+  simSerial.println("AT+HTTPACTION=0");  // GET
+
+  String repMark = ""; unsigned long t = millis();
+  while (millis() - t < 25000) {
+    while (simSerial.available()) repMark += (char)simSerial.read();
+    if (repMark.indexOf("+HTTPACTION") != -1) break;
   }
+  bool ok = repMark.indexOf(",200,") != -1 || repMark.indexOf(",201,") != -1;
+  Serial.println("[SMS] Marque envoye : " + String(ok ? "OK \u2705" : "ECHEC") + " " + repMark.substring(0,40));
   envoyerAT("AT+HTTPTERM");
 }
 
