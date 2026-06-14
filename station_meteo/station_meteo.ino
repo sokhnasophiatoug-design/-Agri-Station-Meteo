@@ -274,6 +274,15 @@ void envoyerFirebaseWiFi(float temp, float humAir,
     http.end();
     Serial.println("[WiFi] GPS sauvegardé dans Firebase");
   }
+  // ── Déclencher le calcul de recommandation SMS sur le backend ──
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient httpSms;
+    String urlSms = "https://agri-station-meteo.onrender.com/sms/recommandation/" + String(STATION_ID);
+    httpSms.begin(urlSms);
+    int codeSms = httpSms.GET();
+    Serial.println("[WiFi] Recommandation SMS → HTTP " + String(codeSms));
+    httpSms.end();
+  }
 }
 
 
@@ -511,6 +520,27 @@ bool envoyerFirebase4G(float temp, float humAir,
 
   // Fermer la session HTTP seulement après lecture
   envoyerAT("AT+HTTPTERM", 2000);
+
+  // ── Déclencher le calcul de recommandation SMS sur le backend ──
+  delay(1000);
+  envoyerAT("AT+HTTPTERM", 1000);
+  delay(500);
+  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
+    // AT+HTTPSSL=1 non supporté sur ce firmware — l'HTTPS est auto via https://
+    String urlSms = "https://agri-station-meteo.onrender.com/sms/recommandation/" + String(STATION_ID);
+    envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlSms + "\"", 3000);
+    while (simSerial.available()) simSerial.read();  // vider buffer
+    simSerial.println("AT+HTTPACTION=0");  // GET
+    // Attendre la réponse du backend (peut prendre 10-15s sur Render)
+    String repSms = "";
+    unsigned long tSms = millis();
+    while (millis() - tSms < 20000) {
+      while (simSerial.available()) repSms += (char)simSerial.read();
+      if (repSms.indexOf("+HTTPACTION") != -1) break;
+    }
+    Serial.println("[4G] Recommandation SMS → " + repSms);
+    envoyerAT("AT+HTTPTERM");
+  }
   // ── GPS via 4G ────────────────────────────────────────────
   if (gpsFixOk) {
     delay(1000);
@@ -772,63 +802,110 @@ void setup() {
 // LECTURE SMS DEPUIS FIREBASE ET ENVOI VIA SIM7600E
 // ============================================================
 bool lireSmsAEnvoyer(String &message, String &telephone) {
+  // ─── GET /stations/ST002/sms_a_envoyer.json ───────────────────────────
   envoyerAT("AT+HTTPTERM", 1000);
   delay(500);
-  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) return false;
+  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) {
+    Serial.println("[SMS] HTTPINIT echoue");
+    return false;
+  }
 
   String url = "https://" + String(FIREBASE_HOST)
              + "/stations/" + STATION_ID + "/sms_a_envoyer.json"
              + "?auth=" + String(FIREBASE_AUTH);
 
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
-  simSerial.println("AT+HTTPACTION=0");  // GET
 
-  String rep = "";
-  unsigned long t = millis();
-  while (millis() - t < 15000) {
-    while (simSerial.available()) rep += (char)simSerial.read();
-    if (rep.indexOf("+HTTPACTION") != -1) break;
-  }
-  delay(500);
+  // Vider le buffer avant la requête
   while (simSerial.available()) simSerial.read();
+  simSerial.println("AT+HTTPACTION=0");
 
-  simSerial.println("AT+HTTPREAD");
-  String body = "";
-  t = millis();
-  while (millis() - t < 8000) {
-    while (simSerial.available()) body += (char)simSerial.read();
-    if (body.indexOf("OK") != -1) break;
+  // Attendre uniquement le signal +HTTPACTION
+  String repAction = "";
+  unsigned long t = millis();
+  while (millis() - t < 20000) {
+    while (simSerial.available()) repAction += (char)simSerial.read();
+    if (repAction.indexOf("+HTTPACTION") != -1) break;
   }
-  envoyerAT("AT+HTTPTERM");
+  Serial.println("[SMS] HTTPACTION : " + repAction);
 
-  // Vérifier si un SMS est en attente
-  if (body.indexOf("\"envoye\":false") == -1 &&
-      body.indexOf("\"envoye\": false") == -1) {
-    Serial.println("[SMS] Aucun SMS en attente");
+  if (repAction.indexOf("200") == -1) {
+    Serial.println("[SMS] Erreur HTTP GET Firebase");
+    envoyerAT("AT+HTTPTERM");
     return false;
   }
 
-  // Parser le message
+  // ── Parser la taille du body depuis "+HTTPACTION: 0,200,270" ──────────
+  // Sur SIM7600E ce firmware exige AT+HTTPREAD=0,<length>
+  int dataLen = 0;
+  {
+    int lastComma = repAction.lastIndexOf(",");
+    if (lastComma != -1) {
+      String lenStr = repAction.substring(lastComma + 1);
+      lenStr.trim();
+      dataLen = lenStr.toInt();
+    }
+  }
+  Serial.println("[SMS] Taille body : " + String(dataLen) + " octets");
+
+  // ── Lire le body JSON ─────────────────────────────────────────────────
+  delay(300);
+  while (simSerial.available()) simSerial.read();  // vider résidus
+  // Utiliser AT+HTTPREAD=0,N si la taille est connue, sinon fallback
+  if (dataLen > 0) {
+    simSerial.println("AT+HTTPREAD=0," + String(dataLen));
+  } else {
+    simSerial.println("AT+HTTPREAD");
+  }
+  String body = "";
+  t = millis();
+  // Attendre suffisamment longtemps pour recevoir tout le body
+  while (millis() - t < 10000) {
+    while (simSerial.available()) body += (char)simSerial.read();
+    if (body.indexOf("\r\nOK") != -1) break;
+    if (body.indexOf("ERROR") != -1) break;
+    // Si on a reçu au moins dataLen octets de JSON, on peut s'arrêter
+    if (dataLen > 0 && (int)body.length() >= dataLen + 20) break;
+  }
+  Serial.println("[SMS] Body recu (" + String(body.length()) + ") : " + body);
+
+  envoyerAT("AT+HTTPTERM");
+
+  // ─── Vérifier si un SMS est EN ATTENTE (envoye = false) ───────────────
+  // Firebase peut retourner "envoye":false  OU  "envoye": false  (avec espace)
+  bool smsEnAttente = (body.indexOf("\"envoye\":false")  != -1)
+                   || (body.indexOf("\"envoye\": false") != -1);
+  if (!smsEnAttente) {
+    Serial.println("[SMS] Aucun SMS en attente (envoye=true ou noeud absent)");
+    return false;
+  }
+
+  // ─── Parser le message ─────────────────────────────────────────────────
   int idxMsg = body.indexOf("\"message\":\"");
   if (idxMsg != -1) {
     int debut = idxMsg + 11;
     int fin   = body.indexOf("\"", debut);
-    message   = body.substring(debut, fin);
-    // Décoder \n
-    message.replace("\\n", "\n");
+    if (fin > debut) {
+      message = body.substring(debut, fin);
+      message.replace("\\n", "\n");   // remplacer \n littéral par vrai saut
+    }
   }
 
-  // Parser le téléphone
+  // ─── Parser le téléphone ───────────────────────────────────────────────
   int idxTel = body.indexOf("\"telephone\":\"");
   if (idxTel != -1) {
     int debut = idxTel + 13;
     int fin   = body.indexOf("\"", debut);
-    telephone = body.substring(debut, fin);
+    if (fin > debut) {
+      telephone = body.substring(debut, fin);
+    }
   }
+
+  Serial.println("[SMS] Message parse  : " + message);
+  Serial.println("[SMS] Telephone parse : " + telephone);
 
   return (message.length() > 0 && telephone.length() > 0);
 }
-
 
 void envoyerSMS(String telephone, String message) {
   Serial.println("[SMS] Envoi → " + telephone);
@@ -868,9 +945,13 @@ void envoyerSMS(String telephone, String message) {
 
 
 void marquerSmsEnvoye() {
+  // ─── PUT /stations/ST002/sms_a_envoyer/envoye.json  ← true ───────────
   envoyerAT("AT+HTTPTERM", 1000);
   delay(500);
-  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) return;
+  if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) {
+    Serial.println("[SMS] marquerSmsEnvoye : HTTPINIT echoue");
+    return;
+  }
 
   String url = "https://" + String(FIREBASE_HOST)
              + "/stations/" + STATION_ID + "/sms_a_envoyer/envoye.json"
@@ -879,15 +960,22 @@ void marquerSmsEnvoye() {
   String jsonTrue = "true";
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+  // Firebase REST : utiliser PUT via POST + override
   envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
 
   simSerial.println("AT+HTTPDATA=" + String(jsonTrue.length()) + ",5000");
   if (attendreReponse("DOWNLOAD", 5000)) {
     simSerial.print(jsonTrue);
     delay(2000);
-    simSerial.println("AT+HTTPACTION=1");
-    delay(5000);
-    Serial.println("[SMS] Marqué comme envoyé dans Firebase");
+    simSerial.println("AT+HTTPACTION=1");  // POST (override en PUT)
+    String repMark = "";
+    unsigned long t = millis();
+    while (millis() - t < 10000) {
+      while (simSerial.available()) repMark += (char)simSerial.read();
+      if (repMark.indexOf("+HTTPACTION") != -1) break;
+    }
+    bool ok = repMark.indexOf("200") != -1;
+    Serial.println("[SMS] Marque comme envoye : " + String(ok ? "OK" : "ECHEC") + " " + repMark);
   }
   envoyerAT("AT+HTTPTERM");
 }
