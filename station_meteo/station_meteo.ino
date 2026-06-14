@@ -383,9 +383,7 @@ bool initSIM7600() {
     delay(3000);
   }
 
-  envoyerAT("AT+CNMP=2", 2000);   // Mode automatique (LTE/4G prioritaire pour les données, résout le problème d'IP)
-  delay(500);
-  envoyerAT("AT+CGSMS=0", 2000);   // Forcer l'envoi de SMS via le domaine Circuit Switched (3G/2G) pour contourner EMM detached
+  envoyerAT("AT+CNMP=38", 2000);   // LTE uniquement (mode qui a permis d'envoyer les SMS avec succès à 14h34)
   delay(500);
   envoyerAT("AT+CGDCONT=1,\"IP\",\"" + String(APN) + "\"", 3000);
   delay(500);
@@ -905,30 +903,10 @@ void envoyerSMS(String telephone, String message) {
   Serial.println("[SMS] Envoi -> " + telephone);
   Serial.println("[SMS] Message : " + message);
 
-  // 1. Basculer temporairement en mode GSM uniquement (2G) pour forcer l'enregistrement CS natif pour SMS
-  Serial.println("[SMS] Basculement reseau -> GSM uniquement (2G) pour l'envoi...");
-  envoyerAT("AT+CNMP=13", 2000); 
-  delay(1000);
-
-  // Attendre l'enregistrement sur le réseau 2G (CREG)
-  Serial.print("[SMS] Attente enregistrement reseau 2G");
-  bool regOk = false;
-  for (int i = 0; i < 15; i++) {
-    String creg = envoyerAT("AT+CREG?", 2000);
-    if (creg.indexOf(",1") != -1 || creg.indexOf(",5") != -1) {
-      regOk = true;
-      Serial.println(" OK !");
-      break;
-    }
-    Serial.print(".");
-    delay(2000);
-  }
-
-  if (!regOk) {
-    Serial.println("\n[SMS]  Echec enregistrement 2G - SMS annule");
-    // Restauration réseau -> Auto (LTE/4G)
-    Serial.println("[SMS] Restauration reseau -> Auto (LTE/4G)...");
-    envoyerAT("AT+CNMP=2", 2000);
+  // Verifier l enregistrement reseau (sous AT+CNMP=38, CREG retourne 0,1 si connecte LTE)
+  String creg = envoyerAT("AT+CREG?", 3000);
+  if (creg.indexOf(",1") == -1 && creg.indexOf(",5") == -1) {
+    Serial.println("[SMS] Module non enregistre reseau - SMS annule");
     return;
   }
 
@@ -955,7 +933,6 @@ void envoyerSMS(String telephone, String message) {
   Serial.println("[SMS] Numero : " + numTel);
 
   // -- Nettoyage UTF-8 -> ASCII 7bit strict ----------------------------
-  // C3 xx = Latin-1 (accents francais), E2 80 xx = ponctuation typo
   String msgPropre = "";
   int mLen = (int)message.length();
   for (int i = 0; i < mLen; ) {
@@ -1061,9 +1038,6 @@ void envoyerSMS(String telephone, String message) {
     if (repCmgs.indexOf("+CMGS") != -1) {
       Serial.println("[SMS] OK SMS confirme par le reseau !");
       marquerSmsEnvoye();
-      // Restauration réseau -> Auto (LTE/4G)
-      Serial.println("[SMS] Restauration reseau -> Auto (LTE/4G)...");
-      envoyerAT("AT+CNMP=2", 2000);
       return;  // succes
     }
     if (repCmgs.indexOf("+CMS ERROR") != -1) {
@@ -1073,9 +1047,6 @@ void envoyerSMS(String telephone, String message) {
     Serial.println("[SMS] Tentative " + String(tentative+1) + " echouee");
   }
   Serial.println("[SMS] SMS non envoye apres 3 tentatives");
-  // Restauration réseau -> Auto (LTE/4G)
-  Serial.println("[SMS] Restauration reseau -> Auto (LTE/4G)...");
-  envoyerAT("AT+CNMP=2", 2000);
 }
 
 
