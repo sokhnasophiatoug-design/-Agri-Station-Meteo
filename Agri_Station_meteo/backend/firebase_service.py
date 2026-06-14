@@ -231,19 +231,22 @@ def sauvegarder_dataset(station_id: str, entree):
         from datetime import datetime
         ref = db.reference(f"stations/{station_id}/dataset")
 
+        now_iso = datetime.now().isoformat()
         if isinstance(entree, list):
             # Remplacer le dataset existant par le dataset fusionné historique + OpenWeather
+            # Toutes les entrées reçoivent le timestamp courant (date du jour) pour
+            # garantir que les anciens enregistrements apparaissent avec la date actuelle.
             ref.set({})
             for idx, row in enumerate(entree, start=1):
                 entree_a_sauver = {
                     **row,
-                    "timestamp": row.get("timestamp") or datetime.now().isoformat(),
+                    "timestamp": now_iso,  # force la date d'aujourd'hui sur toutes les entrées
                 }
                 ref.child(f"{idx:04d}").set(entree_a_sauver)
             print(f"✅ Dataset complet sauvegardé pour {station_id} ({len(entree)} entrées)")
             return
 
-        entree_a_sauver = {**entree, "timestamp": datetime.now().isoformat()}
+        entree_a_sauver = {**entree, "timestamp": now_iso}
         ref.push(entree_a_sauver)
     except Exception as e:
         print(f"⚠️ sauvegarder_dataset ({station_id}) : {e}")
@@ -290,6 +293,37 @@ def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str):
         print(f"[SMS] Message écrit dans Firebase pour {station_id}")
     except Exception as e:
         print(f"❌ ecrire_sms_a_envoyer : {e}")
+
+
+def marquer_sms_envoye(station_id: str):
+    """
+    Marque le SMS en attente comme envoyé dans Firebase.
+    À appeler par l'ESP32 (via la route /sms/marquer-envoye/{station_id})
+    après avoir transmis le SMS par SIM7600E.
+    """
+    try:
+        db.reference(f"stations/{station_id}/sms_a_envoyer/envoye").set(True)
+        print(f"[SMS] ✅ SMS marqué comme envoyé pour {station_id}")
+    except Exception as e:
+        print(f"❌ marquer_sms_envoye : {e}")
+
+
+def get_sms_en_attente(station_id: str) -> dict:
+    """
+    Retourne le SMS en attente pour une station (envoye == False).
+    L'ESP32 interroge cette route régulièrement pour récupérer les messages à transmettre.
+    """
+    try:
+        data = db.reference(f"stations/{station_id}/sms_a_envoyer").get()
+        if not data or not isinstance(data, dict):
+            return {}
+        # Ne retourner que si le SMS n'a pas encore été envoyé
+        if data.get("envoye") is False:
+            return data
+        return {}
+    except Exception as e:
+        print(f"❌ get_sms_en_attente : {e}")
+        return {}
 
 
 def get_telephone_agriculteur(station_id: str) -> str:

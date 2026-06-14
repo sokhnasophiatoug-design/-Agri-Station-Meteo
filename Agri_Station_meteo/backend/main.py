@@ -460,6 +460,29 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
     }
 
 
+@app.get("/sms/en-attente/{station_id}", tags=["SMS"])
+def sms_en_attente(station_id: str):
+    """
+    Retourne le SMS en attente pour l'ESP32 (envoye == False).
+    L'ESP32 interroge cette route et envoie le message via SIM7600E.
+    Si aucun SMS en attente : retourne un objet vide {}.
+    """
+    data = firebase_service.get_sms_en_attente(station_id)
+    return data if data else {"statut": "aucun_sms_en_attente"}
+
+
+@app.post("/sms/marquer-envoye/{station_id}", tags=["SMS"])
+@app.get("/sms/marquer-envoye/{station_id}",  tags=["SMS"])
+def marquer_sms_envoye(station_id: str):
+    """
+    Marque le SMS comme envoyé dans Firebase.
+    L'ESP32 appelle cette route après avoir transmis le SMS par SIM7600E.
+    Le champ `envoye` passe à True — évite les doubles envois.
+    """
+    firebase_service.marquer_sms_envoye(station_id)
+    return {"statut": "ok", "message": f"SMS marqué comme envoyé pour {station_id}"}
+
+
 @app.get("/ia/reentainer/{station_id}", tags=["IA"])  # GET pour déclencher depuis le navigateur
 @app.post("/ia/reentainer/{station_id}", tags=["IA"])
 def reentainer_ia(station_id: str):
