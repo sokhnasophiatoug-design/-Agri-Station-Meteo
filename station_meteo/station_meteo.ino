@@ -439,7 +439,7 @@ bool envoyerFirebase4G(float temp, float humAir,
 
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlMesures + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-   envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
+  // Pas de USERDATA override — on utilise AT+HTTPACTION=3 (PUT natif SIM7600E)
 
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
@@ -449,7 +449,7 @@ bool envoyerFirebase4G(float temp, float humAir,
   simSerial.print(json);
   delay(3000);
 
-  simSerial.println("AT+HTTPACTION=1");  // POST
+  simSerial.println("AT+HTTPACTION=3");  // 3 = PUT natif SIM7600E
   String repAction = "";
   unsigned long t = millis();
   while (millis() - t < 40000) {
@@ -475,7 +475,8 @@ bool envoyerFirebase4G(float temp, float humAir,
 
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlHisto + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
- 
+  // AT+HTTPACTION=1 = POST → Firebase génère une clé push unique
+
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
     envoyerAT("AT+HTTPTERM"); return okMesures;
