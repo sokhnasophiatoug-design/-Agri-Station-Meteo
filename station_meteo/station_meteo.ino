@@ -410,115 +410,96 @@ bool initSIM7600() {
 bool envoyerFirebase4G(float temp, float humAir,
                        float vent, float humSol) {
 
-  String ts   = obtenirTimestamp4G();
+  String ts = obtenirTimestamp4G();
   String json = construireJSON(temp, humAir, vent, humSol, ts);
   Serial.println("[4G] JSON : " + json);
 
-  // ── Firebase direct (Render abandonné — cold start >60s impossible depuis SIM) ──
-  // POST  → historique.json   : crée une entrée (clé push Firebase) ✅ confirmé
-  // POST+override → mesures.json : SET les mesures temps réel
+  // ── ÉTAPE 1 : Envoyer au backend Render (POST /push/ST002) ────────────
+  // Le backend écrit dans Firebase via Admin SDK → pas de problème PUT/REST
+  // C'est le même mécanisme que l'appel SMS qui fonctionne déjà.
+  // ──────────────────────────────────────────────────────────────────────
 
-  // -- 1. HISTORIQUE ----------------------------------------------------
-  bool okHisto = false;
-  for (int tentHisto = 0; tentHisto < 2 && !okHisto; tentHisto++) {
-    if (tentHisto > 0) { Serial.println("[4G] Historique retry..."); delay(2000); }
-    envoyerAT("AT+HTTPTERM", 1000); delay(500);
-    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) continue;
-    delay(1200);  // Le module SSL met ~1s a s initialiser apres HTTPINIT
+  // Reset + init HTTP
+  envoyerAT("AT+HTTPTERM", 2000);
+  delay(1000);
 
-    String url = "https://" + String(FIREBASE_HOST)
-               + "/stations/" + STATION_ID + "/historique.json"
-               + "?auth=" + String(FIREBASE_AUTH);
-
-    String repUrl = envoyerAT("AT+HTTPPARA=\"URL\"," + url + "\"", 3000);
-    if (repUrl.indexOf("OK") == -1) {
-      Serial.println("[4G] URL historique retry...");
-      delay(1500);
-      repUrl = envoyerAT("AT+HTTPPARA=\"URL\"," + url + "\"", 3000);
-      if (repUrl.indexOf("OK") == -1) { envoyerAT("AT+HTTPTERM", 1000); continue; }
+  bool httpOk = false;
+  for (int r = 0; r < 3; r++) {
+    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
+      httpOk = true; break;
     }
-    envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-
-    // Vider le buffer UART avant HTTPDATA
-    while (simSerial.available()) simSerial.read();
-    simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
-    if (attendreReponse("DOWNLOAD", 10000)) {
-      simSerial.print(json); delay(2500);
-      while (simSerial.available()) simSerial.read();  // flush residus
-      simSerial.println("AT+HTTPACTION=1");  // POST
-      String rep = ""; unsigned long t = millis();
-      while (millis() - t < 20000) {
-        while (simSerial.available()) rep += (char)simSerial.read();
-        if (rep.indexOf("+HTTPACTION") != -1) break;
-        if (rep.indexOf("ERROR")       != -1) break;
-      }
-      okHisto = rep.indexOf(",200,") != -1 || rep.indexOf(",201,") != -1;
-      Serial.println("[4G] POST historique : " + String(okHisto ? "OK OK" : "ECHEC") + " | " + rep.substring(0,40));
-    } else {
-      Serial.println("[4G] Historique : timeout DOWNLOAD");
-    }
+    Serial.println("[4G] HTTPINIT retry " + String(r+1) + "/3");
     envoyerAT("AT+HTTPTERM", 2000);
+    delay(2000);
+  }
+  if (!httpOk) {
+    Serial.println("[4G] HTTPINIT échoué"); return false;
   }
 
-  // ── 2. MESURES (temps réel) ───────────────────────────────────────────────
-  bool okMesures = false;
-  {
-    delay(500);
-    envoyerAT("AT+HTTPTERM", 1000); delay(500);
-    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-      String url = "https://" + String(FIREBASE_HOST)
-                 + "/stations/" + STATION_ID + "/mesures.json"
-                 + "?auth=" + FIREBASE_AUTH;
-      envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
-      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-      envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
+  String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
+  envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
+  envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+  // Timeout interne SIM7600E = 70s (> notre attente de 60s dans le loop)
+  envoyerAT("AT+HTTPPARA=\"TIMEOUT\",70000", 2000);
 
-      simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
-      if (attendreReponse("DOWNLOAD", 8000)) {
-        simSerial.print(json); delay(2000);
-        simSerial.println("AT+HTTPACTION=1");  // POST → Firebase honore Override: PUT
-        String rep = ""; unsigned long t = millis();
-        while (millis() - t < 15000) {
-          while (simSerial.available()) rep += (char)simSerial.read();
-          if (rep.indexOf("+HTTPACTION") != -1) break;
-          if (rep.indexOf("ERROR")       != -1) break;
-        }
-        okMesures = rep.indexOf(",200,") != -1;
-        Serial.println("[4G] SET mesures : " + String(okMesures ? "OK ✅" : "ECHEC") + " | " + rep.substring(0,40));
-      }
-      envoyerAT("AT+HTTPTERM", 2000);
+  simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
+  if (!attendreReponse("DOWNLOAD", 10000)) {
+    Serial.println("[4G] HTTPDATA pas de DOWNLOAD — abandon");
+    envoyerAT("AT+HTTPTERM"); return false;
+  }
+  delay(200);
+  simSerial.print(json);
+  delay(3000);
+
+  simSerial.println("AT+HTTPACTION=1");  // POST
+  String repPush = "";
+  unsigned long t = millis();
+  // Render peut être lent à répondre (cold start) → 60 secondes
+  while (millis() - t < 60000) {
+    while (simSerial.available()) repPush += (char)simSerial.read();
+    if (repPush.indexOf("+HTTPACTION") != -1) break;
+    if (repPush.indexOf("ERROR") != -1)       break;
+  }
+
+  bool okPush = repPush.indexOf(",200,") != -1 || repPush.indexOf(",201,") != -1;
+  Serial.println("[4G] Push backend : " + String(okPush ? "OK" : "ECHEC") + " | " + repPush.substring(0, 50));
+
+  // ── Lire la réponse JSON du backend ──────────────────────────────────
+  // /push renvoie {statut, sms_statut, temperature, ...}
+  if (okPush) {
+    delay(300);
+    while (simSerial.available()) simSerial.read();
+    simSerial.println("AT+HTTPREAD");
+    String rawResp = "";
+    unsigned long tRead = millis();
+    while (millis() - tRead < 8000) {
+      while (simSerial.available()) rawResp += (char)simSerial.read();
+      // Attendre le marqueur DATA puis la fermeture }
+      if (rawResp.indexOf("+HTTPREAD: DATA") != -1 && rawResp.lastIndexOf("}") != -1) break;
+      if (rawResp.indexOf("ERROR") != -1) break;
     }
-  }
-
-  // ── 3. GPS (si fix disponible) ────────────────────────────────────────────
-  if (gpsFixOk) {
-    delay(500);
-    envoyerAT("AT+HTTPTERM", 1000); delay(500);
-    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-      String urlGPS = "https://" + String(FIREBASE_HOST)
-                    + "/stations/" + STATION_ID + "/gps.json"
-                    + "?auth=" + FIREBASE_AUTH;
-      String jsonGPS = "{\"latitude\":"  + String(gpsLatitude,  6)
-                     + ",\"longitude\":" + String(gpsLongitude, 6)
-                     + ",\"altitude\":"  + String(gpsAltitude,  1)
-                     + ",\"timestamp\":\"" + ts + "\"}";
-
-      envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlGPS + "\"", 3000);
-      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-      envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
-
-      simSerial.println("AT+HTTPDATA=" + String(jsonGPS.length()) + ",10000");
-      if (attendreReponse("DOWNLOAD", 8000)) {
-        simSerial.print(jsonGPS); delay(2000);
-        simSerial.println("AT+HTTPACTION=1");
-        delay(8000);
-        Serial.println("[4G] SET gps ✅");
-      }
-      envoyerAT("AT+HTTPTERM", 2000);
+    // Extraire le JSON après le marqueur
+    String repRead = rawResp;
+    int dm = rawResp.indexOf("+HTTPREAD: DATA");
+    if (dm != -1) {
+      int js = rawResp.indexOf("\r\n", dm) + 2;
+      if (js > 1) repRead = rawResp.substring(js);
     }
+    Serial.println("[4G] Backend reponse : " + repRead.substring(0, 120));
+    // Afficher le statut SMS calculé par le backend
+    if (repRead.indexOf("\"sms_statut\":\"ok\"") != -1)
+      Serial.println("[4G] ✅ SMS ecrit dans Firebase par le backend");
+    else if (repRead.indexOf("\"sms_statut\":\"no_phone\"") != -1)
+      Serial.println("[4G] ⚠️ Pas de telephone agriculteur enregistre");
+    else
+      Serial.println("[4G] ℹ️ SMS statut : " + repRead.substring(repRead.indexOf("sms_statut"), repRead.indexOf("sms_statut") + 40));
   }
+  envoyerAT("AT+HTTPTERM", 2000);
 
-  return okHisto || okMesures;
+  // NOTE : La recommandation SMS est calculée directement par /push
+  // Plus besoin d'appeler /sms/recommandation séparément.
+
+  return okPush;
 }
 
 
@@ -907,15 +888,21 @@ void envoyerSMS(String telephone, String message) {
     return;
   }
 
-  // Reinit mode SMS proprement
-  delay(1000);
+  // Reinit mode SMS — laisser le module se stabiliser apres les sessions HTTPS
+  delay(2000);
   while (simSerial.available()) simSerial.read();
-  envoyerAT("AT+CMGF=1", 3000);
+  envoyerAT("AT+CMGF=1", 3000);   // Mode texte
   delay(500);
-  // GSM charset 100% compatible Orange SN
-  // (IRA cause problemes sur certains firmware SIM7600E)
-  envoyerAT("AT+CSCS=\"GSM\"", 2000);
+  // IRA = International Reference Alphabet = ASCII pur
+  // [IMPORTANT] Ne PAS utiliser CSCS=GSM : en GSM charset, '[' (0x5B)=A-umlaut
+  // et ']' (0x5D)=N-tilde, ce qui fait rejeter le message par le SMSC Orange SN
+  envoyerAT("AT+CSCS=\"IRA\"", 2000);
   delay(300);
+  // Diagnostics reseau SMS
+  String csca = envoyerAT("AT+CSCA?", 2000);
+  Serial.println("[SMS] SMSC : " + csca.substring(0, 50));
+  String cpin = envoyerAT("AT+CPIN?", 2000);
+  Serial.println("[SMS] CPIN : " + cpin.substring(0, 30));
 
   // Format international
   String numTel = telephone;
@@ -964,9 +951,13 @@ void envoyerSMS(String telephone, String message) {
       i+=2; continue;
     }
     if (c >= 0x80) { i++; continue; }
-    // LF (0x0A) cause CMS ERROR sur Orange SN -> remplacer par espace
-    if (c == 0x0A) { msgPropre += ' '; }
-    else            { msgPropre += (char)c; }
+    // LF et CR causent CMS ERROR sur Orange SN -> remplacer par espace
+    if (c == 0x0A || c == 0x0D) { msgPropre += ' '; }
+    // '[' et ']' sont hors GSM-7bit basic -> remplacer par '(' et ')'
+    // (evite les problemes avec certains SMSC meme en mode IRA)
+    else if (c == '[') { msgPropre += '('; }
+    else if (c == ']') { msgPropre += ')'; }
+    else               { msgPropre += (char)c; }
     i++;
   }
   if ((int)msgPropre.length() > 155) msgPropre = msgPropre.substring(0, 155);
@@ -980,7 +971,7 @@ void envoyerSMS(String telephone, String message) {
       delay(8000);  // SMSC Orange SN peut etre lent
       while (simSerial.available()) simSerial.read();
       envoyerAT("AT+CMGF=1", 3000);
-      envoyerAT("AT+CSCS=\"GSM\"", 2000);
+      envoyerAT("AT+CSCS=\"IRA\"", 2000);
       delay(500);
     }
 
