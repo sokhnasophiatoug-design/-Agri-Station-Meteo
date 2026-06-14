@@ -473,9 +473,24 @@ bool envoyerFirebase4G(float temp, float humAir,
   // ── Lire la réponse JSON du backend ──────────────────────────────────
   // /push renvoie {statut, sms_statut, temperature, ...}
   if (okPush) {
+    // Parser la taille du body depuis "+HTTPACTION: 1,200,127"
+    int dataLen = 0;
+    int lastComma = repPush.lastIndexOf(",");
+    if (lastComma != -1) {
+      String lenStr = repPush.substring(lastComma + 1);
+      lenStr.trim();
+      dataLen = lenStr.toInt();
+    }
+
     delay(300);
     while (simSerial.available()) simSerial.read();
-    simSerial.println("AT+HTTPREAD");
+    
+    if (dataLen > 0) {
+      simSerial.println("AT+HTTPREAD=0," + String(dataLen));
+    } else {
+      simSerial.println("AT+HTTPREAD");
+    }
+
     String rawResp = "";
     unsigned long tRead = millis();
     while (millis() - tRead < 8000) {
@@ -827,7 +842,7 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
     }
   }
 
-  Serial.println("[SMS] Body JSON (" + String(body.length()) + ") : " + body.substring(0, 100));
+  Serial.println("[SMS] Body JSON (" + String(body.length()) + ") : " + body);
   envoyerAT("AT+HTTPTERM");
 
   // ─── Vérifier si un SMS est EN ATTENTE (envoye = false) ───────────────
@@ -878,7 +893,7 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
     if (fin > debut) telephone = body.substring(debut, fin);
   }
 
-  Serial.println("[SMS] Message  : " + message.substring(0, 80));
+  Serial.println("[SMS] Message  : " + message);
   Serial.println("[SMS] Telephone: " + telephone);
 
   return (message.length() > 0 && telephone.length() > 0);
@@ -886,7 +901,7 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
 
 void envoyerSMS(String telephone, String message) {
   Serial.println("[SMS] Envoi -> " + telephone);
-  Serial.println("[SMS] Message : " + message.substring(0, 80));
+  Serial.println("[SMS] Message : " + message);
 
   // Verifier l enregistrement reseau
   String creg = envoyerAT("AT+CREG?", 3000);
@@ -968,7 +983,7 @@ void envoyerSMS(String telephone, String message) {
   }
   if ((int)msgPropre.length() > 155) msgPropre = msgPropre.substring(0, 155);
   msgPropre.trim();
-  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre.substring(0,80));
+  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre);
 
   // -- Envoi avec retry (3 tentatives) ---------------------------------
   for (int tentative = 0; tentative < 3; tentative++) {
@@ -1019,7 +1034,7 @@ void envoyerSMS(String telephone, String message) {
       if (repCmgs.indexOf("ERROR")      != -1) break;
       delay(100);
     }
-    Serial.println("[SMS] Reponse : " + repCmgs.substring(0,60));
+    Serial.println("[SMS] Reponse : " + repCmgs);
 
     if (repCmgs.indexOf("+CMGS") != -1) {
       Serial.println("[SMS] OK SMS confirme par le reseau !");
