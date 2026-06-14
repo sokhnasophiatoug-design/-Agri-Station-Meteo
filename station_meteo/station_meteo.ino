@@ -410,97 +410,105 @@ bool initSIM7600() {
 bool envoyerFirebase4G(float temp, float humAir,
                        float vent, float humSol) {
 
-  String ts = obtenirTimestamp4G();
+  String ts   = obtenirTimestamp4G();
   String json = construireJSON(temp, humAir, vent, humSol, ts);
   Serial.println("[4G] JSON : " + json);
 
-  // ── ÉTAPE 1 : Envoyer au backend Render (POST /push/ST002) ────────────
-  // Le backend écrit dans Firebase via Admin SDK → pas de problème PUT/REST
-  // C'est le même mécanisme que l'appel SMS qui fonctionne déjà.
-  // ──────────────────────────────────────────────────────────────────────
+  // ── Firebase direct (Render abandonné — cold start >60s impossible depuis SIM) ──
+  // POST  → historique.json   : crée une entrée (clé push Firebase) ✅ confirmé
+  // POST+override → mesures.json : SET les mesures temps réel
 
-  // Reset + init HTTP
-  envoyerAT("AT+HTTPTERM", 2000);
-  delay(1000);
-
-  bool httpOk = false;
-  for (int r = 0; r < 3; r++) {
+  // ── 1. HISTORIQUE ─────────────────────────────────────────────────────────
+  bool okHisto = false;
+  {
+    envoyerAT("AT+HTTPTERM", 1000); delay(500);
     if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
-      httpOk = true; break;
+      String url = "https://" + String(FIREBASE_HOST)
+                 + "/stations/" + STATION_ID + "/historique.json"
+                 + "?auth=" + String(FIREBASE_AUTH);
+      envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+
+      simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
+      if (attendreReponse("DOWNLOAD", 8000)) {
+        simSerial.print(json); delay(2000);
+        simSerial.println("AT+HTTPACTION=1");  // POST
+        String rep = ""; unsigned long t = millis();
+        while (millis() - t < 15000) {
+          while (simSerial.available()) rep += (char)simSerial.read();
+          if (rep.indexOf("+HTTPACTION") != -1) break;
+          if (rep.indexOf("ERROR")       != -1) break;
+        }
+        okHisto = rep.indexOf(",200,") != -1 || rep.indexOf(",201,") != -1;
+        Serial.println("[4G] POST historique : " + String(okHisto ? "OK ✅" : "ECHEC") + " | " + rep.substring(0,40));
+      }
+      envoyerAT("AT+HTTPTERM", 2000);
     }
-    Serial.println("[4G] HTTPINIT retry " + String(r+1) + "/3");
-    envoyerAT("AT+HTTPTERM", 2000);
-    delay(2000);
-  }
-  if (!httpOk) {
-    Serial.println("[4G] HTTPINIT échoué"); return false;
   }
 
-  String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
-  envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
-  envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
-  // NOTE : AT+HTTPPARA="TIMEOUT" n'est pas supporté par ce firmware SIM7600E
-  // /push répond en ~2s donc le timeout par défaut du module (120s) suffit
+  // ── 2. MESURES (temps réel) ───────────────────────────────────────────────
+  bool okMesures = false;
+  {
+    delay(500);
+    envoyerAT("AT+HTTPTERM", 1000); delay(500);
+    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
+      String url = "https://" + String(FIREBASE_HOST)
+                 + "/stations/" + STATION_ID + "/mesures.json"
+                 + "?auth=" + String(FIREBASE_AUTH);
+      envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+      envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
 
-  simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
-  if (!attendreReponse("DOWNLOAD", 10000)) {
-    Serial.println("[4G] HTTPDATA pas de DOWNLOAD — abandon");
-    envoyerAT("AT+HTTPTERM"); return false;
-  }
-  delay(200);
-  simSerial.print(json);
-  delay(3000);
-
-  simSerial.println("AT+HTTPACTION=1");  // POST
-  String repPush = "";
-  unsigned long t = millis();
-  // Render peut être lent à répondre (cold start) → 60 secondes
-  while (millis() - t < 60000) {
-    while (simSerial.available()) repPush += (char)simSerial.read();
-    if (repPush.indexOf("+HTTPACTION") != -1) break;
-    if (repPush.indexOf("ERROR") != -1)       break;
-  }
-
-  bool okPush = repPush.indexOf(",200,") != -1 || repPush.indexOf(",201,") != -1;
-  Serial.println("[4G] Push backend : " + String(okPush ? "OK" : "ECHEC") + " | " + repPush.substring(0, 50));
-
-  // ── Lire la réponse JSON du backend ──────────────────────────────────
-  // /push renvoie {statut, sms_statut, temperature, ...}
-  if (okPush) {
-    delay(300);
-    while (simSerial.available()) simSerial.read();
-    simSerial.println("AT+HTTPREAD");
-    String rawResp = "";
-    unsigned long tRead = millis();
-    while (millis() - tRead < 8000) {
-      while (simSerial.available()) rawResp += (char)simSerial.read();
-      // Attendre le marqueur DATA puis la fermeture }
-      if (rawResp.indexOf("+HTTPREAD: DATA") != -1 && rawResp.lastIndexOf("}") != -1) break;
-      if (rawResp.indexOf("ERROR") != -1) break;
+      simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",10000");
+      if (attendreReponse("DOWNLOAD", 8000)) {
+        simSerial.print(json); delay(2000);
+        simSerial.println("AT+HTTPACTION=1");  // POST → Firebase honore Override: PUT
+        String rep = ""; unsigned long t = millis();
+        while (millis() - t < 15000) {
+          while (simSerial.available()) rep += (char)simSerial.read();
+          if (rep.indexOf("+HTTPACTION") != -1) break;
+          if (rep.indexOf("ERROR")       != -1) break;
+        }
+        okMesures = rep.indexOf(",200,") != -1;
+        Serial.println("[4G] SET mesures : " + String(okMesures ? "OK ✅" : "ECHEC") + " | " + rep.substring(0,40));
+      }
+      envoyerAT("AT+HTTPTERM", 2000);
     }
-    // Extraire le JSON après le marqueur
-    String repRead = rawResp;
-    int dm = rawResp.indexOf("+HTTPREAD: DATA");
-    if (dm != -1) {
-      int js = rawResp.indexOf("\r\n", dm) + 2;
-      if (js > 1) repRead = rawResp.substring(js);
-    }
-    Serial.println("[4G] Backend reponse : " + repRead.substring(0, 120));
-    // Afficher le statut SMS calculé par le backend
-    if (repRead.indexOf("\"sms_statut\":\"ok\"") != -1)
-      Serial.println("[4G] ✅ SMS ecrit dans Firebase par le backend");
-    else if (repRead.indexOf("\"sms_statut\":\"no_phone\"") != -1)
-      Serial.println("[4G] ⚠️ Pas de telephone agriculteur enregistre");
-    else
-      Serial.println("[4G] ℹ️ SMS statut : " + repRead.substring(repRead.indexOf("sms_statut"), repRead.indexOf("sms_statut") + 40));
   }
-  envoyerAT("AT+HTTPTERM", 2000);
 
-  // NOTE : La recommandation SMS est calculée directement par /push
-  // Plus besoin d'appeler /sms/recommandation séparément.
+  // ── 3. GPS (si fix disponible) ────────────────────────────────────────────
+  if (gpsFixOk) {
+    delay(500);
+    envoyerAT("AT+HTTPTERM", 1000); delay(500);
+    if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") != -1) {
+      String urlGPS = "https://" + String(FIREBASE_HOST)
+                    + "/stations/" + STATION_ID + "/gps.json"
+                    + "?auth=" + String(FIREBASE_AUTH);
+      String jsonGPS = "{\"latitude\":"  + String(gpsLatitude,  6)
+                     + ",\"longitude\":" + String(gpsLongitude, 6)
+                     + ",\"altitude\":"  + String(gpsAltitude,  1)
+                     + ",\"timestamp\":\"" + ts + "\"}";
 
-  return okPush;
+      envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlGPS + "\"", 3000);
+      envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+      envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
+
+      simSerial.println("AT+HTTPDATA=" + String(jsonGPS.length()) + ",10000");
+      if (attendreReponse("DOWNLOAD", 8000)) {
+        simSerial.print(jsonGPS); delay(2000);
+        simSerial.println("AT+HTTPACTION=1");
+        delay(8000);
+        Serial.println("[4G] SET gps ✅");
+      }
+      envoyerAT("AT+HTTPTERM", 2000);
+    }
+  }
+
+  return okHisto || okMesures;
 }
+
+
+
 
 
 
@@ -866,198 +874,163 @@ bool lireSmsAEnvoyer(String &message, String &telephone) {
 
 void envoyerSMS(String telephone, String message) {
   Serial.println("[SMS] Envoi → " + telephone);
-  Serial.println("[SMS] Message : " + message);
+  Serial.println("[SMS] Message : " + message.substring(0, 80));
 
-  // ── Vérifier l'enregistrement réseau avant envoi ──────────────────────
+  // ── Vérifier l'enregistrement réseau ────────────────────────────────────
   String creg = envoyerAT("AT+CREG?", 2000);
   if (creg.indexOf(",1") == -1 && creg.indexOf(",5") == -1) {
-    Serial.println("[SMS] ❌ Module non enregistré réseau — SMS annulé");
+    Serial.println("[SMS] Module non enregistre reseau — SMS annule");
     return;
   }
+  // Attendre 3s pour que le service SMS soit stable après un éventuel reinit
+  delay(3000);
 
-  // NOTE : Ne PAS utiliser AT+CSCS="GSM" — remplace [ par Ä, ] par Ñ
-  // et corromprait les bytes UTF-8 des accents français.
-  // Le sanitiseur ci-dessous gère le nettoyage manuellement.
-  envoyerAT("AT+CMGF=1", 2000);   // mode texte
-  delay(300);
+  // Mode texte
+  while (simSerial.available()) simSerial.read();  // vider le buffer
+  envoyerAT("AT+CMGF=1", 2000);
+  delay(500);
 
-  // S'assurer que le numéro est en format international
+  // Format international
   String numTel = telephone;
   if (!numTel.startsWith("+") && !numTel.startsWith("00")) {
-    numTel = "+221" + numTel;   // préfixe Sénégal par défaut
+    numTel = "+221" + numTel;
   }
-  Serial.println("[SMS] Numéro formaté : " + numTel);
+  Serial.println("[SMS] Numero : " + numTel);
 
-  simSerial.println("AT+CMGS=\"" + numTel + "\"");
-  delay(1000);
-
-  // Attendre le prompt >
-  unsigned long t = millis();
-  bool promptOk = false;
-  String repPrompt = "";
-  while (millis() - t < 6000) {
-    while (simSerial.available()) {
-      char c = simSerial.read();
-      repPrompt += c;
-      if (c == '>') { promptOk = true; break; }
-    }
-    if (promptOk) break;
-  }
-
-  if (!promptOk) {
-    Serial.println("[SMS] ❌ Pas de prompt > — Réponse : " + repPrompt);
-    Serial.println("[SMS] → Vérifiez : SIM supporte-t-elle les SMS ? Crédit suffisant ?");
-    simSerial.write(27);  // ESC
-    return;
-  }
-
-  Serial.println("[SMS] Prompt > recu - envoi du message...");
-
-  // ── Nettoyage du message : remplace tous les caractères non-ASCII ──────────────
-  // Le message vient de Firebase en UTF-8. On décode octet par octet.
-  // Règles :
-  //   0xE2 0x80 0x94  = — (tiret long)          → '-'
-  //   0xC3 0xA9       = é                         → 'e'
-  //   0xC3 0xA0       = à                         → 'a'
-  //   0xC3 0xA8       = è                         → 'e'
-  //   ... (tous les accents français)
+  // ── Nettoyage UTF-8 → ASCII pur ─────────────────────────────────────────
   String msgPropre = "";
   int mLen = (int)message.length();
   for (int i = 0; i < mLen; ) {
-    unsigned char c  = (unsigned char)message.charAt(i);
-
-    // ── Séquences 3 octets (0xE2) ──
+    unsigned char c = (unsigned char)message.charAt(i);
     if (c == 0xE2 && i + 2 < mLen) {
       unsigned char c2 = (unsigned char)message.charAt(i+1);
       unsigned char c3 = (unsigned char)message.charAt(i+2);
       if (c2 == 0x80) {
-        if      (c3 == 0x94 || c3 == 0x93) { msgPropre += '-'; }  // — –
-        else if (c3 == 0x99 || c3 == 0x98) { msgPropre += '\''; } // ’ ‘
-        else if (c3 == 0x9C || c3 == 0x9D) { msgPropre += '"'; }  // “ ”
-        else if (c3 == 0xA6)               { msgPropre += '.'; }   // …
-        // autres séquences E2-80-xx : ignorer
+        if      (c3==0x94||c3==0x93)          { msgPropre+='-'; }
+        else if (c3==0x99||c3==0x98)          { msgPropre+='\''; }
+        else if (c3==0x9C||c3==0x9D)          { msgPropre+='"'; }
+        else if (c3==0xA6)                    { msgPropre+='.'; }
       }
-      i += 3; continue;
+      i+=3; continue;
     }
-
-    // ── Séquences 2 octets (0xC3) : accents français ──
     if (c == 0xC3 && i + 1 < mLen) {
       unsigned char c2 = (unsigned char)message.charAt(i+1);
-      switch (c2) {
-        // Minuscules
-        case 0xA0: case 0xA1: case 0xA2: case 0xA3:  // àáâã
-        case 0xA4: case 0xA5:                         // äå
-          msgPropre += 'a'; break;
-        case 0xA7: msgPropre += 'c'; break;           // ç
-        case 0xA8: case 0xA9: case 0xAA: case 0xAB:  // èéêë
-          msgPropre += 'e'; break;
-        case 0xAC: case 0xAD: case 0xAE: case 0xAF:  // ìíîï
-          msgPropre += 'i'; break;
-        case 0xB1: msgPropre += 'n'; break;           // ñ
-        case 0xB2: case 0xB3: case 0xB4: case 0xB5:  // òóôõ
-        case 0xB6:                                    // ö
-          msgPropre += 'o'; break;
-        case 0xB9: case 0xBA: case 0xBB: case 0xBC:  // ùúûü
-          msgPropre += 'u'; break;
-        case 0xBD: case 0xBE: msgPropre += 'y'; break; // ýþ
-        // Majuscules
-        case 0x80: case 0x81: case 0x82: case 0x83:  // ÀÁÂÃ
-        case 0x84: case 0x85:                         // ÄÅ
-          msgPropre += 'A'; break;
-        case 0x87: msgPropre += 'C'; break;           // Ç
-        case 0x88: case 0x89: case 0x8A: case 0x8B:  // ÈÉÊË
-          msgPropre += 'E'; break;
-        case 0x8C: case 0x8D: case 0x8E: case 0x8F:  // ÌÍÎÏ
-          msgPropre += 'I'; break;
-        case 0x91: msgPropre += 'N'; break;           // Ñ
-        case 0x92: case 0x93: case 0x94: case 0x95:  // ÒÓÔÕ
-        case 0x96:                                    // Ö
-          msgPropre += 'O'; break;
-        case 0x99: case 0x9A: case 0x9B: case 0x9C:  // ÙÚÛÜ
-          msgPropre += 'U'; break;
-        default: /* ignorer */ break;
+      switch(c2){
+        case 0xA0:case 0xA1:case 0xA2:case 0xA3:case 0xA4:case 0xA5: msgPropre+='a';break;
+        case 0xA7: msgPropre+='c'; break;
+        case 0xA8:case 0xA9:case 0xAA:case 0xAB: msgPropre+='e'; break;
+        case 0xAC:case 0xAD:case 0xAE:case 0xAF: msgPropre+='i'; break;
+        case 0xB1: msgPropre+='n'; break;
+        case 0xB2:case 0xB3:case 0xB4:case 0xB5:case 0xB6: msgPropre+='o'; break;
+        case 0xB9:case 0xBA:case 0xBB:case 0xBC: msgPropre+='u'; break;
+        case 0x80:case 0x81:case 0x82:case 0x83:case 0x84:case 0x85: msgPropre+='A';break;
+        case 0x87: msgPropre+='C'; break;
+        case 0x88:case 0x89:case 0x8A:case 0x8B: msgPropre+='E'; break;
+        case 0x8C:case 0x8D:case 0x8E:case 0x8F: msgPropre+='I'; break;
+        case 0x91: msgPropre+='N'; break;
+        case 0x92:case 0x93:case 0x94:case 0x95:case 0x96: msgPropre+='O'; break;
+        case 0x99:case 0x9A:case 0x9B:case 0x9C: msgPropre+='U'; break;
+        default: break;
       }
-      i += 2; continue;
+      i+=2; continue;
     }
-
-    // ── Autres bytes multi-octets inconnus → ignorer ──
     if (c >= 0x80) { i++; continue; }
-
-    // ── ASCII pur → passer tel quel ──
     msgPropre += (char)c;
     i++;
   }
-
-  // Limite stricte : 155 octets (pure ASCII après nettoyage)
   if ((int)msgPropre.length() > 155) msgPropre = msgPropre.substring(0, 155);
-  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.)");
+  Serial.println("[SMS] Msg propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre.substring(0,60));
 
-  simSerial.print(msgPropre);
-  delay(300);
-  simSerial.write(26);   // Ctrl+Z
-
-  // ── Attendre la confirmation réseau (+CMGS ou +CMS ERROR) ────────────
-  String repCmgs = "";
-  t = millis();
-  while (millis() - t < 15000) {  // réseau peut prendre jusqu'à 10s
-    while (simSerial.available()) repCmgs += (char)simSerial.read();
-    if (repCmgs.indexOf("+CMGS")      != -1) break;  // succès
-    if (repCmgs.indexOf("+CMS ERROR") != -1) break;  // erreur réseau
-    if (repCmgs.indexOf("ERROR")      != -1) break;  // autre erreur
-  }
-
-  Serial.println("[SMS] Réponse réseau : " + repCmgs);
-
-  if (repCmgs.indexOf("+CMGS") != -1) {
-    // Succès : +CMGS: <mr>  (message reference number)
-    Serial.println("[SMS] ✅ SMS confirmé par le réseau !");
-    marquerSmsEnvoye();
-
-  } else if (repCmgs.indexOf("+CMS ERROR") != -1) {
-    // Extraire le code d'erreur
-    int idxErr = repCmgs.indexOf("+CMS ERROR:") + 11;
-    String codeErr = repCmgs.substring(idxErr);
-    codeErr.trim();
-    Serial.println("[SMS] ❌ Erreur réseau CMS : " + codeErr);
-    // Codes courants :
-    //  38 = Network out of order / SIM sans service SMS
-    //  42 = Congestion réseau
-    // 330 = SIM not provisioned for SMS
-    if (codeErr.startsWith("38") || codeErr.startsWith("330")) {
-      Serial.println("[SMS] → La SIM n'a PAS le service SMS activé !");
-      Serial.println("[SMS] → Utilisez une SIM téléphonie (Orange prépayée).");
+  // ── Envoi avec retry (2 tentatives) ─────────────────────────────────────
+  for (int tentative = 0; tentative < 2; tentative++) {
+    if (tentative > 0) {
+      Serial.println("[SMS] Retry " + String(tentative) + "/2...");
+      delay(5000);
+      while (simSerial.available()) simSerial.read();
+      envoyerAT("AT+CMGF=1", 2000);
+      delay(500);
     }
 
-  } else {
-    Serial.println("[SMS] ⚠️ Pas de confirmation reçue dans les 15 secondes");
+    while (simSerial.available()) simSerial.read();
+    simSerial.println("AT+CMGS=\"" + numTel + "\"");
+    delay(1200);
+
+    // Attendre prompt >
+    unsigned long tPr = millis();
+    bool promptOk = false;
+    String repPr = "";
+    while (millis() - tPr < 8000) {
+      while (simSerial.available()) {
+        char c = simSerial.read();
+        repPr += c;
+        if (c == '>') { promptOk = true; break; }
+      }
+      if (promptOk) break;
+    }
+    if (!promptOk) {
+      Serial.println("[SMS] Pas de prompt > : " + repPr.substring(0,30));
+      continue;
+    }
+
+    Serial.println("[SMS] Prompt > recu - envoi...");
+    simSerial.print(msgPropre);
+    delay(300);
+    simSerial.write(26);  // Ctrl+Z
+
+    // Attendre confirmation reseau (15s max)
+    String repCmgs = "";
+    unsigned long tCmgs = millis();
+    while (millis() - tCmgs < 15000) {
+      while (simSerial.available()) repCmgs += (char)simSerial.read();
+      if (repCmgs.indexOf("+CMGS")      != -1) break;
+      if (repCmgs.indexOf("+CMS ERROR") != -1) break;
+      if (repCmgs.indexOf("ERROR")      != -1) break;
+    }
+    Serial.println("[SMS] Reponse : " + repCmgs.substring(0,50));
+
+    if (repCmgs.indexOf("+CMGS") != -1) {
+      Serial.println("[SMS] SMS confirme par le reseau !");
+      marquerSmsEnvoye();
+      return;  // succes
+    }
+    Serial.println("[SMS] Tentative " + String(tentative+1) + " echouee");
   }
+  Serial.println("[SMS] SMS non envoye apres 2 tentatives");
 }
 
 
+
+
 void marquerSmsEnvoye() {
-  // ─── Appel backend GET /sms/marquer-envoye/ST002 ──────────────────────
-  // Plus fiable qu'un PUT direct Firebase REST (pas de problème d'override)
-  envoyerAT("AT+HTTPTERM", 1000);
-  delay(500);
+  // POST → Firebase sms_a_envoyer/envoye.json avec override PUT
+  // (Firebase direct — pas de Render, pas de cold start)
+  envoyerAT("AT+HTTPTERM", 1000); delay(500);
   if (envoyerAT("AT+HTTPINIT", 5000).indexOf("OK") == -1) {
     Serial.println("[SMS] marquerSmsEnvoye : HTTPINIT echoue");
     return;
   }
 
-  String url = "https://agri-station-meteo.onrender.com/sms/marquer-envoye/" + String(STATION_ID);
+  String url = "https://" + String(FIREBASE_HOST)
+             + "/stations/" + STATION_ID + "/sms_a_envoyer/envoye.json"
+             + "?auth=" + String(FIREBASE_AUTH);
+
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + url + "\"", 3000);
+  envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+  envoyerAT("AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\"", 2000);
 
-  while (simSerial.available()) simSerial.read();
-  simSerial.println("AT+HTTPACTION=0");  // GET
-
-  String repMark = "";
-  unsigned long t = millis();
-  while (millis() - t < 30000) {
-    while (simSerial.available()) repMark += (char)simSerial.read();
-    if (repMark.indexOf("+HTTPACTION") != -1) break;
+  String jsonTrue = "true";
+  simSerial.println("AT+HTTPDATA=" + String(jsonTrue.length()) + ",5000");
+  if (attendreReponse("DOWNLOAD", 5000)) {
+    simSerial.print(jsonTrue); delay(2000);
+    simSerial.println("AT+HTTPACTION=1");
+    String repMark = ""; unsigned long t = millis();
+    while (millis() - t < 10000) {
+      while (simSerial.available()) repMark += (char)simSerial.read();
+      if (repMark.indexOf("+HTTPACTION") != -1) break;
+    }
+    bool ok = repMark.indexOf(",200,") != -1;
+    Serial.println("[SMS] Marque envoye : " + String(ok ? "OK \u2705" : "ECHEC") + " " + repMark.substring(0,30));
   }
-  bool ok = repMark.indexOf("200") != -1;
-  Serial.println("[SMS] Marque envoye : " + String(ok ? "OK" : "ECHEC") + " " + repMark.substring(0,40));
   envoyerAT("AT+HTTPTERM");
 }
 
