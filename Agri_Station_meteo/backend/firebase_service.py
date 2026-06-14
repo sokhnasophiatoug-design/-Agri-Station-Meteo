@@ -330,20 +330,47 @@ def get_openweather_historique(station_id: str) -> list:
         print(f"❌ get_openweather_historique : {e}")
         return []
 
+def _sms_clean(texte: str, max_car: int = 155) -> str:
+    """
+    Nettoie un texte pour compatibilité GSM-7bit et le tronque à max_car
+    caractères (pas octets).
+    - Remplace les caractères hors alphabet GSM-7bit par leurs équivalents ASCII
+    - Le tiret long '—' (U+2014) en particulier cause CMS ERROR sur SIM7600E
+    """
+    remplacements = {
+        '\u2014': '-',   # tiret long —
+        '\u2013': '-',   # tiret court –
+        '\u2019': "'",   # apostrophe courbe droite '
+        '\u2018': "'",   # apostrophe courbe gauche '
+        '\u201c': '"',   # guillemet ouvrant "
+        '\u201d': '"',   # guillemet fermant "
+        '\u2026': '...',  # points de suspension …
+        '\u00ab': '"',   # guillemet français «
+        '\u00bb': '"',   # guillemet français »
+        '\u00a0': ' ',   # espace insécable
+    }
+    for char, remplacement in remplacements.items():
+        texte = texte.replace(char, remplacement)
+    # Tronquer au nombre de caractères (pas d'octets)
+    return texte[:max_car]
+
+
 def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str):
     """
     Écrit la recommandation à envoyer par SMS dans Firebase.
+    Le message est nettoyé pour GSM-7bit avant écriture (pas de tiret long, etc.)
     L'ESP32 lira ce nœud et enverra le SMS via SIM7600E.
     """
     try:
         from datetime import datetime
+        message_propre = _sms_clean(message)
         db.reference(f"stations/{station_id}/sms_a_envoyer").set({
-            "message"  : message,
+            "message"  : message_propre,
             "telephone": telephone,
             "timestamp": datetime.now().isoformat(),
             "envoye"   : False,
         })
-        print(f"[SMS] Message écrit dans Firebase pour {station_id}")
+        print(f"[SMS] Message écrit dans Firebase pour {station_id} ({len(message_propre)} car.)")
     except Exception as e:
         print(f"❌ ecrire_sms_a_envoyer : {e}")
 

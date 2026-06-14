@@ -31,23 +31,23 @@ from sklearn.model_selection import train_test_split
 # ── Métadonnées des 6 classes ────────────────────────────────────────────────
 
 LABELS = [
-    "Conditions favorables — surveiller régulièrement",             # 0
-    "Arroser les cultures — humidité du sol insuffisante",          # 1
-    "URGENCE — Stress hydrique sévère, arroser immédiatement",      # 2
-    "Risque fongique — envisager un traitement fongicide",          # 3
-    "Reporter pulvérisation — vent trop fort",                      # 4
-    "Attendre la pluie prévue — irrigation non nécessaire",         # 5
+    "Conditions favorables - surveiller regulierement",          # 0
+    "Arroser les cultures - humidite du sol insuffisante",       # 1
+    "URGENCE - Stress hydrique severe",                          # 2
+    "Risque fongique - traitement fongicide conseille",          # 3
+    "Reporter pulverisation - vent trop fort",                   # 4
+    "Attendre la pluie prevue - irrigation inutile",             # 5
 ]
 
 EMOJIS = ["✅", "💧", "🚨", "🍄", "💨", "🌧️"]
 
 CONSEILS_DETAILLES = [
-    "Les conditions sont bonnes. Continuez à surveiller vos cultures et vérifiez l'état du sol toutes les 6 heures.",
-    "L'humidité du sol est faible. Activez l'irrigation pendant 30 à 45 minutes, de préférence tôt le matin pour limiter l'évaporation.",
-    "Situation critique ! Le sol est très sec et la chaleur est élevée. Arrosez immédiatement et abondamment. Vérifiez vos canalisations d'irrigation.",
-    "L'humidité de l'air est élevée avec une température chaude : risque de maladies fongiques. Inspectez vos plants et appliquez un fongicide préventif si nécessaire.",
-    "Le vent souffle trop fort pour pulvériser des produits. Reportez toute pulvérisation et protégez les jeunes plants avec des filets brise-vent.",
-    "De la pluie est prévue dans les prochaines heures. Évitez d'arroser maintenant. Profitez-en pour vérifier vos équipements d'irrigation.",
+    "Les conditions sont bonnes. Continuez a surveiller vos cultures et verifiez l'etat du sol toutes les 6 heures.",
+    "L'humidite du sol est faible. Activez l'irrigation pendant 30 a 45 minutes, de preference tot le matin pour limiter l'evaporation.",
+    "Situation critique ! Le sol est tres sec et la chaleur est elevee. Arrosez immediatement et abondamment. Verifiez vos canalisations.",
+    "L'humidite de l'air est elevee avec une temperature chaude : risque de maladies fongiques. Appliquez un fongicide preventif.",
+    "Le vent souffle trop fort pour pulveriser des produits. Reportez toute pulverisation et protegez les jeunes plants.",
+    "De la pluie est prevue dans les prochaines heures. Evitez d'arroser maintenant. Verifiez vos equipements d'irrigation.",
 ]
 
 # Ordre fixe des features — respecté partout

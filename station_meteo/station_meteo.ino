@@ -439,6 +439,8 @@ bool envoyerFirebase4G(float temp, float humAir,
   String urlPush = "https://agri-station-meteo.onrender.com/push/" + String(STATION_ID);
   envoyerAT("AT+HTTPPARA=\"URL\",\"" + urlPush + "\"", 3000);
   envoyerAT("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 3000);
+  // Timeout interne SIM7600E = 70s (> notre attente de 60s dans le loop)
+  envoyerAT("AT+HTTPPARA=\"TIMEOUT\",70000", 2000);
 
   simSerial.println("AT+HTTPDATA=" + String(json.length()) + ",15000");
   if (!attendreReponse("DOWNLOAD", 10000)) {
@@ -873,6 +875,7 @@ void envoyerSMS(String telephone, String message) {
     return;
   }
 
+  envoyerAT("AT+CSCS=\"GSM\"", 2000);  // encodage GSM-7bit (160 car. max)
   envoyerAT("AT+CMGF=1", 2000);   // mode texte
   delay(300);
 
@@ -906,10 +909,51 @@ void envoyerSMS(String telephone, String message) {
     return;
   }
 
-  Serial.println("[SMS] Prompt > reçu — envoi du message...");
-  simSerial.print(message);
+  Serial.println("[SMS] Prompt > recu - envoi du message...");
+
+  // ── Nettoyage du message pour GSM-7bit ──────────────────────────────────
+  // Le tiret long — (UTF-8: 0xE2 0x80 0x94) cause +CMS ERROR
+  // Remplacer octet par octet les séquences UTF-8 non-GSM
+  String msgPropre = "";
+  int mLen = (int)message.length();
+  for (int i = 0; i < mLen; ) {
+    unsigned char c = (unsigned char)message.charAt(i);
+    if (c == 0xE2 && i + 2 < mLen) {
+      unsigned char c2 = (unsigned char)message.charAt(i+1);
+      unsigned char c3 = (unsigned char)message.charAt(i+2);
+      if (c2 == 0x80) {
+        if (c3 == 0x94 || c3 == 0x93 || c3 == 0x92) { // — – ’
+          msgPropre += '-'; i += 3; continue;
+        }
+        if (c3 == 0x98 || c3 == 0x99) {  // ‘ ’
+          msgPropre += '\'' ; i += 3; continue;
+        }
+        if (c3 == 0x9C || c3 == 0x9D) {  // “ ”
+          msgPropre += '"'; i += 3; continue;
+        }
+        if (c3 == 0xA6) {  // …
+          msgPropre += '.'; i += 3; continue;
+        }
+      }
+      // Autre séquence 0xE2... non reconnue -> sauter
+      i += 3; continue;
+    }
+    if (c >= 0x80) {
+      // Autre octet multi-byte (0xC3 pour é,à,è etc.) : passer tel quel
+      // Le SIM avec AT+CSCS="GSM" les interprète correctement
+      msgPropre += (char)c;
+    } else {
+      msgPropre += (char)c;
+    }
+    i++;
+  }
+  // Limite stricte : 155 octets
+  if ((int)msgPropre.length() > 155) msgPropre = msgPropre.substring(0, 155);
+  Serial.println("[SMS] Message propre (" + String(msgPropre.length()) + " oct.) : " + msgPropre.substring(0, 60));
+
+  simSerial.print(msgPropre);
   delay(300);
-  simSerial.write(26);   // Ctrl+Z → envoyer au réseau
+  simSerial.write(26);   // Ctrl+Z
 
   // ── Attendre la confirmation réseau (+CMGS ou +CMS ERROR) ────────────
   String repCmgs = "";

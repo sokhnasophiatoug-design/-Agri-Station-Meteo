@@ -544,15 +544,15 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
     if not telephone.startswith("+"):
         telephone = "+221" + telephone
 
-    # ── 4. Construire le message SMS (≤ 160 caractères, GSM pur) ────────────
-    conseil = reco["conseil"][:80]   # tronquer pour tenir en 1 SMS
+    # ── 4. Construire le message SMS (≤ 155 caractères, GSM-7bit pur) ──────────
+    conseil = reco["conseil"][:80]
     message = (
         f"Agri Meteo {station_id} "
         f"[{reco['label'][:30]}]\n"
         f"{conseil}\n"
         f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}km/h"
     )
-    message = message[:160]  # garantie 1 SMS
+    message = firebase_service._sms_clean(message)  # garantie GSM-7bit + 155 car.
 
     # ── 5. Écrire dans Firebase → ESP32 enverra le SMS ──────────────────────
     firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
