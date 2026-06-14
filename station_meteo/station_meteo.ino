@@ -900,10 +900,10 @@ void envoyerSMS(String telephone, String message) {
   while (simSerial.available()) simSerial.read();
   envoyerAT("AT+CMGF=1", 3000);   // Mode texte
   delay(500);
-  // CSCS="GSM" est requis par le réseau Orange SN pour accepter l'envoi.
-  // Les crochets [ et ] sont convertis en ( et ) pour éviter les caractères Ä et Ñ.
-  envoyerAT("AT+CSCS=\"GSM\"", 2000);
-  delay(300);
+  // Diagnostics réseau et signal
+  envoyerAT("AT+CSQ", 2000);      // Qualité du signal (RSSI) - 15+ est recommandé
+  String cscs = envoyerAT("AT+CSCS?", 2000); // Vérifier le jeu de caractères par défaut
+  Serial.println("[SMS] Charset actuel : " + cscs.substring(0, 30));
   // Diagnostics reseau SMS
   String csca = envoyerAT("AT+CSCA?", 2000);
   Serial.println("[SMS] SMSC : " + csca.substring(0, 50));
@@ -977,7 +977,6 @@ void envoyerSMS(String telephone, String message) {
       delay(8000);  // SMSC Orange SN peut etre lent
       while (simSerial.available()) simSerial.read();
       envoyerAT("AT+CMGF=1", 3000);
-      envoyerAT("AT+CSCS=\"GSM\"", 2000);
       delay(500);
     }
 
@@ -1029,6 +1028,7 @@ void envoyerSMS(String telephone, String message) {
     }
     if (repCmgs.indexOf("+CMS ERROR") != -1) {
       Serial.println("[SMS] CMS ERROR - num. incorrect, SMS desactive, ou msg trop long");
+      envoyerAT("AT+CEER", 2000); // Récupérer le diagnostic détaillé du rejet opérateur
     }
     Serial.println("[SMS] Tentative " + String(tentative+1) + " echouee");
   }
