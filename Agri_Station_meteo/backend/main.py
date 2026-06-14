@@ -3,7 +3,7 @@ main.py — API FastAPI pour la Station Météo Agricole
 Routes : /auth, /mesures, /historique, /previsions, /recommandation, /tts, /stations, /agriculteurs
 """
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
 from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -144,81 +144,40 @@ class PushMesuresRequest(BaseModel):
     altitude:     Optional[float] = None
     gps_fix:      Optional[bool]  = False
 
-@app.post("/push/{station_id}", tags=["ESP32"])
-def push_mesures(station_id: str, body: PushMesuresRequest):
+def _pipeline_sms_background(station_id: str, temperature: float, humidite_air: float,
+                              humidite_sol: float, vitesse_vent: float):
     """
-    L'ESP32 envoie ses capteurs ici (HTTP POST simple, pas de PUT/PATCH Firebase).
-    Le backend effectue en séquence :
-      1. SET stations/{station_id}/mesures      (données temps réel)
-      2. PUSH stations/{station_id}/historique  (historique permanent)
-      3. SET stations/{station_id}/gps          (si GPS fix disponible)
-      4. Calcul recommandation IA + écriture SMS dans Firebase
-         → l'ESP32 n'a plus besoin d'appeler /sms/recommandation séparément.
+    Calcul IA + écriture SMS + dataset — exécuté EN ARRIÈRE-PLAN
+    après que le 200 est déjà renvoyé à l'ESP32.
+    L'ESP32 n'attend plus ce calcul → plus de timeout 4G.
     """
-    from datetime import datetime
-
-    payload = body.dict()
-    payload["station_id"] = station_id
-
-    # ── 1-3. Écriture Firebase ───────────────────────────────────────────────
-    result = firebase_service.push_mesures_et_historique(station_id, payload)
-    if not result.get("succes"):
-        raise HTTPException(status_code=500, detail=result.get("erreur", "Erreur Firebase"))
-
-    # ── 4. Recommandation IA + SMS (non bloquant si erreur) ─────────────────
-    sms_statut = "skipped"
     try:
-        # Prévisions OpenWeather
-        gps    = firebase_service.get_station_gps(station_id)
-        prev   = weather_service.get_previsions_5j(
-            region = "Kaolack",
-            lat    = gps.get("latitude"),
-            lon    = gps.get("longitude"),
+        gps  = firebase_service.get_station_gps(station_id)
+        prev = weather_service.get_previsions_5j(
+            region="Kaolack",
+            lat=gps.get("latitude"),
+            lon=gps.get("longitude"),
         )
         if prev.get("ok") and prev.get("liste"):
             firebase_service.sauvegarder_openweather(station_id, prev["liste"])
 
-        # Recommandation IA sur les capteurs reçus
         p  = float(prev.get("liste", [{}])[0].get("pluie",    0) if prev.get("ok") else 0)
-        tf = float(prev.get("liste", [{}])[0].get("temp_max", body.temperature) if prev.get("ok") else body.temperature)
-        hf = float(prev.get("liste", [{}])[0].get("humidite", body.humidite_air) if prev.get("ok") else body.humidite_air)
+        tf = float(prev.get("liste", [{}])[0].get("temp_max", temperature) if prev.get("ok") else temperature)
+        hf = float(prev.get("liste", [{}])[0].get("humidite", humidite_air) if prev.get("ok") else humidite_air)
         vf = float(prev.get("liste", [{}])[0].get("vent",     0) if prev.get("ok") else 0)
 
         reco = ia_service.get_recommandation(
-            temperature        = body.temperature,
-            humidite_air       = body.humidite_air,
-            humidite_sol       = body.humidite_sol,
-            vitesse_vent       = body.vitesse_vent,
-            pluie_prevue_3h    = p,
-            temperature_future = tf,
-            humidite_future    = hf,
-            vent_future        = vf,
+            temperature=temperature, humidite_air=humidite_air,
+            humidite_sol=humidite_sol, vitesse_vent=vitesse_vent,
+            pluie_prevue_3h=p, temperature_future=tf,
+            humidite_future=hf, vent_future=vf,
         )
 
-        # Téléphone agriculteur
-        telephone = firebase_service.get_telephone_agriculteur(station_id)
-        if not telephone:
-            sms_statut = "no_phone"
-        else:
-            if not telephone.startswith("+"):
-                telephone = "+221" + telephone
-            conseil = reco["conseil"][:80]
-            message = (
-                f"Agri Meteo {station_id} "
-                f"[{reco['label'][:30]}]\n"
-                f"{conseil}\n"
-                f"Temp:{body.temperature:.0f}C Sol:{body.humidite_sol:.0f}% Vent:{body.vitesse_vent:.0f}km/h"
-            )[:160]
-            firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
-            sms_statut = "ok"
-            print(f"[PUSH] 📱 SMS écrit pour {station_id} → {telephone}")
-
-        # Traçabilité dataset
         firebase_service.sauvegarder_dataset(station_id, {
-            "temperature"       : body.temperature,
-            "humidite_air"      : body.humidite_air,
-            "humidite_sol"      : body.humidite_sol,
-            "vitesse_vent"      : body.vitesse_vent,
+            "temperature"       : temperature,
+            "humidite_air"      : humidite_air,
+            "humidite_sol"      : humidite_sol,
+            "vitesse_vent"      : vitesse_vent,
             "pluie_prevue_3h"   : p,
             "temperature_future": tf,
             "humidite_future"   : hf,
@@ -228,9 +187,59 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             "source"            : reco["source"],
         })
 
+        telephone = firebase_service.get_telephone_agriculteur(station_id)
+        if telephone:
+            if not telephone.startswith("+"):
+                telephone = "+221" + telephone
+            conseil = reco["conseil"][:80]
+            message = (
+                f"Agri Meteo {station_id} [{reco['label'][:30]}]\n"
+                f"{conseil}\n"
+                f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}km/h"
+            )
+            message = firebase_service._sms_clean(message)
+            firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
+            print(f"[BG] ✅ SMS ecrit ({len(message)} car.) → {telephone}")
+        else:
+            print(f"[BG] ⚠️ Pas de telephone pour {station_id}")
+
     except Exception as e:
-        print(f"[PUSH] ⚠️ Erreur pipeline SMS : {e}")
-        sms_statut = f"error: {str(e)[:60]}"
+        print(f"[BG] ❌ _pipeline_sms_background : {e}")
+
+
+@app.post("/push/{station_id}", tags=["ESP32"])
+def push_mesures(station_id: str, body: PushMesuresRequest,
+                 background_tasks: BackgroundTasks):
+    """
+    L'ESP32 envoie ses capteurs ici (HTTP POST simple).
+
+    Réponse rapide (~2s) :
+      - SET mesures    (temps réel)
+      - PUSH historique
+      - SET gps
+      → 200 OK renvoyé immédiatement
+
+    En arrière-plan (invisible pour l'ESP32) :
+      - OpenWeather + IA + dataset + sms_a_envoyer
+    """
+    payload = body.dict()
+    payload["station_id"] = station_id
+
+    # ── Écriture Firebase rapide (< 2s) ──────────────────────────────────────
+    result = firebase_service.push_mesures_et_historique(station_id, payload)
+    if not result.get("succes"):
+        raise HTTPException(status_code=500, detail=result.get("erreur", "Erreur Firebase"))
+
+    # ── Pipeline lourd en arrière-plan (OpenWeather + IA + SMS) ──────────────
+    # L'ESP32 reçoit le 200 AVANT que ce calcul commence.
+    background_tasks.add_task(
+        _pipeline_sms_background,
+        station_id,
+        body.temperature,
+        body.humidite_air,
+        body.humidite_sol,
+        body.vitesse_vent,
+    )
 
     return {
         "statut"      : "ok",
@@ -238,7 +247,6 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
         "timestamp"   : payload.get("timestamp"),
         "temperature" : body.temperature,
         "humidite_sol": body.humidite_sol,
-        "sms_statut"  : sms_statut,
     }
 
 
