@@ -866,36 +866,86 @@ void envoyerSMS(String telephone, String message) {
   Serial.println("[SMS] Envoi → " + telephone);
   Serial.println("[SMS] Message : " + message);
 
+  // ── Vérifier l'enregistrement réseau avant envoi ──────────────────────
+  String creg = envoyerAT("AT+CREG?", 2000);
+  if (creg.indexOf(",1") == -1 && creg.indexOf(",5") == -1) {
+    Serial.println("[SMS] ❌ Module non enregistré réseau — SMS annulé");
+    return;
+  }
+
   envoyerAT("AT+CMGF=1", 2000);   // mode texte
   delay(300);
 
-  simSerial.println("AT+CMGS=\"" + telephone + "\"");
+  // S'assurer que le numéro est en format international
+  String numTel = telephone;
+  if (!numTel.startsWith("+") && !numTel.startsWith("00")) {
+    numTel = "+221" + numTel;   // préfixe Sénégal par défaut
+  }
+  Serial.println("[SMS] Numéro formaté : " + numTel);
+
+  simSerial.println("AT+CMGS=\"" + numTel + "\"");
   delay(1000);
 
   // Attendre le prompt >
   unsigned long t = millis();
   bool promptOk = false;
-  while (millis() - t < 5000) {
-    if (simSerial.available()) {
+  String repPrompt = "";
+  while (millis() - t < 6000) {
+    while (simSerial.available()) {
       char c = simSerial.read();
+      repPrompt += c;
       if (c == '>') { promptOk = true; break; }
     }
+    if (promptOk) break;
   }
 
   if (!promptOk) {
-    Serial.println("[SMS] Pas de prompt > — annulé");
+    Serial.println("[SMS] ❌ Pas de prompt > — Réponse : " + repPrompt);
+    Serial.println("[SMS] → Vérifiez : SIM supporte-t-elle les SMS ? Crédit suffisant ?");
     simSerial.write(27);  // ESC
     return;
   }
 
+  Serial.println("[SMS] Prompt > reçu — envoi du message...");
   simSerial.print(message);
   delay(300);
-  simSerial.write(26);   // Ctrl+Z → envoyer
-  delay(6000);
-  Serial.println("[SMS] ✅ Envoyé !");
+  simSerial.write(26);   // Ctrl+Z → envoyer au réseau
 
-  // Marquer comme envoyé dans Firebase
-  marquerSmsEnvoye();
+  // ── Attendre la confirmation réseau (+CMGS ou +CMS ERROR) ────────────
+  String repCmgs = "";
+  t = millis();
+  while (millis() - t < 15000) {  // réseau peut prendre jusqu'à 10s
+    while (simSerial.available()) repCmgs += (char)simSerial.read();
+    if (repCmgs.indexOf("+CMGS")      != -1) break;  // succès
+    if (repCmgs.indexOf("+CMS ERROR") != -1) break;  // erreur réseau
+    if (repCmgs.indexOf("ERROR")      != -1) break;  // autre erreur
+  }
+
+  Serial.println("[SMS] Réponse réseau : " + repCmgs);
+
+  if (repCmgs.indexOf("+CMGS") != -1) {
+    // Succès : +CMGS: <mr>  (message reference number)
+    Serial.println("[SMS] ✅ SMS confirmé par le réseau !");
+    marquerSmsEnvoye();
+
+  } else if (repCmgs.indexOf("+CMS ERROR") != -1) {
+    // Extraire le code d'erreur
+    int idxErr = repCmgs.indexOf("+CMS ERROR:") + 11;
+    String codeErr = repCmgs.substring(idxErr);
+    codeErr.trim();
+    Serial.println("[SMS] ❌ Erreur réseau CMS : " + codeErr);
+    // Codes courants :
+    //  38 = Network out of order / SIM sans service SMS
+    //  42 = Congestion réseau
+    // 330 = SIM not provisioned for SMS
+    if (codeErr.startsWith("38") || codeErr.startsWith("330")) {
+      Serial.println("[SMS] → La SIM n'a PAS le service SMS activé !");
+      Serial.println("[SMS] → Utilisez une SIM téléphonie (Orange prépayée).");
+    }
+
+  } else {
+    Serial.println("[SMS] ⚠️ Pas de confirmation reçue dans les 15 secondes");
+  }
 }
 
 
