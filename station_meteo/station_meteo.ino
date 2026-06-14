@@ -385,6 +385,8 @@ bool initSIM7600() {
 
   envoyerAT("AT+CNMP=2", 2000);   // Mode automatique (LTE, WCDMA, GSM) — requis pour le SMS via 3G/2G (CSFB) si 4G LTE détache le SMS
   delay(500);
+  envoyerAT("AT+CGSMS=0", 2000);   // Forcer l'envoi de SMS via le domaine Circuit Switched (3G/2G) pour contourner EMM detached
+  delay(500);
   envoyerAT("AT+CGDCONT=1,\"IP\",\"" + String(APN) + "\"", 3000);
   delay(500);
   envoyerAT("AT+CGACT=1,1", 10000);
