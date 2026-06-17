@@ -22,6 +22,7 @@ def afficher_carte_stations(stations: dict):
         zoom_start=SENEGAL_ZOOM,
         tiles=None,
         prefer_canvas=True,
+        max_zoom=22,
     )
 
     # Couche 1 : Carte sombre (CartoDB Dark Matter) - par défaut
@@ -29,12 +30,16 @@ def afficher_carte_stations(stations: dict):
         tiles="CartoDB dark_matter",
         name="Carte Sombre",
         attr="CartoDB",
+        max_zoom=22,
+        max_native_zoom=20,
     ).add_to(m)
 
     # Couche 2 : Carte standard (OpenStreetMap)
     folium.TileLayer(
         tiles="OpenStreetMap",
         name="Carte Standard",
+        max_zoom=22,
+        max_native_zoom=19,
     ).add_to(m)
 
     # Couche 3 : Vue Satellite haute résolution (Esri World Imagery)
@@ -42,6 +47,8 @@ def afficher_carte_stations(stations: dict):
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri World Imagery",
         name="Vue Satellite",
+        max_zoom=22,
+        max_native_zoom=17,
     ).add_to(m)
 
     # Ajouter le sélecteur de couche dans le coin supérieur droit
@@ -129,6 +136,7 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         zoom_start=17,
         tiles=None,
         prefer_canvas=True,
+        max_zoom=22,
     )
 
     # Couche 1 : Vue Satellite haute résolution (Esri World Imagery) - par défaut
@@ -136,12 +144,16 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri World Imagery",
         name="Vue Satellite",
+        max_zoom=22,
+        max_native_zoom=17,
     ).add_to(m)
 
     # Couche 2 : Carte standard (OpenStreetMap)
     folium.TileLayer(
         tiles="OpenStreetMap",
         name="Carte Standard",
+        max_zoom=22,
+        max_native_zoom=19,
     ).add_to(m)
 
     # Ajouter le sélecteur de couche
