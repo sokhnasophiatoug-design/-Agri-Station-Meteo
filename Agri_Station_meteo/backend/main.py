@@ -33,6 +33,27 @@ app.add_middleware(
 )
 
 
+# ── Événements de démarrage ──────────────────────────────────────────────────
+
+@app.on_event("startup")
+def startup_event():
+    print("[IA] Détection et entraînement automatique des modèles IA au démarrage...")
+    try:
+        stations = firebase_service.get_all_stations()
+        if stations:
+            for station_id in stations.keys():
+                print(f"[IA] Essai de ré-entraînement pour la station : {station_id}")
+                res = ia_service.reentainer_modele(station_id)
+                if res.get("statut") == "firebase":
+                    print(f"[IA] ✅ Station {station_id} entraînée avec succès !")
+                else:
+                    print(f"[IA] ℹ️ Station {station_id} conservée en mode Règles : {res.get('message')}")
+        else:
+            print("[IA] ⚠️ Aucune station détectée dans Firebase au démarrage.")
+    except Exception as e:
+        print(f"[IA] ❌ Erreur lors de l'entraînement au démarrage : {e}")
+
+
 # ── Schémas de données ───────────────────────────────────────────────────────
 
 class TokenRequest(BaseModel):
