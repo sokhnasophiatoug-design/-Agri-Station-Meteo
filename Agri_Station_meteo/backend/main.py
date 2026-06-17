@@ -818,6 +818,15 @@ def get_all_stations():
     return {"stations": result}
 
 
+@app.get("/stations/{station_id}/gps", tags=["Stations"])
+def get_station_gps(station_id: str):
+    """
+    Retourne les coordonnées GPS de la station spécifiée.
+    """
+    gps = firebase_service.get_station_gps(station_id)
+    return gps if gps else {"latitude": None, "longitude": None}
+
+
 # ── Agriculteurs (admin) ─────────────────────────────────────────────────────
 
 @app.get("/agriculteurs", tags=["Admin"])

@@ -91,3 +91,62 @@ def afficher_carte_stations(stations: dict):
         st.info("ℹ️ Aucune station avec données GPS disponible pour le moment.")
 
     st_folium(m, width=None, height=480, returned_objects=[])
+
+
+def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: dict):
+    """
+    Affiche une carte Folium zoomée sur la parcelle d'une station spécifique.
+    """
+    if not lat or not lon:
+        st.warning("Coordonnées GPS de la parcelle indisponibles.")
+        return
+
+    m = folium.Map(
+        location=[lat, lon],
+        zoom_start=15,
+        tiles="OpenStreetMap",
+        prefer_canvas=True,
+    )
+
+    temp    = mesures.get("temperature", "N/A")
+    hum_sol = mesures.get("humidite_sol", "N/A")
+    vent    = mesures.get("vitesse_vent", "N/A")
+    ts      = mesures.get("timestamp", "N/A")
+
+    # Couleur du marqueur
+    if isinstance(temp, (int, float)):
+        couleur = "red" if temp > 38 else ("orange" if temp > 32 else "green")
+    else:
+        couleur = "gray"
+
+    popup_html = f"""
+    <div style="font-family:sans-serif; min-width:200px; color:#1e293b;">
+        <h4 style="margin:0 0 8px; color:#1b5e20;">🌾 Parcelle {station_id}</h4>
+        <table style="width:100%; font-size:13px;">
+            <tr><td>🌡️ Température</td><td><b>{temp}°C</b></td></tr>
+            <tr><td>🌱 Humidité sol</td><td><b>{hum_sol}%</b></td></tr>
+            <tr><td>💨 Vent</td><td><b>{vent} km/h</b></td></tr>
+            <tr><td>🕐 Relevé</td><td><b>{ts}</b></td></tr>
+        </table>
+    </div>
+    """
+
+    folium.Marker(
+        location=[lat, lon],
+        popup=folium.Popup(popup_html, max_width=260),
+        tooltip=f"🌾 Votre Parcelle ({station_id})",
+        icon=folium.Icon(color=couleur, icon="home", prefix="fa"),
+    ).add_to(m)
+
+    # Cercle représentant la zone de couverture immédiate (ex. 100m)
+    folium.Circle(
+        location=[lat, lon],
+        radius=100,
+        color="#2E7D32",
+        weight=2,
+        fill=True,
+        fill_color="#A5D6A7",
+        fill_opacity=0.2,
+    ).add_to(m)
+
+    st_folium(m, width=None, height=350, returned_objects=[])
