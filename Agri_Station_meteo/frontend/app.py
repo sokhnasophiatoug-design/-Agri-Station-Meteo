@@ -217,11 +217,11 @@ def main():
     query_params = st.query_params
 
     # 1. Si on vient de se déconnecter, on nettoie le paramètre de l'URL
-    if "logging_out" in query_params:
+    if query_params.get("logging_out") is not None:
         st.query_params.clear()
 
     # 2. Si on a des paramètres de reconnexion automatique dans l'URL, on les charge
-    elif "auto_login" in query_params:
+    elif query_params.get("auto_login") is not None:
         st.session_state.authenticated = True
         st.session_state.id_token      = query_params.get("token")
         st.session_state.role          = query_params.get("role")
@@ -236,7 +236,7 @@ def main():
         st.rerun()
 
     # 3. Si non connecté, on injecte le JS pour lire le localStorage et rediriger vers l'auto_login
-    if not st.session_state.get("authenticated", False) and "logging_out" not in query_params:
+    if not st.session_state.get("authenticated", False) and query_params.get("logging_out") is None:
         import streamlit.components.v1 as components
         components.html("""
         <script>
