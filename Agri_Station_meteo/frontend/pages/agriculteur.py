@@ -176,25 +176,6 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.markdown("####  Prévisions météo — 5 prochains jours")
     afficher_previsions(previsions)
 
-    # ── Localisation de la parcelle ──
-    st.markdown("---")
-    st.markdown("####  🌍 Localisation de votre Parcelle")
-    gps = _get(f"/stations/{station_id}/gps", default={})
-    lat = gps.get("latitude")
-    lon = gps.get("longitude")
-
-    if lat and lon:
-        from components.map_component import afficher_carte_parcelle
-        mesures_dict = {
-            "temperature": temp,
-            "humidite_sol": hum_sol,
-            "vitesse_vent": vent,
-            "timestamp": ts
-        }
-        afficher_carte_parcelle(lat, lon, station_id, mesures_dict)
-    else:
-        st.info("🛰️ Coordonnées GPS de la parcelle en cours de calibrage ou non configurées sur cette station.")
-
     render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
 
 
