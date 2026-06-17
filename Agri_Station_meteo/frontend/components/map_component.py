@@ -129,7 +129,7 @@ def afficher_carte_stations(stations: dict):
     if not has_marker:
         st.info("ℹ️ Aucune station avec données GPS disponible pour le moment.")
 
-    st_folium(m, width=None, height=480, returned_objects=[])
+    st_folium(m, height=480, use_container_width=True, returned_objects=[])
 
 
 def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: dict):
@@ -142,7 +142,7 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
 
     m = folium.Map(
         location=[lat, lon],
-        zoom_start=17,
+        zoom_start=18,
         tiles=None,
         prefer_canvas=True,
         max_zoom=22,
@@ -218,4 +218,4 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         fill_opacity=0.2,
     ).add_to(m)
 
-    st_folium(m, width=None, height=350, returned_objects=[])
+    st_folium(m, height=350, use_container_width=True, returned_objects=[])
