@@ -540,6 +540,16 @@ def get_recommandation(body: RecommandationRequest):
     return result
 
 
+@app.get("/ia/status", tags=["IA"])
+def get_ia_status():
+    """
+    Retourne la source actuelle du modèle IA ('Règles' ou 'Firebase').
+    """
+    return {
+        "source": ia_service.get_source_modele(),
+    }
+
+
 @app.get("/ia/predire/{station_id}", tags=["IA"])
 def predire_auto(station_id: str, region: str = "Kaolack"):
     """

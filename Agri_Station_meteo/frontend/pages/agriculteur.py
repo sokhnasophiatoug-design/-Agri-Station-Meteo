@@ -135,13 +135,21 @@ def _page_accueil(station_id, nom, station_nom, region):
                 reco_label     = esc(reco.get('label', ''))
                 reco_conseil   = esc(reco.get('conseil', ''))
                 reco_confiance = int(reco.get('confiance', 0) * 100)
+                reco_source    = esc(reco.get('source', 'Règles'))
+
+                source_badge = (
+                    f"<span style='background-color:#E8F5E9;color:#2E7D32;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Apprentissage ({reco_source})</span>"
+                    if reco_source == "Firebase" else
+                    f"<span style='background-color:#FFF3E0;color:#EF6C00;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Règles Métier</span>"
+                )
+
                 render_html(
                     "<div class='reco-card fade-in'>"
                     + "<span class='reco-icon'>" + reco_emoji + "</span>"
                     + "<div class='reco-titre'>" + reco_label + "</div>"
                     + "<div class='reco-desc'>" + reco_conseil + "</div>"
-                    + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;'>"
-                    + "Confiance du modèle : " + str(reco_confiance) + "%"
+                    + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;display:flex;align-items:center;'>"
+                    + "Confiance du modèle : " + str(reco_confiance) + "%" + source_badge
                     + "".join(["</", "div", "></", "div", ">"])
                 )
                 if st.button("   Écouter le conseil", width='stretch', key="btn_tts"):

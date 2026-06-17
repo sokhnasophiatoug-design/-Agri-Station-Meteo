@@ -8,6 +8,7 @@ import requests
 from components.http import http_get, http_post
 import pandas as pd
 from datetime import datetime
+import time
 
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -151,7 +152,97 @@ def _page_seuils(stations):
                                       "temp_min": temp_min, "hum_sol_min": hum_sol_min, "vent_max": vent_max})
         if ok: st.success(" Seuils globaux mis à jour pour toutes les stations")
         else:  st.error(f" Erreur : {resp.get('detail', 'Inconnue')}")
+
+
+def _page_modele_ia(stations):
+    st.markdown("""
+    <div class="entete-admin fade-in">
+        <div>
+            <h1> 🤖 Gestion du Modèle IA</h1>
+            <div class="sous-titre">
+                Supervision et entraînement de l'intelligence artificielle
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 1. Obtenir le statut actuel du modèle
+    statut_ia = _get("/ia/status", default={"source": "Règles"})
+    source_actuelle = statut_ia.get("source", "Règles")
+
+    # Affichage du badge actuel
+    if source_actuelle == "Firebase":
+        badge_html = """
+        <div style="background-color: #E8F5E9; border-left: 5px solid #2E7D32; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h5 style="color: #2E7D32; margin: 0 0 5px 0;">🟢 Mode Actif : Apprentissage Automatique (Firebase)</h5>
+            <p style="margin: 0; font-size: 0.9rem; color: #388E3C;">Les recommandations sont générées par l'arbre de décision scikit-learn entraîné sur vos mesures réelles.</p>
+        </div>
+        """
+    else:
+        badge_html = """
+        <div style="background-color: #FFF3E0; border-left: 5px solid #EF6C00; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h5 style="color: #EF6C00; margin: 0 0 5px 0;">🟠 Mode Actif : Règles Métier (Déterministes)</h5>
+            <p style="margin: 0; font-size: 0.9rem; color: #F57C00;">Le système utilise l'arbre de décision statique prédéfini (Zéro dépendance, actif au démarrage).</p>
+        </div>
+        """
+    st.markdown(badge_html, unsafe_allow_html=True)
+
+    if not stations:
+        st.warning("Aucune station disponible pour l'entraînement.")
+        return
+
+    # 2. Sélection de la station pour l'entraînement
+    st.markdown("###  Entraînement par Station")
+    st.info("L'entraînement d'une station fusionnera son historique Firebase avec les données OpenWeather pour générer le modèle.")
+    
+    station_ids = list(stations.keys())
+    station_selectionnee = st.selectbox("Sélectionnez la station à entraîner", station_ids)
+
+    # 3. Lancer l'entraînement
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown(f"**Station cible :** `{station_selectionnee}` ({stations[station_selectionnee].get('region', 'Région inconnue')})")
+    with col2:
+        btn_train = st.button(" Lancer le ré-entraînement", use_container_width=True)
+
+    if btn_train:
+        with st.spinner("Ré-entraînement du modèle en cours..."):
+            # On envoie la requête post /ia/reentainer/{station_id}
+            ok, resp = _post(f"/ia/reentainer/{station_selectionnee}", {})
+            if ok:
+                statut = resp.get("statut")
+                nb_entrees = resp.get("nb_entrees", 0)
+                score = resp.get("score")
+                msg = resp.get("message", "")
+                
+                if statut == "ok":
+                    st.success(f"🎉 Modèle ré-entraîné avec succès !")
+                    st.write(f"📈 **Nombre d'entrées utilisées :** {nb_entrees}")
+                    if score is not None:
+                        st.write(f"🎯 **Précision du modèle (validation score) :** {score:.1%}")
+                    else:
+                        st.write("ℹ️ *Pas assez de données pour évaluer précisément la précision du modèle.*")
+                    st.info(f"Source actuelle globale du modèle : **{resp.get('source')}**")
+                    time.sleep(2)
+                    st.rerun()
+                else:
+                    st.warning(f"⚠️ Entraînement insuffisant : {msg}")
+                    st.write(f"Données trouvées : {nb_entrees} mesures (minimum 5 requis).")
+            else:
+                st.error(f"Une erreur est survenue lors du ré-entraînement : {resp.get('detail', 'Inconnue')}")
+
+    # 4. Explications sur le fonctionnement du classifieur
+    with st.expander("ℹ️ Comment fonctionne l'Apprentissage Automatique ?"):
+        st.markdown("""
+        Le système de recommandation utilise un algorithme d'arbre de décision de la bibliothèque **scikit-learn** (`DecisionTreeClassifier`).
         
+        *   **Collecte & Labellisation :** Le backend fusionne les données physiques issues de l'ESP32 et les historiques d'OpenWeather. Il applique les règles d'irrigation métier sur chaque mesure pour labelliser automatiquement le dataset (ex. *Arroser*, *Urgence hydrique*, *Reporter pulvérisation*).
+        *   **Apprentissage :** L'arbre de décision apprend les motifs reliant les capteurs (humidité, température, vent) aux actions recommandées.
+        *   **Calcul de Confiance :** En mode Machine Learning, l'indice de confiance affiché sur le tableau de bord de l'agriculteur reflète la probabilité statistique calculée par le modèle (`predict_proba`).
+        *   **Bascule automatique :** Dès que le modèle est entraîné avec succès, le backend bascule du mode 'Règles' au mode 'Firebase' pour toutes les prédictions futures.
+        """)
+
+
 # ── Page principale avec sidebar ──────────────────────────────────────────────
 
 def page_admin():
@@ -233,6 +324,7 @@ def page_admin():
             " Données Temps Réel",
             " Gestion Agriculteurs",
             " Seuils d'Alerte",
+            " Modèle Apprentissage (IA)",
         ], label_visibility="collapsed")
 
         st.markdown("---")
@@ -279,3 +371,4 @@ def page_admin():
     elif "Données Temps Réel"    in section: _page_donnees(stations_aff)
     elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs)
     elif "Seuils"                in section: _page_seuils(stations_aff)
+    elif "Modèle Apprentissage"  in section: _page_modele_ia(stations_aff)

@@ -372,7 +372,8 @@ def reentainer_modele(station_id: str) -> dict:
         f"({len(dataset)} mesures{score_str})"
     )
     print(f"[IA] {msg}")
-    return {"statut": "regles", "message": msg, "nb_entrees": len(dataset), "score": None}
+    score_val = float(score) if len(dataset) >= 20 else None
+    return {"statut": "firebase", "message": msg, "nb_entrees": len(dataset), "score": score_val}
 
 
 # ── Message vocal agriculteur ────────────────────────────────────────────────
