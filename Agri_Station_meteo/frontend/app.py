@@ -213,52 +213,6 @@ def main():
 
     _load_css()
 
-    # ── Gestion de la reconnexion automatique ──
-    query_params = st.query_params
-
-    # 1. Si on vient de se déconnecter, on nettoie le paramètre de l'URL
-    if query_params.get("logging_out") is not None:
-        st.query_params.clear()
-
-    # 2. Si on a des paramètres de reconnexion automatique dans l'URL, on les charge
-    elif query_params.get("auto_login") is not None:
-        st.session_state.authenticated = True
-        st.session_state.id_token      = query_params.get("token")
-        st.session_state.role          = query_params.get("role")
-        st.session_state.uid           = query_params.get("uid")
-        st.session_state.nom           = query_params.get("nom")
-        st.session_state.email         = query_params.get("email")
-        st.session_state.station_id    = query_params.get("station_id")
-        st.session_state.station_nom   = query_params.get("station_nom")
-        st.session_state.region        = query_params.get("region")
-
-        st.query_params.clear()
-        st.rerun()
-
-    # 3. Si non connecté, on injecte le JS pour lire le localStorage et rediriger vers l'auto_login
-    if not st.session_state.get("authenticated", False) and query_params.get("logging_out") is None:
-        import streamlit.components.v1 as components
-        components.html("""
-        <script>
-        (function() {
-            var storage;
-            try { storage = window.parent.localStorage; } catch(e) { storage = window.localStorage; }
-            if (storage && storage.getItem("session_authenticated") === "true") {
-                var token = storage.getItem("session_token");
-                var role = storage.getItem("session_role");
-                var uid = storage.getItem("session_uid");
-                var nom = encodeURIComponent(storage.getItem("session_nom") || "");
-                var email = encodeURIComponent(storage.getItem("session_email") || "");
-                var station_id = encodeURIComponent(storage.getItem("session_station_id") || "");
-                var station_nom = encodeURIComponent(storage.getItem("session_station_nom") || "");
-                var region = encodeURIComponent(storage.getItem("session_region") || "");
-
-                window.parent.location.search = "?auto_login=1&token=" + token + "&role=" + role + "&uid=" + uid + "&nom=" + nom + "&email=" + email + "&station_id=" + station_id + "&station_nom=" + station_nom + "&region=" + region;
-            }
-        })();
-        </script>
-        """, height=0)
-
     # ── Routing par rôle ──────────────────────────────────────────────────────
     if not st.session_state.get("authenticated", False):
         # Page login : PAS de hamburger ni de CSS responsive dashboard

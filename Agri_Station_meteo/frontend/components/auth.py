@@ -260,30 +260,6 @@ def _form_connexion():
         st.session_state.station_id    = role.get("station_id", "")
         st.session_state.station_nom   = role.get("station_nom", "")
         st.session_state.region        = role.get("region", "")
-
-        # Enregistrer dans le localStorage du navigateur pour la reconnexion automatique
-        import streamlit.components.v1 as components
-        import json
-        components.html(f"""
-        <script>
-        (function() {{
-            var storage;
-            try {{ storage = window.parent.localStorage; }} catch(e) {{ storage = window.localStorage; }}
-            if (storage) {{
-                storage.setItem("session_uid", {json.dumps(role.get('uid'))});
-                storage.setItem("session_token", {json.dumps(auth['idToken'])});
-                storage.setItem("session_role", {json.dumps(role.get('role'))});
-                storage.setItem("session_nom", {json.dumps(role.get('nom', 'Utilisateur'))});
-                storage.setItem("session_email", {json.dumps(role.get('email', email))});
-                storage.setItem("session_station_id", {json.dumps(role.get('station_id', ''))});
-                storage.setItem("session_station_nom", {json.dumps(role.get('station_nom', ''))});
-                storage.setItem("session_region", {json.dumps(role.get('region', ''))});
-                storage.setItem("session_authenticated", "true");
-            }}
-        }})();
-        </script>
-        """, height=0)
-
         st.success(f" Bienvenue, {st.session_state.nom} !")
         st.rerun()
 
@@ -385,32 +361,6 @@ def page_login():
 
 
 def deconnexion():
-    import streamlit.components.v1 as components
-    # Supprimer du localStorage du navigateur
-    components.html("""
-    <script>
-    (function() {
-        var storage;
-        try { storage = window.parent.localStorage; } catch(e) { storage = window.localStorage; }
-        if (storage) {
-            storage.removeItem("session_uid");
-            storage.removeItem("session_token");
-            storage.removeItem("session_role");
-            storage.removeItem("session_nom");
-            storage.removeItem("session_email");
-            storage.removeItem("session_station_id");
-            storage.removeItem("session_station_nom");
-            storage.removeItem("session_region");
-            storage.removeItem("session_authenticated");
-        }
-        window.parent.location.search = "?logging_out=1";
-    })();
-    </script>
-    """, height=0)
-
-    import time
-    time.sleep(0.3)
-
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.rerun()
