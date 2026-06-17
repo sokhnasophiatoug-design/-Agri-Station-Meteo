@@ -184,16 +184,16 @@ def _page_modele_ia(stations):
     # Affichage du badge actuel
     if source_actuelle == "Firebase":
         badge_html = """
-        <div style="background-color: #E8F5E9; border-left: 5px solid #2E7D32; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h5 style="color: #2E7D32; margin: 0 0 5px 0;">🟢 Mode Actif : Apprentissage Automatique (Firebase)</h5>
-            <p style="margin: 0; font-size: 0.9rem; color: #388E3C;">Les recommandations sont générées par l'arbre de décision scikit-learn entraîné sur vos mesures réelles.</p>
+        <div style="background-color: #E8F5E9; border-left: 5px solid #1B5E20; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h5 style="color: #1B5E20; margin: 0 0 5px 0; font-weight: bold;">🟢 Mode Actif : Apprentissage Automatique (Firebase)</h5>
+            <p style="margin: 0; font-size: 0.9rem; color: #1B5E20; font-weight: 500;">Les recommandations sont générées par l'arbre de décision scikit-learn entraîné sur vos mesures réelles.</p>
         </div>
         """
     else:
         badge_html = """
-        <div style="background-color: #FFF3E0; border-left: 5px solid #EF6C00; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h5 style="color: #EF6C00; margin: 0 0 5px 0;">🟠 Mode Actif : Règles Métier (Déterministes)</h5>
-            <p style="margin: 0; font-size: 0.9rem; color: #F57C00;">Le système utilise l'arbre de décision statique prédéfini (Zéro dépendance, actif au démarrage).</p>
+        <div style="background-color: #FFF3E0; border-left: 5px solid #E65100; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h5 style="color: #E65100; margin: 0 0 5px 0; font-weight: bold;">🟠 Mode Actif : Règles Métier (Déterministes)</h5>
+            <p style="margin: 0; font-size: 0.9rem; color: #E65100; font-weight: 500;">Le système utilise l'arbre de décision statique prédéfini (Zéro dépendance, actif au démarrage).</p>
         </div>
         """
     st.markdown(badge_html, unsafe_allow_html=True)
