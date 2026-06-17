@@ -42,11 +42,20 @@ def afficher_carte_stations(stations: dict):
         max_native_zoom=19,
     ).add_to(m)
 
-    # Couche 3 : Vue Satellite haute résolution (Esri World Imagery)
+    # Couche 3 : Vue Satellite Google
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google Maps",
+        name="Vue Satellite (Google)",
+        max_zoom=22,
+        max_native_zoom=20,
+    ).add_to(m)
+
+    # Couche 4 : Vue Satellite Esri
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri World Imagery",
-        name="Vue Satellite",
+        name="Vue Satellite (Esri)",
         max_zoom=22,
         max_native_zoom=17,
     ).add_to(m)
@@ -139,16 +148,25 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         max_zoom=22,
     )
 
-    # Couche 1 : Vue Satellite haute résolution (Esri World Imagery) - par défaut
+    # Couche 1 : Vue Satellite Google - par défaut
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google Maps",
+        name="Vue Satellite (Google)",
+        max_zoom=22,
+        max_native_zoom=20,
+    ).add_to(m)
+
+    # Couche 2 : Vue Satellite Esri
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri World Imagery",
-        name="Vue Satellite",
+        name="Vue Satellite (Esri)",
         max_zoom=22,
         max_native_zoom=17,
     ).add_to(m)
 
-    # Couche 2 : Carte standard (OpenStreetMap)
+    # Couche 3 : Carte standard (OpenStreetMap)
     folium.TileLayer(
         tiles="OpenStreetMap",
         name="Carte Standard",
