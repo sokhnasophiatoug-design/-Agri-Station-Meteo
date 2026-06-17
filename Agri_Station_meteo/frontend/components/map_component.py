@@ -20,9 +20,32 @@ def afficher_carte_stations(stations: dict):
     m = folium.Map(
         location=SENEGAL_CENTER,
         zoom_start=SENEGAL_ZOOM,
-        tiles="CartoDB dark_matter",
+        tiles=None,
         prefer_canvas=True,
     )
+
+    # Couche 1 : Carte sombre (CartoDB Dark Matter) - par défaut
+    folium.TileLayer(
+        tiles="CartoDB dark_matter",
+        name="Carte Sombre",
+        attr="CartoDB",
+    ).add_to(m)
+
+    # Couche 2 : Carte standard (OpenStreetMap)
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        name="Carte Standard",
+    ).add_to(m)
+
+    # Couche 3 : Vue Satellite haute résolution (Esri World Imagery)
+    folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri World Imagery",
+        name="Vue Satellite",
+    ).add_to(m)
+
+    # Ajouter le sélecteur de couche dans le coin supérieur droit
+    folium.LayerControl(position="topright").add_to(m)
 
     has_marker = False
 
@@ -103,10 +126,26 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
 
     m = folium.Map(
         location=[lat, lon],
-        zoom_start=15,
-        tiles="OpenStreetMap",
+        zoom_start=17,
+        tiles=None,
         prefer_canvas=True,
     )
+
+    # Couche 1 : Vue Satellite haute résolution (Esri World Imagery) - par défaut
+    folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri World Imagery",
+        name="Vue Satellite",
+    ).add_to(m)
+
+    # Couche 2 : Carte standard (OpenStreetMap)
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        name="Carte Standard",
+    ).add_to(m)
+
+    # Ajouter le sélecteur de couche
+    folium.LayerControl(position="topright").add_to(m)
 
     temp    = mesures.get("temperature", "N/A")
     hum_sol = mesures.get("humidite_sol", "N/A")
