@@ -375,34 +375,47 @@ def reentainer_modele(station_id: str) -> dict:
         print(f"[IA] {msg}")
         return {"succes": False, "message": msg, "nb_entrees": len(dataset)}
 
-    df = pd.DataFrame(dataset)
-    X  = df[FEATURES].values
-    y  = df["label"].values
+    try:
+        df = pd.DataFrame(dataset)
+        X  = df[FEATURES].values
+        y  = df["label"].values
 
-    score_val = None
-    # Avec peu de données : pas de split train/test
-    if len(dataset) >= 20:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42,
-            stratify=y if len(set(y)) > 1 else None
+        score_val = None
+        # Avec peu de données : pas de split train/test
+        if len(dataset) >= 20:
+            from collections import Counter
+            counts = Counter(y)
+            min_class_count = min(counts.values()) if counts else 0
+            
+            # Ne stratifier que si toutes les classes représentées ont au moins 2 membres
+            can_stratify = (len(counts) > 1 and min_class_count >= 2)
+            
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42,
+                stratify=y if can_stratify else None
+            )
+            modele = DecisionTreeClassifier(max_depth=8, random_state=42)
+            modele.fit(X_train, y_train)
+            score = modele.score(X_test, y_test)
+            score_val = float(score)
+            score_str = f", précision : {score:.1%}"
+        else:
+            modele = DecisionTreeClassifier(max_depth=8, random_state=42)
+            modele.fit(X, y)
+            score_str = " (trop peu de données pour évaluer la précision)"
+
+        _classifieur = _ClassifieurSklearn(modele)
+        msg = (
+            f"Modèle sklearn entraîné sur données Firebase réelles "
+            f"({len(dataset)} mesures{score_str})"
         )
-        modele = DecisionTreeClassifier(max_depth=8, random_state=42)
-        modele.fit(X_train, y_train)
-        score = modele.score(X_test, y_test)
-        score_val = float(score)
-        score_str = f", précision : {score:.1%}"
-    else:
-        modele = DecisionTreeClassifier(max_depth=8, random_state=42)
-        modele.fit(X, y)
-        score_str = " (trop peu de données pour évaluer la précision)"
+        print(f"[IA] {msg}")
+        return {"statut": "firebase", "message": msg, "nb_entrees": len(dataset), "score": score_val}
 
-    _classifieur = _ClassifieurSklearn(modele)
-    msg = (
-        f"Modèle sklearn entraîné sur données Firebase réelles "
-        f"({len(dataset)} mesures{score_str})"
-    )
-    print(f"[IA] {msg}")
-    return {"statut": "firebase", "message": msg, "nb_entrees": len(dataset), "score": score_val}
+    except Exception as e:
+        err_msg = f"Erreur lors de l'entraînement scikit-learn : {e}"
+        print(f"[IA] ❌ {err_msg}")
+        return {"succes": False, "message": err_msg, "nb_entrees": len(dataset)}
 
 
 # ── Message vocal agriculteur ────────────────────────────────────────────────
