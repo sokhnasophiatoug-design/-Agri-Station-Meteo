@@ -191,6 +191,15 @@ def get_source_modele() -> str:
     return _classifieur.source
 
 
+def safe_float(val, default=0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
 # ── Construction du dataset depuis Firebase ──────────────────────────────────
 
 def construire_dataset(station_id: str) -> list:
@@ -207,16 +216,35 @@ def construire_dataset(station_id: str) -> list:
 
     dataset = []
     for mesure in capteurs:
-        t   = float(mesure.get("temperature",  0))
-        ha  = float(mesure.get("humidite_air", 0))
-        hs  = float(mesure.get("humidite_sol", 0))
-        vv  = float(mesure.get("vitesse_vent", 0))
+        if not isinstance(mesure, dict):
+            continue
+        t   = safe_float(mesure.get("temperature"),  0.0)
+        ha  = safe_float(mesure.get("humidite_air"), 0.0)
+        hs  = safe_float(mesure.get("humidite_sol"), 0.0)
+        vv  = safe_float(mesure.get("vitesse_vent"), 0.0)
 
-        prev = prev_defaut
-        p    = float(prev.get("pluie_prevue_3h",    prev.get("pluie_future",   0)))
-        tf   = float(prev.get("temperature_future", prev.get("temp_future",    t)))
-        hf   = float(prev.get("humidite_future",    prev.get("hum_future",     ha)))
-        vf   = float(prev.get("vent_future",        prev.get("vent_futur",     0)))
+        prev = prev_defaut if isinstance(prev_defaut, dict) else {}
+        
+        # Fallback chain for OpenWeather values
+        p_val = prev.get("pluie_prevue_3h")
+        if p_val is None:
+            p_val = prev.get("pluie_future")
+        p = safe_float(p_val, 0.0)
+
+        tf_val = prev.get("temperature_future")
+        if tf_val is None:
+            tf_val = prev.get("temp_future")
+        tf = safe_float(tf_val, t)
+
+        hf_val = prev.get("humidite_future")
+        if hf_val is None:
+            hf_val = prev.get("hum_future")
+        hf = safe_float(hf_val, ha)
+
+        vf_val = prev.get("vent_future")
+        if vf_val is None:
+            vf_val = prev.get("vent_futur")
+        vf = safe_float(vf_val, 0.0)
 
         label = _regles(t, ha, hs, vv, p, tf, hf, vf)
 
@@ -280,18 +308,18 @@ def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
         }
     derniere = historique[0]
 
-    t   = float(derniere.get("temperature",  0))
-    ha  = float(derniere.get("humidite_air", 0))
-    hs  = float(derniere.get("humidite_sol", 0))
-    vv  = float(derniere.get("vitesse_vent", 0))
+    t   = safe_float(derniere.get("temperature"),  0.0)
+    ha  = safe_float(derniere.get("humidite_air"), 0.0)
+    hs  = safe_float(derniere.get("humidite_sol"), 0.0)
+    vv  = safe_float(derniere.get("vitesse_vent"), 0.0)
 
     # 2. Prévisions OpenWeather (prochain créneau 3h)
     try:
         snap = weather_service.snapshot_openweather_ia(region=region)
-        p    = float(snap.get("pluie_prevue_3h",    0))
-        tf   = float(snap.get("temperature_future", t))
-        hf   = float(snap.get("humidite_future",    ha))
-        vf   = float(snap.get("vent_future",        0))
+        p    = safe_float(snap.get("pluie_prevue_3h"),    0.0)
+        tf   = safe_float(snap.get("temperature_future"), t)
+        hf   = safe_float(snap.get("humidite_future"),    ha)
+        vf   = safe_float(snap.get("vent_future"),        0.0)
     except Exception:
         # Si OpenWeather indisponible : on prédit sans données météo futures
         p, tf, hf, vf = 0.0, t, ha, vv
@@ -351,6 +379,7 @@ def reentainer_modele(station_id: str) -> dict:
     X  = df[FEATURES].values
     y  = df["label"].values
 
+    score_val = None
     # Avec peu de données : pas de split train/test
     if len(dataset) >= 20:
         X_train, X_test, y_train, y_test = train_test_split(
@@ -360,6 +389,7 @@ def reentainer_modele(station_id: str) -> dict:
         modele = DecisionTreeClassifier(max_depth=8, random_state=42)
         modele.fit(X_train, y_train)
         score = modele.score(X_test, y_test)
+        score_val = float(score)
         score_str = f", précision : {score:.1%}"
     else:
         modele = DecisionTreeClassifier(max_depth=8, random_state=42)
@@ -372,7 +402,6 @@ def reentainer_modele(station_id: str) -> dict:
         f"({len(dataset)} mesures{score_str})"
     )
     print(f"[IA] {msg}")
-    score_val = float(score) if len(dataset) >= 20 else None
     return {"statut": "firebase", "message": msg, "nb_entrees": len(dataset), "score": score_val}
 
 

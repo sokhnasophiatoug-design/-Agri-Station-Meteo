@@ -30,7 +30,18 @@ def _get(endpoint, default=None):
 def _post(endpoint, body):
     try:
         r = http_post(f"{BACKEND}{endpoint}", json=body, timeout=60)
-        return r.status_code == 200, r.json()
+        if r.status_code == 200:
+            try:
+                return True, r.json()
+            except Exception:
+                return False, {"detail": "Le serveur a retourné une réponse invalide."}
+        else:
+            try:
+                err_data = r.json()
+                detail = err_data.get("detail", f"Erreur {r.status_code}")
+                return False, {"detail": detail}
+            except Exception:
+                return False, {"detail": f"Erreur serveur (code {r.status_code})"}
     except Exception as e:
         return False, {"detail": str(e)}
 
