@@ -32,7 +32,6 @@ def afficher_carte_stations(stations: dict):
         attr="CartoDB",
         max_zoom=22,
         max_native_zoom=20,
-        detect_retina=True,
     ).add_to(m)
 
     # Couche 2 : Carte standard (OpenStreetMap)
@@ -41,17 +40,15 @@ def afficher_carte_stations(stations: dict):
         name="Carte Standard",
         max_zoom=22,
         max_native_zoom=19,
-        detect_retina=True,
     ).add_to(m)
 
     # Couche 3 : Vue Satellite Google
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         attr="Google Maps",
-        name="Vue Satellite (Google)",
+        name="Vue Satellite (Google - Recommandé)",
         max_zoom=22,
         max_native_zoom=20,
-        detect_retina=True,
     ).add_to(m)
 
     # Couche 4 : Vue Satellite Esri
@@ -61,7 +58,6 @@ def afficher_carte_stations(stations: dict):
         name="Vue Satellite (Esri)",
         max_zoom=22,
         max_native_zoom=17,
-        detect_retina=True,
     ).add_to(m)
 
     # Ajouter le sélecteur de couche dans le coin supérieur droit
@@ -156,10 +152,9 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         attr="Google Maps",
-        name="Vue Satellite (Google)",
+        name="Vue Satellite (Google - Recommandé)",
         max_zoom=22,
         max_native_zoom=20,
-        detect_retina=True,
     ).add_to(m)
 
     # Couche 2 : Vue Satellite Esri
@@ -169,7 +164,6 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         name="Vue Satellite (Esri)",
         max_zoom=22,
         max_native_zoom=17,
-        detect_retina=True,
     ).add_to(m)
 
     # Couche 3 : Carte standard (OpenStreetMap)
@@ -178,7 +172,6 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         name="Carte Standard",
         max_zoom=22,
         max_native_zoom=19,
-        detect_retina=True,
     ).add_to(m)
 
     # Ajouter le sélecteur de couche
