@@ -20,6 +20,7 @@ from components.weather_card import (
 )
 from components.html_render  import esc, render_html
 from components.auth         import deconnexion
+from components.map_component import afficher_carte_parcelle
 
 BACKEND = "https://agri-station-meteo.onrender.com"
 
@@ -85,6 +86,7 @@ def _page_accueil(station_id, nom, station_nom, region):
         historique = _get(f"/historique/{station_id}?limit=48", default={}).get("historique", [])
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
+        gps_data   = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
 
     if not mesures:
         st.error(" Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
@@ -175,6 +177,15 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.markdown("---")
     st.markdown("####  Prévisions météo — 5 prochains jours")
     afficher_previsions(previsions)
+
+    st.markdown("---")
+    st.markdown("#### 🌍 Localisation de votre Parcelle")
+    lat = gps_data.get("latitude")
+    lon = gps_data.get("longitude")
+    if lat and lon:
+        afficher_carte_parcelle(lat, lon, station_id, mesures)
+    else:
+        st.info("ℹ️ Calibrage GPS de la station en cours. La localisation de votre parcelle sera bientôt disponible.")
 
     render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
 
