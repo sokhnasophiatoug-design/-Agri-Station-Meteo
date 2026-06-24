@@ -150,8 +150,8 @@ def _page_accueil(station_id, nom, station_nom, region):
     lat = gps_data.get("latitude")
     lon = gps_data.get("longitude")
 
-    # Colonnes : gauche = conseil IA, droite = carte GPS
-    col_reco, col_carte = st.columns([3, 2])
+    # Colonnes : gauche = carte GPS, droite = conseil IA
+    col_carte, col_reco = st.columns([2, 3])
 
     with col_reco:
         if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
