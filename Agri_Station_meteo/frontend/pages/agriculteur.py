@@ -50,10 +50,10 @@ def _calculer_alertes(mesures, seuils):
     temp    = mesures.get("temperature")
     hum_sol = mesures.get("humidite_sol")
     vent    = mesures.get("vitesse_vent")
-    if temp    and temp    > seuils.get("temp_max",    40): alertes.append(f"🌡️ Température critique : {temp:.1f}°C (seuil : {seuils['temp_max']}°C)")
-    if temp    and temp    < seuils.get("temp_min",    15): alertes.append(f"❄️ Température trop basse : {temp:.1f}°C (seuil : {seuils['temp_min']}°C)")
-    if hum_sol and hum_sol < seuils.get("hum_sol_min", 25): alertes.append(f"🌱 Sol trop sec : {hum_sol:.1f}% (seuil : {seuils['hum_sol_min']}%)")
-    if vent    and vent    > seuils.get("vent_max",    45): alertes.append(f"💨 Vent dangereux : {vent:.1f} km/h (seuil : {seuils['vent_max']} km/h)")
+    if temp    and temp    > seuils.get("temp_max",    40): alertes.append(f"Temperature critique : {temp:.1f}C (seuil : {seuils['temp_max']}C)")
+    if temp    and temp    < seuils.get("temp_min",    15): alertes.append(f"Temperature trop basse : {temp:.1f}C (seuil : {seuils['temp_min']}C)")
+    if hum_sol and hum_sol < seuils.get("hum_sol_min", 25): alertes.append(f"Sol trop sec : {hum_sol:.1f}% (seuil : {seuils['hum_sol_min']}%)")
+    if vent    and vent    > seuils.get("vent_max",    45): alertes.append(f"Vent dangereux : {vent:.1f} km/h (seuil : {seuils['vent_max']} km/h)")
     return alertes
 
 
@@ -80,8 +80,6 @@ def _page_accueil(station_id, nom, station_nom, region):
 
     # ── Alertes calculées avant l'entête ──
     alertes = _calculer_alertes(mesures, seuils) + afficher_alerte_meteo(previsions)
-
-    # ── Construction du bloc alertes pour l'entête ──
     if alertes:
         alertes_items = "".join(
             "<div style='"
@@ -108,7 +106,7 @@ def _page_accueil(station_id, nom, station_nom, region):
             "<div style='display:flex;align-items:center;gap:8px;"
             "background:rgba(0,217,126,0.1);border-left:3px solid #00d97e;"
             "border-radius:6px;padding:8px 12px;font-size:0.78rem;color:#b0f4d8;'>"
-            "<span style='font-size:1rem;'>✅</span> Aucune alerte active"
+            "<span style='font-size:1rem;'></span> Aucune alerte active"
             "</div>"
         )
 
@@ -134,24 +132,24 @@ def _page_accueil(station_id, nom, station_nom, region):
         "</div>"
     )
     render_html(html_entete)
-
-    st.markdown("####  Mesures en temps réel")
+    st.markdown("---")
+    st.markdown("#### Mesures en temps reel")
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.metric(" Température",  f"{temp}°C"    if isinstance(temp,    (int, float)) else temp,    delta="Élevé" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
-    with c2: st.metric(" Humidité air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
-    with c3: st.metric(" Humidité sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta=" Sec"   if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
-    with c4: st.metric(" Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
-    st.caption(f" Dernière mesure : {ts}")
+    with c1: st.metric("Temperature",  f"{temp}C"    if isinstance(temp,    (int, float)) else temp,    delta="Eleve" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
+    with c2: st.metric("Humidite air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
+    with c3: st.metric("Humidite sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="Sec" if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
+    with c4: st.metric("Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
+    st.caption(f"Derniere mesure : {ts}")
 
 
-    st.markdown("####  Conseil de votre assistant agricole IA")
+    st.markdown("#### Conseil de votre assistant agricole IA")
 
-    # GPS pour la carte parcelle
+    # GPS
     lat = gps_data.get("latitude")
     lon = gps_data.get("longitude")
 
-    # Colonnes : gauche = carte GPS (petite), droite = conseil IA (large)
-    col_carte, col_reco = st.columns([1.5, 3.5])
+    # Colonnes : gauche = carte GPS (large), droite = conseil IA (petit)
+    col_carte, col_reco = st.columns([3.5, 1.5])
 
     with col_reco:
         if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
@@ -211,12 +209,30 @@ def _page_accueil(station_id, nom, station_nom, region):
     render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
 
 
+def _page_gps(station_id, mesures):
+    """Page dediee a la carte GPS de la station."""
+    st.markdown("#### Localisation de la Parcelle")
+    gps_data = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
+    lat = gps_data.get("latitude")
+    lon = gps_data.get("longitude")
+    if lat and lon:
+        stations_dict = {
+            station_id: {
+                "gps":     {"latitude": lat, "longitude": lon},
+                "mesures": mesures,
+            }
+        }
+        afficher_carte_stations(stations_dict)
+    else:
+        st.info("Calibrage GPS en cours. La localisation sera bientot disponible.")
+
+
 def _page_historique(station_id):
-    st.markdown("####  Historique complet")
+    st.markdown("#### Historique complet")
     historique = _get(f"/historique/{station_id}?limit=200", default={}).get("historique", [])
     if not historique:
         st.info("Aucun historique disponible."); return
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([" Température", " Humidité air", " Humidité sol", " Vent", " Vue globale"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Temperature", "Humidite air", "Humidite sol", "Vent", "Vue globale"])
     with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
     with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
     with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
@@ -407,9 +423,10 @@ def page_agriculteur():
         st.markdown("---")
 
         page = st.radio("Navigation", [
-            " Accueil",
-            " Historique",
-            " Prévisions",
+            "Accueil",
+            "Localisation GPS",
+            "Historique",
+            "Previsions",
         ], label_visibility="collapsed")
 
         st.markdown("---")
@@ -422,9 +439,9 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        auto = st.checkbox(" Actualisation auto (30s)", value=False)
+        auto = st.checkbox("Actualisation auto (30s)", value=False)
         if auto:
-            st.info(" Actualisation dans 30s…")
+            st.info("Actualisation dans 30s...")
             time.sleep(30)
             st.rerun()
 
@@ -442,7 +459,7 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        if st.button(" Se déconnecter", width='stretch', key="btn_deco_agri"):
+        if st.button("Se deconnecter", width='stretch', key="btn_deco_agri"):
             deconnexion()
 
         st.markdown(
@@ -455,6 +472,7 @@ def page_agriculteur():
     # ══════════════════════════════════════════
     #  ROUTING
     # ══════════════════════════════════════════
-    if "Accueil"      in page: _page_accueil(station_id, nom, station_nom, region_sel)
-    elif "Historique" in page: _page_historique(station_id)
-    elif "Prévisions" in page: _page_previsions(station_id, region_sel)
+    if "Accueil"          in page: _page_accueil(station_id, nom, station_nom, region_sel)
+    elif "Localisation GPS" in page: _page_gps(station_id, {})
+    elif "Historique"     in page: _page_historique(station_id)
+    elif "Previsions"     in page: _page_previsions(station_id, region_sel)
