@@ -83,7 +83,6 @@ def _page_accueil(station_id, nom, station_nom, region):
 
     with st.spinner("Chargement des données..."):
         mesures    = _get(f"/mesures/{station_id}", default={})
-        historique = _get(f"/historique/{station_id}?limit=48", default={}).get("historique", [])
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
         gps_data   = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
@@ -112,17 +111,6 @@ def _page_accueil(station_id, nom, station_nom, region):
     with c4: st.metric(" Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
     st.caption(f" Dernière mesure : {ts}")
 
-    st.markdown("---")
-    st.markdown("####  Historique des mesures")
-    if historique:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([" Température", " Humidité air", " Humidité sol", " Vent", " Vue globale"])
-        with tab1: st.plotly_chart(graphique_historique(historique, "temperature"),  width='stretch', config={"displayModeBar": False})
-        with tab2: st.plotly_chart(graphique_historique(historique, "humidite_air"), width='stretch', config={"displayModeBar": False})
-        with tab3: st.plotly_chart(graphique_historique(historique, "humidite_sol"), width='stretch', config={"displayModeBar": False})
-        with tab4: st.plotly_chart(graphique_historique(historique, "vitesse_vent"), width='stretch', config={"displayModeBar": False})
-        with tab5: st.plotly_chart(graphique_tous_capteurs(historique),              width='stretch', config={"displayModeBar": False})
-    else:
-        st.info("Aucun historique disponible pour le moment.")
 
     st.markdown("####  Conseil de votre assistant agricole IA")
     if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
@@ -174,9 +162,6 @@ def _page_accueil(station_id, nom, station_nom, region):
             afficher_meteo_actuelle(meteo)
         st.info("Données capteurs insuffisantes pour générer une recommandation.")"""
 
-    st.markdown("---")
-    st.markdown("####  Prévisions météo — 5 prochains jours")
-    afficher_previsions(previsions)
 
     st.markdown("---")
     st.markdown("#### 🌍 Localisation de votre Parcelle")
