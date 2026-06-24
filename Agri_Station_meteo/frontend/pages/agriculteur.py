@@ -135,7 +135,6 @@ def _page_accueil(station_id, nom, station_nom, region):
     )
     render_html(html_entete)
 
-    st.markdown("---")
     st.markdown("####  Mesures en temps réel")
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.metric(" Température",  f"{temp}°C"    if isinstance(temp,    (int, float)) else temp,    delta="Élevé" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
