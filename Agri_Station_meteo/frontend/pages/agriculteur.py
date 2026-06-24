@@ -66,7 +66,6 @@ def _page_accueil(station_id, nom, station_nom, region):
         mesures    = _get(f"/mesures/{station_id}", default={})
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
-        gps_data   = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
 
     if not mesures:
         st.error(" Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
@@ -132,7 +131,6 @@ def _page_accueil(station_id, nom, station_nom, region):
         "</div>"
     )
     render_html(html_entete)
-    st.markdown("---")
     st.markdown("#### Mesures en temps reel")
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.metric("Temperature",  f"{temp}C"    if isinstance(temp,    (int, float)) else temp,    delta="Eleve" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
@@ -144,69 +142,44 @@ def _page_accueil(station_id, nom, station_nom, region):
 
     st.markdown("#### Conseil de votre assistant agricole IA")
 
-    # GPS
-    lat = gps_data.get("latitude")
-    lon = gps_data.get("longitude")
+    if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
+        reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
+                                         "humidite_sol": hum_sol, "vitesse_vent": vent,
+                                         "nom": nom, "region": region})
+        if reco:
+            reco_label     = esc(reco.get('label', ''))
+            reco_conseil   = esc(reco.get('conseil', ''))
+            reco_confiance = int(reco.get('confiance', 0) * 100)
+            reco_source    = esc(reco.get('source', 'Regles'))
 
-    # Colonnes : gauche = carte GPS (large), droite = conseil IA (petit)
-    col_carte, col_reco = st.columns([3.5, 1.5])
+            source_badge = (
+                f"<span style='background-color:#E8F5E9;color:#2E7D32;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Apprentissage ({reco_source})</span>"
+                if reco_source == "Firebase" else
+                f"<span style='background-color:#FFF3E0;color:#EF6C00;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Regles Metier</span>"
+            )
 
-    with col_reco:
-        if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
-            reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
-                                             "humidite_sol": hum_sol, "vitesse_vent": vent,
-                                             "nom": nom, "region": region})
-            if reco:
-                reco_emoji    = reco.get('emoji', '')
-                reco_label     = esc(reco.get('label', ''))
-                reco_conseil   = esc(reco.get('conseil', ''))
-                reco_confiance = int(reco.get('confiance', 0) * 100)
-                reco_source    = esc(reco.get('source', 'Règles'))
-
-                source_badge = (
-                    f"<span style='background-color:#E8F5E9;color:#2E7D32;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Apprentissage ({reco_source})</span>"
-                    if reco_source == "Firebase" else
-                    f"<span style='background-color:#FFF3E0;color:#EF6C00;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Règles Métier</span>"
-                )
-
-                render_html(
-                    "<div class='reco-card fade-in'>"
-                    + "<span class='reco-icon'>" + reco_emoji + "</span>"
-                    + "<div class='reco-titre'>" + reco_label + "</div>"
-                    + "<div class='reco-desc'>" + reco_conseil + "</div>"
-                    + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;display:flex;align-items:center;'>"
-                    + "Confiance du modèle : " + str(reco_confiance) + "%" + source_badge
-                    + "".join(["</", "div", "></", "div", ">"])
-                )
-                if st.button("   Écouter le conseil", width='stretch', key="btn_tts"):
-                    try:
-                        resp = http_post(f"{BACKEND}/tts",
-                                     json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
-                                         "lent": False}, timeout=15)
-                        if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
-                        else: st.error("Erreur lors de la génération audio")
-                    except Exception as e: st.error(f"Service vocal indisponible : {e}")
-            else:
-                st.info("Recommandation IA indisponible — vérifiez le backend.")
+            render_html(
+                "<div class='reco-card fade-in'>"
+                + "<div class='reco-titre'>" + reco_label + "</div>"
+                + "<div class='reco-desc'>" + reco_conseil + "</div>"
+                + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;display:flex;align-items:center;'>"
+                + "Confiance du modele : " + str(reco_confiance) + "%" + source_badge
+                + "".join(["</", "div", "></", "div", ">"])
+            )
+            if st.button("Ecouter le conseil", width='stretch', key="btn_tts"):
+                try:
+                    resp = http_post(f"{BACKEND}/tts",
+                                 json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
+                                     "lent": False}, timeout=15)
+                    if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
+                    else: st.error("Erreur lors de la generation audio")
+                except Exception as e: st.error(f"Service vocal indisponible : {e}")
         else:
-            st.info("Données capteurs insuffisantes pour générer une recommandation.")
+            st.info("Recommandation IA indisponible — verifiez le backend.")
+    else:
+        st.info("Donnees capteurs insuffisantes pour generer une recommandation.")
 
-    with col_carte:
-        if lat and lon:
-            # Construit le dict station au format attendu par afficher_carte_stations
-            stations_dict = {
-                station_id: {
-                    "gps":    {"latitude": lat, "longitude": lon},
-                    "mesures": mesures,
-                }
-            }
-            afficher_carte_stations(stations_dict)
-        else:
-            st.info("Calibrage GPS en cours. La localisation sera bientot disponible.")
-
-
-
-    render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
+    render_html("<div class='footer'>Station Meteo Agricole · Reseau IoT Senegal · USSEIN</div>")
 
 
 def _page_gps(station_id, mesures):
