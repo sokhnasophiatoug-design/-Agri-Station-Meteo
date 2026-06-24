@@ -20,7 +20,7 @@ from components.weather_card import (
 )
 from components.html_render  import esc, render_html
 from components.auth         import deconnexion
-from components.map_component import afficher_carte_parcelle
+from components.map_component import afficher_carte_parcelle, afficher_carte_stations
 
 BACKEND = "https://agri-station-meteo.onrender.com"
 
@@ -150,8 +150,8 @@ def _page_accueil(station_id, nom, station_nom, region):
     lat = gps_data.get("latitude")
     lon = gps_data.get("longitude")
 
-    # Colonnes : gauche = carte GPS, droite = conseil IA
-    col_carte, col_reco = st.columns([2, 3])
+    # Colonnes : gauche = carte GPS (petite), droite = conseil IA (large)
+    col_carte, col_reco = st.columns([1.5, 3.5])
 
     with col_reco:
         if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
@@ -194,11 +194,17 @@ def _page_accueil(station_id, nom, station_nom, region):
             st.info("Données capteurs insuffisantes pour générer une recommandation.")
 
     with col_carte:
-        st.markdown("#### 🌍 Localisation de votre Parcelle")
         if lat and lon:
-            afficher_carte_parcelle(lat, lon, station_id, mesures)
+            # Construit le dict station au format attendu par afficher_carte_stations
+            stations_dict = {
+                station_id: {
+                    "gps":    {"latitude": lat, "longitude": lon},
+                    "mesures": mesures,
+                }
+            }
+            afficher_carte_stations(stations_dict)
         else:
-            st.info("ℹ️ Calibrage GPS en cours. La localisation sera bientôt disponible.")
+            st.info("Calibrage GPS en cours. La localisation sera bientot disponible.")
 
 
 
