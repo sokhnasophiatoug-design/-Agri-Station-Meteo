@@ -66,6 +66,7 @@ def _page_accueil(station_id, nom, station_nom, region):
         mesures    = _get(f"/mesures/{station_id}", default={})
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
+        gps_data   = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
 
     if not mesures:
         st.error(" Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
@@ -144,14 +145,20 @@ def _page_accueil(station_id, nom, station_nom, region):
 
 
     st.markdown("####  Conseil de votre assistant agricole IA")
-    if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
-        reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
-                                         "humidite_sol": hum_sol, "vitesse_vent": vent,
-                                         "nom": nom, "region": region})
-        if reco:
-            col_reco, col_meteo = st.columns([3, 2])
 
-            with col_reco:
+    # GPS pour la carte parcelle
+    lat = gps_data.get("latitude")
+    lon = gps_data.get("longitude")
+
+    # Colonnes : gauche = conseil IA, droite = carte GPS
+    col_reco, col_carte = st.columns([3, 2])
+
+    with col_reco:
+        if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
+            reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
+                                             "humidite_sol": hum_sol, "vitesse_vent": vent,
+                                             "nom": nom, "region": region})
+            if reco:
                 reco_emoji    = reco.get('emoji', '')
                 reco_label     = esc(reco.get('label', ''))
                 reco_conseil   = esc(reco.get('conseil', ''))
@@ -181,17 +188,17 @@ def _page_accueil(station_id, nom, station_nom, region):
                         if resp.status_code == 200: st.audio(resp.content, format="audio/mp3")
                         else: st.error("Erreur lors de la génération audio")
                     except Exception as e: st.error(f"Service vocal indisponible : {e}")
-
-            with col_meteo:
-                if meteo.get("ok"):
-                    render_html(html_meteo_carte_ia(meteo))
-
+            else:
+                st.info("Recommandation IA indisponible — vérifiez le backend.")
         else:
-            st.info("Recommandation IA indisponible — vérifiez le backend.")
-    """else:
-        if meteo.get("ok"):
-            afficher_meteo_actuelle(meteo)
-        st.info("Données capteurs insuffisantes pour générer une recommandation.")"""
+            st.info("Données capteurs insuffisantes pour générer une recommandation.")
+
+    with col_carte:
+        st.markdown("#### 🌍 Localisation de votre Parcelle")
+        if lat and lon:
+            afficher_carte_parcelle(lat, lon, station_id, mesures)
+        else:
+            st.info("ℹ️ Calibrage GPS en cours. La localisation sera bientôt disponible.")
 
 
 
