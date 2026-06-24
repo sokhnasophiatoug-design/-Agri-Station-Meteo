@@ -66,7 +66,6 @@ def _page_accueil(station_id, nom, station_nom, region):
         mesures    = _get(f"/mesures/{station_id}", default={})
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
-        gps_data   = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
 
     if not mesures:
         st.error(" Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
@@ -193,6 +192,7 @@ def _page_accueil(station_id, nom, station_nom, region):
         if meteo.get("ok"):
             afficher_meteo_actuelle(meteo)
         st.info("Données capteurs insuffisantes pour générer une recommandation.")"""
+
 
 
     render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
