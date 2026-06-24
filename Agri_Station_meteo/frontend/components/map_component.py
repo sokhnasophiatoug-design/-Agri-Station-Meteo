@@ -6,8 +6,6 @@ Utilise Folium + streamlit-folium pour afficher toutes les stations sur une cart
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-from folium import MacroElement
-from jinja2 import Template
 
 # Centre par défaut : Sénégal
 SENEGAL_CENTER = [14.4974, -14.4524]
@@ -137,9 +135,6 @@ def afficher_carte_stations(stations: dict):
 def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: dict):
     """
     Affiche une carte Folium zoomée sur la parcelle d'une station spécifique.
-    - Vue satellite Google définie par défaut (première couche ajoutée).
-    - Cercle vert dynamique : opacité diminue quand le zoom augmente (zone visible
-      surtout aux zooms éloignés, quasi-invisible en vue très rapprochée).
     """
     if not lat or not lon:
         st.warning("Coordonnées GPS de la parcelle indisponibles.")
@@ -153,33 +148,33 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         max_zoom=22,
     )
 
-    # ── Couche 1 (défaut) : Vue Satellite Google ──────────────────────────────
+    # Couche 1 : Vue Satellite Google - par défaut
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         attr="Google Maps",
-        name="🛰️ Vue Satellite (Google - Recommandé)",
+        name="Vue Satellite (Google - Recommandé)",
         max_zoom=22,
         max_native_zoom=20,
     ).add_to(m)
 
-    # ── Couche 2 : Vue Satellite Esri ─────────────────────────────────────────
+    # Couche 2 : Vue Satellite Esri
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri World Imagery",
-        name="🛰️ Vue Satellite (Esri)",
+        name="Vue Satellite (Esri)",
         max_zoom=22,
         max_native_zoom=17,
     ).add_to(m)
 
-    # ── Couche 3 : Carte standard OpenStreetMap ───────────────────────────────
+    # Couche 3 : Carte standard (OpenStreetMap)
     folium.TileLayer(
         tiles="OpenStreetMap",
-        name="🗺️ Carte Standard",
+        name="Carte Standard",
         max_zoom=22,
         max_native_zoom=19,
     ).add_to(m)
 
-    # ── Sélecteur de couche ───────────────────────────────────────────────────
+    # Ajouter le sélecteur de couche
     folium.LayerControl(position="topright").add_to(m)
 
     temp    = mesures.get("temperature", "N/A")
@@ -187,7 +182,7 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
     vent    = mesures.get("vitesse_vent", "N/A")
     ts      = mesures.get("timestamp", "N/A")
 
-    # Couleur du marqueur selon la température
+    # Couleur du marqueur
     if isinstance(temp, (int, float)):
         couleur = "red" if temp > 38 else ("orange" if temp > 32 else "green")
     else:
@@ -212,9 +207,8 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         icon=folium.Icon(color=couleur, icon="home", prefix="fa"),
     ).add_to(m)
 
-    # ── Cercle dynamique : opacité inversement proportionnelle au zoom ────────
-    # À zoom 10 → opacité ~0.55 / À zoom 14 → ~0.25 / À zoom 18+ → ~0.05
-    circle = folium.Circle(
+    # Cercle représentant la zone de couverture immédiate (ex. 100m)
+    folium.Circle(
         location=[lat, lon],
         radius=100,
         color="#2E7D32",
@@ -222,36 +216,6 @@ def afficher_carte_parcelle(lat: float, lon: float, station_id: str, mesures: di
         fill=True,
         fill_color="#A5D6A7",
         fill_opacity=0.2,
-    )
-    circle.add_to(m)
-
-    # Récupérer l'identifiant Leaflet du cercle pour le cibler en JS
-    circle_var = circle.get_name()
-
-    # Script JS injecté : écoute l'événement 'zoomend' et recalcule l'opacité
-    zoom_script = MacroElement()
-    zoom_script._template = Template("""
-        {% macro script(this, kwargs) %}
-        (function() {
-            var circle = {{ circle_var }};
-
-            function updateOpacity() {
-                var zoom = {{ this._parent.get_name() }}.getZoom();
-                // Opacité : diminue avec le zoom (0.55 à z=10, 0.05 à z=20)
-                var fillOpacity = Math.max(0.02, 0.6 - (zoom - 10) * 0.055);
-                var strokeOpacity = Math.max(0.1, 0.9 - (zoom - 10) * 0.08);
-                circle.setStyle({
-                    fillOpacity: fillOpacity,
-                    opacity: strokeOpacity
-                });
-            }
-
-            // Appliquer au chargement initial
-            {{ this._parent.get_name() }}.on('zoomend', updateOpacity);
-            updateOpacity();
-        })();
-        {% endmacro %}
-    """.replace("{{ circle_var }}", circle_var))
-    m.get_root().script.add_child(zoom_script)
+    ).add_to(m)
 
     st_folium(m, height=350, use_container_width=True, returned_objects=[])
