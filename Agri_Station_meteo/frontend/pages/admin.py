@@ -95,7 +95,6 @@ def _page_tableau(stations, agriculteurs):
     )
     st.markdown(html_kpi, unsafe_allow_html=True)
 
-    st.markdown("---")
     st.markdown("####  Carte GPS")
     if stations:
         afficher_carte_stations(stations)
@@ -328,8 +327,6 @@ def page_admin():
             unsafe_allow_html=True
         )
 
-        st.markdown("---")
-
         section = st.radio("Navigation", [
             " Tableau de Bord",
             " Données Temps Réel",
@@ -338,16 +335,12 @@ def page_admin():
             " Modèle Apprentissage (IA)",
         ], label_visibility="collapsed")
 
-        st.markdown("---")
-
         st.markdown("** Filtrer par Région**")
         regions_dispo = ["Toutes"] + sorted({
             data.get("region", "") for data in stations.values() if data.get("region")
         })
         filtre_region = st.selectbox("Région", regions_dispo,
                                      label_visibility="collapsed", key="admin_filtre_region")
-
-        st.markdown("---")
 
         st.markdown(
             "<div class='sidebar-box'>"
@@ -360,7 +353,6 @@ def page_admin():
             unsafe_allow_html=True
         )
 
-        st.markdown("---")
 
         if st.button(" Se déconnecter", width='stretch', key="btn_deco_admin"):
             deconnexion()
