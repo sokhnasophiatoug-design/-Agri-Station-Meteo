@@ -60,28 +60,9 @@ def _calculer_alertes(mesures, seuils):
 # ── Pages ─────────────────────────────────────────────────────────────────────
 
 def _page_accueil(station_id, nom, station_nom, region):
-    # Météo actuelle — récupérée EN PREMIER pour l'afficher dans l'entête
-    meteo = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
-
-    # ── Entête + météo actuelle ──
-    heure = datetime.now().strftime('%H:%M:%S')
-
-    meteo_bloc = html_meteo_entete(meteo)
-
-    html_entete = (
-        "<div class='entete fade-in'>"
-        "<div>"
-        "<h1> Bonjour, " + esc(nom) + "</h1>"
-        "<div class='sous-titre'>"
-        "<span class='live-dot'></span>"
-        + esc(station_nom) + " &nbsp;·&nbsp;  " + esc(region) + " &nbsp;·&nbsp; " + heure
-        + "</div>"
-        + meteo_bloc
-        + "</div></div>"
-    )
-    render_html(html_entete)
-
+    # ── Chargement de toutes les données en premier ──
     with st.spinner("Chargement des données..."):
+        meteo      = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
         mesures    = _get(f"/mesures/{station_id}", default={})
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
         seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
@@ -97,10 +78,62 @@ def _page_accueil(station_id, nom, station_nom, region):
     vent    = mesures.get("vitesse_vent", "--")
     ts      = mesures.get("timestamp",    "N/A")
 
+    # ── Alertes calculées avant l'entête ──
     alertes = _calculer_alertes(mesures, seuils) + afficher_alerte_meteo(previsions)
+
+    # ── Construction du bloc alertes pour l'entête ──
     if alertes:
-        with st.expander(f" {len(alertes)} alerte(s) active(s)", expanded=True):
-            for al in alertes: st.warning(al)
+        alertes_items = "".join(
+            "<div style='"
+            "display:flex;align-items:flex-start;gap:8px;"
+            "background:rgba(255,80,80,0.12);border-left:3px solid #ff5252;"
+            "border-radius:6px;padding:6px 10px;margin-bottom:5px;"
+            "font-size:0.75rem;line-height:1.4;color:#ffe0e0;'"
+            ">" + esc(al) + "</div>"
+            for al in alertes
+        )
+        bloc_alertes = (
+            "<div style='display:flex;flex-direction:column;gap:0;'>"
+            "<div style='font-size:0.72rem;font-weight:800;letter-spacing:0.05em;"
+            "color:#ff6b6b;margin-bottom:6px;display:flex;align-items:center;gap:6px;'>"
+            "<span style='display:inline-block;width:8px;height:8px;border-radius:50%;"
+            "background:#ff5252;box-shadow:0 0 6px #ff5252;animation:pulse 1.2s infinite;'></span>"
+            + str(len(alertes)) + " ALERTE" + ("S" if len(alertes) > 1 else "") + " ACTIVE" + ("S" if len(alertes) > 1 else "") +
+            "</div>"
+            + alertes_items +
+            "</div>"
+        )
+    else:
+        bloc_alertes = (
+            "<div style='display:flex;align-items:center;gap:8px;"
+            "background:rgba(0,217,126,0.1);border-left:3px solid #00d97e;"
+            "border-radius:6px;padding:8px 12px;font-size:0.78rem;color:#b0f4d8;'>"
+            "<span style='font-size:1rem;'>✅</span> Aucune alerte active"
+            "</div>"
+        )
+
+    # ── Entête avec alertes intégrées à droite ──
+    heure      = datetime.now().strftime('%H:%M:%S')
+    meteo_bloc = html_meteo_entete(meteo)
+
+    html_entete = (
+        "<div class='entete fade-in' style='display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;'>"
+        # Colonne gauche
+        "<div style='flex:1;min-width:220px;'>"
+        "<h1> Bonjour, " + esc(nom) + "</h1>"
+        "<div class='sous-titre'>"
+        "<span class='live-dot'></span>"
+        + esc(station_nom) + " &nbsp;·&nbsp; " + esc(region) + " &nbsp;·&nbsp; " + heure
+        + "</div>"
+        + meteo_bloc
+        + "</div>"
+        # Colonne droite — alertes
+        "<div style='min-width:220px;max-width:340px;flex:0 0 auto;'>"
+        + bloc_alertes +
+        "</div>"
+        "</div>"
+    )
+    render_html(html_entete)
 
     st.markdown("---")
     st.markdown("####  Mesures en temps réel")
