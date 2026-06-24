@@ -195,15 +195,6 @@ def _page_accueil(station_id, nom, station_nom, region):
         st.info("Données capteurs insuffisantes pour générer une recommandation.")"""
 
 
-    st.markdown("---")
-    st.markdown("#### 🌍 Localisation de votre Parcelle")
-    lat = gps_data.get("latitude")
-    lon = gps_data.get("longitude")
-    if lat and lon:
-        afficher_carte_parcelle(lat, lon, station_id, mesures)
-    else:
-        st.info("ℹ️ Calibrage GPS de la station en cours. La localisation de votre parcelle sera bientôt disponible.")
-
     render_html("<div class='footer'>Station Météo Agricole · Réseau IoT Sénégal · USSEIN</div>")
 
 
