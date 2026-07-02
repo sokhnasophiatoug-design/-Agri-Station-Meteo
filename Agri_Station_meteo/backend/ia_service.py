@@ -1,11 +1,6 @@
 """
-ia_service.py — Classifieur agricole à 8 features / 6 classes
-===============================================================
-
-Flux de fonctionnement :
-  1. Au démarrage  → _ClassifieurRegles actif (règles directes, zéro dépendance)
-  2. Dès que Firebase accumule ≥ 100 mesures réelles →
-     POST /ia/reentainer/{id} → étiquetage des vraies données → sklearn actif
+ia_service.py — Classifieur expert agricole à 8 features / 7 classes
+===================================================================
 
 Entrées (8 features) :
   Capteurs ESP32 temps réel :
@@ -14,43 +9,47 @@ Entrées (8 features) :
     pluie_prevue_3h (mm), temperature_future (°C), humidite_future (%), vent_future (km/h)
 
 Classes prédites (priorité décroissante) :
-  4 → 💨 Reporter pulvérisation  (vent ≥ 45 km/h OU prévu ≥ 40)
-  5 → 🌧️ Attendre la pluie      (pluie ≥ 3 mm ET sol < 60 %)
-  2 → 🚨 Urgence hydrique        (sol ≤ 20 % ET temp ≥ 30 °C)
-  1 → 💧 Arroser                 (sol ≤ 25 % ET pas de pluie prévue)
-  3 → 🍄 Risque fongique         (humidité air ≥ 80 % ET temp ≥ 28 °C)
-  0 → ✅ Conditions favorables
+  2 → 🌧️ Alerte Drainage         (pluie prévue > 15 mm)
+  1 → 🏜️ Alerte Sécheresse       (sol < HUM_SOL_MIN)
+  4 → 💧 Alerte Saturation       (sol > HUM_SOL_MAX)
+  5 → ❄️ Alerte Gel / Froid      (temp < TEMP_MIN ou prévue < TEMP_MIN)
+  3 → ☀️ Alerte Évapotranspiration (prévue > TEMP_MAX et vent prévu > VENT_MAX et hum prévue < HUM_AIR_MIN)
+  6 → 🍄 Alerte Risque de Maladies (hum prévue > HUM_AIR_MAX et 18 <= temp prévue <= 26)
+  0 → ✅ Conditions Optimales
 """
 
-import numpy as np
-import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
+# ── Métadonnées des 7 classes ────────────────────────────────────────────────
 
+LABELS = {
+    0: "Conditions Optimales",
+    1: "Alerte Sécheresse",
+    2: "Alerte Drainage",
+    3: "Alerte Évapotranspiration",
+    4: "Alerte Saturation",
+    5: "Alerte Gel / Froid",
+    6: "Alerte Risque de Maladies"
+}
 
-# ── Métadonnées des 6 classes ────────────────────────────────────────────────
+EMOJIS = {
+    0: "✅",
+    1: "🏜️",
+    2: "🌧️",
+    3: "☀️",
+    4: "💧",
+    5: "❄️",
+    6: "🍄"
+}
 
-LABELS = [
-    "Conditions favorables - surveiller regulierement",          # 0
-    "Arroser les cultures - humidite du sol insuffisante",       # 1
-    "URGENCE - Stress hydrique severe",                          # 2
-    "Risque fongique - traitement fongicide conseille",          # 3
-    "Reporter pulverisation - vent trop fort",                   # 4
-    "Attendre la pluie prevue - irrigation inutile",             # 5
-]
+CONSEILS_DETAILLES = {
+    0: "Les conditions actuelles et les prévisions à venir sont optimales pour vos cultures.",
+    1: "L'humidité du sol est basse et aucune pluie n'est prévue. Un arrosage est recommandé tôt le matin ou en soirée.",
+    2: "Précipitations abondantes attendues par météo. Pensez à vérifier le drainage de vos champs et suspendez l'arrosage.",
+    3: "la meteo prévoit de fortes températures, du vent et un air très sec. Risque d'un dessèchement accéléré, surveillez vos cultures.",
+    4: "Le sol est saturé en eau. Risque d'asphyxie des racines. Suspendez toute irrigation.",
+    5: "Baisse critique des températures prévue par la meteo ou mesurée par les capteurs. Risque de gel pour vos cultures.",
+    6: "la meteo prévoit une humidité de l'air très élevée combinée à des températures douces. Risque important de développement de maladies (champignons, mildiou). Inspectez le feuillage."
+}
 
-EMOJIS = ["✅", "💧", "🚨", "🍄", "💨", "🌧️"]
-
-CONSEILS_DETAILLES = [
-    "Les conditions sont bonnes. Continuez a surveiller vos cultures et verifiez l'etat du sol toutes les 6 heures.",
-    "L'humidite du sol est faible. Activez l'irrigation pendant 30 a 45 minutes, de preference tot le matin pour limiter l'evaporation.",
-    "Situation critique ! Le sol est tres sec et la chaleur est elevee. Arrosez immediatement et abondamment. Verifiez vos canalisations.",
-    "L'humidite de l'air est elevee avec une temperature chaude : risque de maladies fongiques. Appliquez un fongicide preventif.",
-    "Le vent souffle trop fort pour pulveriser des produits. Reportez toute pulverisation et protegez les jeunes plants.",
-    "De la pluie est prevue dans les prochaines heures. Evitez d'arroser maintenant. Verifiez vos equipements d'irrigation.",
-]
-
-# Ordre fixe des features — respecté partout
 FEATURES = [
     "temperature",
     "humidite_air",
@@ -61,82 +60,6 @@ FEATURES = [
     "humidite_future",
     "vent_future",
 ]
-
-
-# ── Règles métier (arbre de décision explicite) ──────────────────────────────
-
-def _regles(
-    temperature: float,
-    humidite_air: float,
-    humidite_sol: float,
-    vitesse_vent: float,
-    pluie_prevue_3h: float = 0.0,
-    temperature_future: float = 0.0,
-    humidite_future: float = 0.0,
-    vent_future: float = 0.0,
-) -> int:
-    """
-    Arbre de décision prioritaire à 6 classes.
-    Utilisé directement au démarrage ET pour étiqueter les données Firebase
-    avant ré-entraînement sklearn.
-    """
-    if vitesse_vent >= 45 or vent_future >= 40:
-        return 4
-    if pluie_prevue_3h >= 3.0 and humidite_sol < 60:
-        return 5
-    if humidite_sol <= 20 and temperature >= 30:
-        return 2
-    if humidite_sol <= 25 and pluie_prevue_3h < 3.0:
-        return 1
-    if humidite_air >= 80 and temperature >= 28:
-        return 3
-    return 0
-
-
-# ── Classifieurs ─────────────────────────────────────────────────────────────
-
-class _ClassifieurRegles:
-    """
-    Classifieur basé sur les règles métier.
-    Actif au démarrage — aucune dépendance fichier / Firebase.
-    """
-    source = "Règles"
-
-    def predict(self, features: list) -> int:
-        return _regles(*features)
-
-    def confiance(self, idx: int) -> float:
-        # Les règles sont déterministes : confiance = 1.0
-        return 1.0
-
-
-class _ClassifieurSklearn:
-    """
-    Classifieur sklearn (DecisionTreeClassifier) entraîné sur données Firebase.
-    Remplace _ClassifieurRegles après ré-entraînement.
-    """
-    source = "Firebase"
-
-    def __init__(self, modele: DecisionTreeClassifier):
-        self._modele = modele
-
-    def predict(self, features: list) -> int:
-        X = np.array([features])
-        return int(self._modele.predict(X)[0])
-
-    def confiance(self, features: list, idx: int) -> float:
-        X = np.array([features])
-        proba = self._modele.predict_proba(X)[0]
-        # predict_proba retourne les probas dans l'ordre des classes vues
-        classes = list(self._modele.classes_)
-        if idx in classes:
-            return round(float(proba[classes.index(idx)]), 3)
-        return 1.0
-
-
-# Classifieur actif au démarrage = règles directes
-_classifieur: _ClassifieurRegles | _ClassifieurSklearn = _ClassifieurRegles()
-print("[IA] Classifieur démarré — mode : Règles (8 features, 6 classes)")
 
 
 # ── API publique ─────────────────────────────────────────────────────────────
@@ -150,45 +73,76 @@ def get_recommandation(
     temperature_future: float = 0.0,
     humidite_future: float = 0.0,
     vent_future: float = 0.0,
+    culture: str = "Tomate",
+    seuils: dict = None
 ) -> dict:
     """
-    Prédit la recommandation à partir des 8 features.
-
-    Retourne :
-      label_idx  : indice classe (0-5)
-      label      : texte court
-      emoji      : emoji associé
-      conseil    : texte long explicatif
-      confiance  : certitude (0-1)
-      source     : 'Règles' | 'Firebase'
+    Prédit la recommandation à partir des 8 features en utilisant le système expert.
     """
-    features = [
-        temperature, humidite_air, humidite_sol, vitesse_vent,
-        pluie_prevue_3h, temperature_future, humidite_future, vent_future,
-    ]
+    if seuils is None:
+        try:
+            from firebase_service import get_seuils_culture
+            seuils = get_seuils_culture(culture)
+        except Exception:
+            try:
+                from firebase_service import DEFAULT_CULTURES_SEUILS
+                seuils = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Tomate"])
+            except Exception:
+                # Fallback ultime au cas où
+                seuils = {
+                    "HUM_SOL_MIN": 40.0,
+                    "HUM_SOL_MAX": 70.0,
+                    "TEMP_AIR_MIN": 15.0,
+                    "TEMP_AIR_MAX": 30.0,
+                    "HUM_AIR_MIN": 50.0,
+                    "HUM_AIR_MAX": 85.0,
+                    "VENT_MAX": 25.0
+                }
 
-    idx = _classifieur.predict(features)
-    idx = min(max(idx, 0), len(LABELS) - 1)  # garde-fou
+    hum_sol_min = float(seuils.get("HUM_SOL_MIN", 40.0))
+    hum_sol_max = float(seuils.get("HUM_SOL_MAX", 70.0))
+    temp_air_min = float(seuils.get("TEMP_AIR_MIN", 15.0))
+    temp_air_max = float(seuils.get("TEMP_AIR_MAX", 30.0))
+    hum_air_min = float(seuils.get("HUM_AIR_MIN", 50.0))
+    hum_air_max = float(seuils.get("HUM_AIR_MAX", 85.0))
+    vent_max = float(seuils.get("VENT_MAX", 25.0))
 
-    # Calcul confiance selon le type de classifieur
-    if isinstance(_classifieur, _ClassifieurSklearn):
-        conf = _classifieur.confiance(features, idx)
+    # LOGIQUE DÉCISIONNELLE DE L'ARBRE (PAR ORDRE DE PRIORITÉ)
+    # 1. Si api_pluie_prevue > 15 mm -> Code 2 (Alerte Drainage)
+    if pluie_prevue_3h > 15.0:
+        idx = 2
+    # 2. Sinon, si hum_sol < HUM_SOL_MIN -> Code 1 (Alerte Sécheresse)
+    elif humidite_sol < hum_sol_min:
+        idx = 1
+    # 3. Sinon, si hum_sol > HUM_SOL_MAX -> Code 4 (Alerte Saturation)
+    elif humidite_sol > hum_sol_max:
+        idx = 4
+    # 4. Sinon, si temp_air < TEMP_AIR_MIN ou api_temp < TEMP_AIR_MIN -> Code 5 (Alerte Gel)
+    elif temperature < temp_air_min or temperature_future < temp_air_min:
+        idx = 5
+    # 5. Sinon, si api_temp > TEMP_AIR_MAX AND api_vent > VENT_MAX AND api_hum < HUM_AIR_MIN -> Code 3 (Evapotranspiration)
+    elif temperature_future > temp_air_max and vent_future > vent_max and humidite_future < hum_air_min:
+        idx = 3
+    # 6. Sinon, si api_hum > HUM_AIR_MAX AND (18 <= api_temp <= 26) -> Code 6 (Risque phytosanitaire)
+    elif humidite_future > hum_air_max and (18.0 <= temperature_future <= 26.0):
+        idx = 6
+    # 7. Sinon -> Code 0 (Conditions Optimales)
     else:
-        conf = 1.0  # règles déterministes
+        idx = 0
 
     return {
         "label_idx": idx,
         "label":     LABELS[idx],
         "emoji":     EMOJIS[idx],
         "conseil":   CONSEILS_DETAILLES[idx],
-        "confiance": conf,
-        "source":    _classifieur.source,
+        "confiance": 1.0,
+        "source":    "Système Expert",
     }
 
 
 def get_source_modele() -> str:
-    """Retourne la source du classifieur actif : 'Règles' ou 'Firebase'."""
-    return _classifieur.source
+    """Retourne la source du modèle : toujours 'Système Expert'."""
+    return "Système Expert"
 
 
 def safe_float(val, default=0.0) -> float:
@@ -205,7 +159,7 @@ def safe_float(val, default=0.0) -> float:
 def construire_dataset(station_id: str) -> list:
     """
     Fusionne historique capteurs Firebase + données OpenWeather historique.
-    Chaque mesure est étiquetée automatiquement via _regles().
+    Sans labellisation (traçabilité brute sans label).
     """
     from firebase_service import get_historique, get_openweather_historique
 
@@ -246,8 +200,6 @@ def construire_dataset(station_id: str) -> list:
             vf_val = prev.get("vent_futur")
         vf = safe_float(vf_val, 0.0)
 
-        label = _regles(t, ha, hs, vv, p, tf, hf, vf)
-
         dataset.append({
             "temperature":        t,
             "humidite_air":       ha,
@@ -257,7 +209,6 @@ def construire_dataset(station_id: str) -> list:
             "temperature_future": tf,
             "humidite_future":    hf,
             "vent_future":        vf,
-            "label":              label,
         })
 
     return dataset
@@ -286,17 +237,15 @@ def generer_dataset_sur_firebase(station_id: str) -> dict:
     }
 
 
-# ── Ré-entraînement depuis Firebase ─────────────────────────────────────────
+# ── Ré-entraînement depuis Firebase (Mocké pour Système Expert) ───────────────
 
 def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
     """
     Prédit la recommandation pour demain en prenant :
       - la DERNIÈRE mesure réelle ESP32 depuis Firebase
       - les prévisions OpenWeather actuelles
-
-    Fonctionne dès la première mesure reçue — aucune attente.
     """
-    from firebase_service import get_historique
+    from firebase_service import get_historique, get_station_culture
     import weather_service
 
     # 1. Dernière mesure capteurs (ESP32)
@@ -321,15 +270,18 @@ def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
         hf   = safe_float(snap.get("humidite_future"),    ha)
         vf   = safe_float(snap.get("vent_future"),        0.0)
     except Exception:
-        # Si OpenWeather indisponible : on prédit sans données météo futures
         p, tf, hf, vf = 0.0, t, ha, vv
 
-    # 3. Prédiction immédiate (règles ou sklearn selon classifieur actif)
-    reco = get_recommandation(t, ha, hs, vv, p, tf, hf, vf)
+    # 3. Récupérer la culture
+    culture = get_station_culture(station_id)
+
+    # 4. Prédiction immédiate via Système Expert
+    reco = get_recommandation(t, ha, hs, vv, p, tf, hf, vf, culture=culture)
 
     return {
         "succes": True,
         "station_id": station_id,
+        "culture": culture,
         "capteurs": {
             "temperature":  t,
             "humidite_air": ha,
@@ -348,18 +300,11 @@ def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
 
 def reentainer_modele(station_id: str) -> dict:
     """
-    (Optionnel — amélioration progressive)
-    Entraîne sklearn sur les données RÉELLES Firebase étiquetées par _regles().
-    Fonctionne dès 5 entrées. Plus on a de données, meilleure est la précision.
-    Remplace _ClassifieurRegles par _ClassifieurSklearn une fois entraîné.
+    (Mocké pour le Système Expert)
+    Génère le dataset brute fusionné et le stocke.
     """
-    global _classifieur
-
     dataset = construire_dataset(station_id)
 
-    # Générer ou créer le dataset complet dans Firebase pour assurer
-    # que la branche stations/{station_id}/dataset existe et contient
-    # le dataset fusionné historique + OpenWeather.
     try:
         from firebase_service import sauvegarder_dataset
         if dataset:
@@ -367,55 +312,12 @@ def reentainer_modele(station_id: str) -> dict:
     except Exception as e:
         print(f"⚠️ Impossible de sauvegarder le dataset complet pour {station_id} : {e}")
 
-    if len(dataset) < 5:
-        msg = (
-            f"Données insuffisantes ({len(dataset)} mesures, minimum 5) "
-            "— classifieur Règles conservé"
-        )
-        print(f"[IA] {msg}")
-        return {"succes": False, "message": msg, "nb_entrees": len(dataset)}
-
-    try:
-        df = pd.DataFrame(dataset)
-        X  = df[FEATURES].values
-        y  = df["label"].values
-
-        score_val = None
-        # Avec peu de données : pas de split train/test
-        if len(dataset) >= 20:
-            from collections import Counter
-            counts = Counter(y)
-            min_class_count = min(counts.values()) if counts else 0
-            
-            # Ne stratifier que si toutes les classes représentées ont au moins 2 membres
-            can_stratify = (len(counts) > 1 and min_class_count >= 2)
-            
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42,
-                stratify=y if can_stratify else None
-            )
-            modele = DecisionTreeClassifier(max_depth=8, random_state=42)
-            modele.fit(X_train, y_train)
-            score = modele.score(X_test, y_test)
-            score_val = float(score)
-            score_str = f", précision : {score:.1%}"
-        else:
-            modele = DecisionTreeClassifier(max_depth=8, random_state=42)
-            modele.fit(X, y)
-            score_str = " (trop peu de données pour évaluer la précision)"
-
-        _classifieur = _ClassifieurSklearn(modele)
-        msg = (
-            f"Modèle sklearn entraîné sur données Firebase réelles "
-            f"({len(dataset)} mesures{score_str})"
-        )
-        print(f"[IA] {msg}")
-        return {"statut": "firebase", "message": msg, "nb_entrees": len(dataset), "score": score_val}
-
-    except Exception as e:
-        err_msg = f"Erreur lors de l'entraînement scikit-learn : {e}"
-        print(f"[IA] ❌ {err_msg}")
-        return {"succes": False, "message": err_msg, "nb_entrees": len(dataset)}
+    return {
+        "statut": "firebase",
+        "message": "Système expert configuré avec succès et dataset mis à jour.",
+        "nb_entrees": len(dataset),
+        "score": 1.0
+    }
 
 
 # ── Message vocal agriculteur ────────────────────────────────────────────────
@@ -431,15 +333,17 @@ def get_message_vocal(
     temperature_future: float = 0.0,
     humidite_future: float = 0.0,
     vent_future: float = 0.0,
+    culture: str = "Tomate",
 ) -> str:
     """Génère un message vocal adapté aux agriculteurs peu alphabétisés."""
     reco = get_recommandation(
         temperature, humidite_air, humidite_sol, vitesse_vent,
         pluie_prevue_3h, temperature_future, humidite_future, vent_future,
+        culture=culture
     )
     pluie_str = f"Pluie prévue : {pluie_prevue_3h:.0f} mm. " if pluie_prevue_3h > 0 else ""
     return (
-        f"Bonjour {nom}, voici vos informations pour la région {region}. "
+        f"Bonjour {nom}, voici vos informations pour la région {region} sur votre culture de {culture}. "
         f"Température : {temperature:.0f} degrés. "
         f"Humidité du sol : {humidite_sol:.0f} pour cent. "
         f"{pluie_str}"

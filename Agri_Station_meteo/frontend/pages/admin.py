@@ -121,7 +121,9 @@ def _page_donnees(stations):
     rows = []
     for st_id, data in stations.items():
         m = data.get("mesures", {})
-        rows.append({"Station ID": st_id, "Température (°C)": m.get("temperature", "N/A"),
+        rows.append({"Station ID": st_id, 
+                     "Culture": data.get("culture", "Tomate"),
+                     "Température (°C)": m.get("temperature", "N/A"),
                      "Humidité air (%)": m.get("humidite_air", "N/A"), "Humidité sol (%)": m.get("humidite_sol", "N/A"),
                      "Vent (km/h)": m.get("vitesse_vent", "N/A"), "Dernière mesure": m.get("timestamp", "N/A")})
     st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
@@ -142,25 +144,45 @@ def _page_agriculteurs(agriculteurs):
 
 
 def _page_seuils(stations):
-    st.markdown("####  Seuils d'alerte globaux")
-    st.info(" Ces seuils s'appliquent à toutes les stations du réseau.")
+    st.markdown("####  Seuils d'alerte par Culture")
+    st.info(" Définissez dynamiquement les seuils agronomiques pour chaque type de culture.")
 
-    seuils_actuels = _get("/seuils", default={"temp_max": 40.0, "temp_min": 15.0, "hum_sol_min": 25.0, "vent_max": 45.0})
+    cultures_list = ["Tomate", "Poivron", "Aubergine", "Mais", "Oignon"]
+    selected_culture = st.selectbox("Sélectionnez la culture à configurer", cultures_list)
 
-    with st.form("form_seuils"):
+    # Récupérer les seuils actuels de cette culture
+    seuils_actuels = _get(f"/seuils/culture/{selected_culture}", default={
+        "HUM_SOL_MIN": 40.0, "HUM_SOL_MAX": 70.0,
+        "TEMP_AIR_MIN": 15.0, "TEMP_AIR_MAX": 30.0,
+        "HUM_AIR_MIN": 50.0, "HUM_AIR_MAX": 85.0,
+        "VENT_MAX": 25.0
+    })
+
+    with st.form("form_seuils_culture"):
         sc1, sc2 = st.columns(2)
         with sc1:
-            temp_max    = st.number_input(" Temp. max (°C)",    value=float(seuils_actuels.get("temp_max",    40.0)), step=0.5)
-            hum_sol_min = st.number_input(" Hum. sol min (%)", value=float(seuils_actuels.get("hum_sol_min", 25.0)), step=1.0)
+            hum_sol_min = st.number_input(" Humidité sol min (%)", value=float(seuils_actuels.get("HUM_SOL_MIN", 40.0)), step=1.0)
+            hum_sol_max = st.number_input(" Humidité sol max (%)", value=float(seuils_actuels.get("HUM_SOL_MAX", 70.0)), step=1.0)
+            temp_min = st.number_input("❄️ Température min air (°C)", value=float(seuils_actuels.get("TEMP_AIR_MIN", 15.0)), step=0.5)
+            temp_max = st.number_input(" Température max air (°C)", value=float(seuils_actuels.get("TEMP_AIR_MAX", 30.0)), step=0.5)
         with sc2:
-            temp_min = st.number_input("❄️ Temp. min (°C)",   value=float(seuils_actuels.get("temp_min",   15.0)), step=0.5)
-            vent_max = st.number_input(" Vent max (km/h)",  value=float(seuils_actuels.get("vent_max",   45.0)), step=1.0)
-        submitted = st.form_submit_button(" Enregistrer les seuils globaux", width='stretch')
+            hum_air_min = st.number_input(" Humidité air min (%)", value=float(seuils_actuels.get("HUM_AIR_MIN", 50.0)), step=1.0)
+            hum_air_max = st.number_input(" Humidité air max (%)", value=float(seuils_actuels.get("HUM_AIR_MAX", 85.0)), step=1.0)
+            vent_max = st.number_input(" Vitesse vent max (km/h)", value=float(seuils_actuels.get("VENT_MAX", 25.0)), step=1.0)
+            
+        submitted = st.form_submit_button(f" Enregistrer les seuils pour : {selected_culture}", width='stretch')
 
     if submitted:
-        ok, resp = _post("/seuils", {"station_id": "", "temp_max": temp_max,
-                                      "temp_min": temp_min, "hum_sol_min": hum_sol_min, "vent_max": vent_max})
-        if ok: st.success(" Seuils globaux mis à jour pour toutes les stations")
+        ok, resp = _post(f"/seuils/culture/{selected_culture}", {
+            "hum_sol_min": hum_sol_min,
+            "hum_sol_max": hum_sol_max,
+            "temp_min": temp_min,
+            "temp_max": temp_max,
+            "hum_air_min": hum_air_min,
+            "hum_air_max": hum_air_max,
+            "vent_max": vent_max
+        })
+        if ok: st.success(f" Seuils pour la culture {selected_culture} mis à jour avec succès !")
         else:  st.error(f" Erreur : {resp.get('detail', 'Inconnue')}")
 
 
@@ -168,88 +190,60 @@ def _page_modele_ia(stations):
     st.markdown("""
     <div class="entete-admin fade-in">
         <div>
-            <h1> 🤖 Gestion du Modèle IA</h1>
+            <h1> 🤖 Gestion du Système Expert IA</h1>
             <div class="sous-titre">
-                Supervision et entraînement de l'intelligence artificielle
+                Supervision et génération du dataset fusionné
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 1. Obtenir le statut actuel du modèle
-    statut_ia = _get("/ia/status", default={"source": "Règles"})
-    source_actuelle = statut_ia.get("source", "Règles")
-
-    # Affichage du badge actuel
-    if source_actuelle == "Firebase":
-        badge_html = """
-        <div style="background-color: #E8F5E9; border-left: 5px solid #1B5E20; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h5 style="color: #1B5E20; margin: 0 0 5px 0; font-weight: bold;">🟢 Mode Actif : Apprentissage Automatique (Firebase)</h5>
-            <p style="margin: 0; font-size: 0.9rem; color: #1B5E20; font-weight: 500;">Les recommandations sont générées par l'arbre de décision scikit-learn entraîné sur vos mesures réelles.</p>
-        </div>
-        """
-    else:
-        badge_html = """
-        <div style="background-color: #FFF3E0; border-left: 5px solid #E65100; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h5 style="color: #E65100; margin: 0 0 5px 0; font-weight: bold;">🟠 Mode Actif : Règles Métier (Déterministes)</h5>
-            <p style="margin: 0; font-size: 0.9rem; color: #E65100; font-weight: 500;">Le système utilise l'arbre de décision statique prédéfini (Zéro dépendance, actif au démarrage).</p>
-        </div>
-        """
+    badge_html = """
+    <div style="background-color: #E8F5E9; border-left: 5px solid #1B5E20; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <h5 style="color: #1B5E20; margin: 0 0 5px 0; font-weight: bold;">🟢 Mode Actif : Système Expert (Arbre de Classification)</h5>
+        <p style="margin: 0; font-size: 0.9rem; color: #1B5E20; font-weight: 500;">Les recommandations sont générées à l'aide de règles agronomiques strictes associées dynamiquement à la culture choisie.</p>
+    </div>
+    """
     st.markdown(badge_html, unsafe_allow_html=True)
 
     if not stations:
-        st.warning("Aucune station disponible pour l'entraînement.")
+        st.warning("Aucune station disponible.")
         return
 
-    # 2. Sélection de la station pour l'entraînement
-    st.markdown("###  Entraînement par Station")
-    st.info("L'entraînement d'une station fusionnera son historique Firebase avec les données OpenWeather pour générer le modèle.")
+    # 2. Sélection de la station pour la mise à jour
+    st.markdown("###  Mise à jour du Dataset par Station")
+    st.info("La mise à jour d'une station fusionnera son historique Firebase avec les données OpenWeather pour générer le dataset de traçabilité brute.")
     
     station_ids = list(stations.keys())
-    station_selectionnee = st.selectbox("Sélectionnez la station à entraîner", station_ids)
+    station_selectionnee = st.selectbox("Sélectionnez la station à mettre à jour", station_ids)
 
-    # 3. Lancer l'entraînement
+    # 3. Lancer la mise à jour
     col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown(f"**Station cible :** `{station_selectionnee}` ({stations[station_selectionnee].get('region', 'Région inconnue')})")
     with col2:
-        btn_train = st.button(" Lancer le ré-entraînement", use_container_width=True)
+        btn_train = st.button(" Lancer la mise à jour", use_container_width=True)
 
     if btn_train:
-        with st.spinner("Ré-entraînement du modèle en cours..."):
-            # On envoie la requête post /ia/reentainer/{station_id}
+        with st.spinner("Mise à jour du dataset en cours..."):
             ok, resp = _post(f"/ia/reentainer/{station_selectionnee}", {})
             if ok:
-                statut = resp.get("statut")
                 nb_entrees = resp.get("nb_entrees", 0)
-                score = resp.get("score")
-                msg = resp.get("message", "")
-                
-                if statut == "ok":
-                    st.success(f"🎉 Modèle ré-entraîné avec succès !")
-                    st.write(f"📈 **Nombre d'entrées utilisées :** {nb_entrees}")
-                    if score is not None:
-                        st.write(f"🎯 **Précision du modèle (validation score) :** {score:.1%}")
-                    else:
-                        st.write("ℹ️ *Pas assez de données pour évaluer précisément la précision du modèle.*")
-                    st.info(f"Source actuelle globale du modèle : **{resp.get('source')}**")
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.warning(f"⚠️ Entraînement insuffisant : {msg}")
-                    st.write(f"Données trouvées : {nb_entrees} mesures (minimum 5 requis).")
+                st.success(f"🎉 Dataset de traçabilité mis à jour avec succès !")
+                st.write(f"📈 **Nombre d'entrées fusionnées :** {nb_entrees}")
+                time.sleep(2)
+                st.rerun()
             else:
-                st.error(f"Une erreur est survenue lors du ré-entraînement : {resp.get('detail', 'Inconnue')}")
+                st.error(f"Une erreur est survenue : {resp.get('detail', 'Inconnue')}")
 
-    # 4. Explications sur le fonctionnement du classifieur
-    with st.expander("ℹ️ Comment fonctionne l'Apprentissage Automatique ?"):
+    # 4. Explications
+    with st.expander("ℹ️ Comment fonctionne le Système Expert ?"):
         st.markdown("""
-        Le système de recommandation utilise un algorithme d'arbre de décision de la bibliothèque **scikit-learn** (`DecisionTreeClassifier`).
+        Le système de recommandation utilise un arbre de classification agronomique (système expert) en format de règles strictes.
         
-        *   **Collecte & Labellisation :** Le backend fusionne les données physiques issues de l'ESP32 et les historiques d'OpenWeather. Il applique les règles d'irrigation métier sur chaque mesure pour labelliser automatiquement le dataset (ex. *Arroser*, *Urgence hydrique*, *Reporter pulvérisation*).
-        *   **Apprentissage :** L'arbre de décision apprend les motifs reliant les capteurs (humidité, température, vent) aux actions recommandées.
-        *   **Calcul de Confiance :** En mode Machine Learning, l'indice de confiance affiché sur le tableau de bord de l'agriculteur reflète la probabilité statistique calculée par le modèle (`predict_proba`).
-        *   **Bascule automatique :** Dès que le modèle est entraîné avec succès, le backend bascule du mode 'Règles' au mode 'Firebase' pour toutes les prédictions futures.
+        *   **Collecte & Fusion :** Le backend combine les données physiques issues de l'ESP32 et les historiques d'OpenWeather. Il applique les règles d'irrigation métier sur chaque mesure pour générer la recommandation correspondante.
+        *   **Configuration par culture :** Chaque culture (Tomate, Poivron, Aubergine, Maïs, Oignon) possède ses propres seuils d'alerte, modifiables depuis le menu 'Seuils d'Alerte'.
+        *   **Génération du Dataset :** Le bouton 'Lancer la mise à jour' fusionne l'historique capteurs avec les données météo et génère un dataset de traçabilité brute dans Firebase.
         """)
 
 
@@ -332,7 +326,7 @@ def page_admin():
             " Données Temps Réel",
             " Gestion Agriculteurs",
             " Seuils d'Alerte",
-            " Modèle Apprentissage (IA)",
+            " Système Expert (IA)",
         ], label_visibility="collapsed")
 
         st.markdown("** Filtrer par Région**")
@@ -345,10 +339,10 @@ def page_admin():
         st.markdown(
             "<div class='sidebar-box'>"
             "<div style='font-weight:800;font-size:0.82rem;margin-bottom:8px;'> Réseau en Temps Réel</div>"
-            "<div style='font-size:0.82rem;'> " + str(len(stations)) + " station(s) totale(s)</div>"
-            "<div style='font-size:0.82rem;color:#A5D6A7;'>🟢 " + str(nb_actives) + " active(s)</div>"
-            "<div style='font-size:0.82rem;color:#EF9A9A;'>🔴 " + str(nb_panne) + " en panne</div>"
-            "<div style='font-size:0.82rem;opacity:0.70;margin-top:4px;'>\u200d " + str(len(agriculteurs)) + " agriculteur(s)</div>"
+            "<div style='font-size:0.82rem;line-height:1.4;'> " + str(len(stations)) + " station(s) totale(s)</div>"
+            "<div style='font-size:0.82rem;line-height:1.4;color:#A5D6A7;'>🟢 " + str(nb_actives) + " active(s)</div>"
+            "<div style='font-size:0.82rem;line-height:1.4;color:#EF9A9A;'>🔴 " + str(nb_panne) + " en panne</div>"
+            "<div style='font-size:0.82rem;line-height:1.4;opacity:0.70;margin-top:4px;'>\u200d " + str(len(agriculteurs)) + " agriculteur(s)</div>"
             "</div>",
             unsafe_allow_html=True
         )
@@ -374,4 +368,4 @@ def page_admin():
     elif "Données Temps Réel"    in section: _page_donnees(stations_aff)
     elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs)
     elif "Seuils"                in section: _page_seuils(stations_aff)
-    elif "Modèle Apprentissage"  in section: _page_modele_ia(stations_aff)
+    elif "Système Expert"        in section: _page_modele_ia(stations_aff)

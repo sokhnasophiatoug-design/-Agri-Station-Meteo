@@ -295,11 +295,17 @@ def sauvegarder_dataset(station_id: str, entree):
                     **row,
                     "timestamp": now_iso,  # force la date d'aujourd'hui sur toutes les entrées
                 }
+                entree_a_sauver.pop("label", None)
+                entree_a_sauver.pop("label_idx", None)
+                entree_a_sauver.pop("source", None)
                 ref.child(f"{idx:04d}").set(entree_a_sauver)
             print(f"✅ Dataset complet sauvegardé pour {station_id} ({len(entree)} entrées)")
             return
 
         entree_a_sauver = {**entree, "timestamp": now_iso}
+        entree_a_sauver.pop("label", None)
+        entree_a_sauver.pop("label_idx", None)
+        entree_a_sauver.pop("source", None)
         ref.push(entree_a_sauver)
     except Exception as e:
         print(f"⚠️ sauvegarder_dataset ({station_id}) : {e}")
@@ -367,7 +373,7 @@ def _sms_clean(texte: str, max_car: int = 155) -> str:
     return texte[:max_car]
 
 
-def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str):
+def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str, recommandation_id: int = None):
     """
     Écrit la recommandation à envoyer par SMS dans Firebase.
     Le message est nettoyé pour GSM-7bit avant écriture (pas de tiret long, etc.)
@@ -376,12 +382,16 @@ def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str):
     try:
         from datetime import datetime
         message_propre = _sms_clean(message)
-        db.reference(f"stations/{station_id}/sms_a_envoyer").set({
+        payload = {
             "message"  : message_propre,
             "telephone": telephone,
             "timestamp": datetime.now().isoformat(),
             "envoye"   : False,
-        })
+        }
+        if recommandation_id is not None:
+            payload["recommandation_id"] = recommandation_id
+            
+        db.reference(f"stations/{station_id}/sms_a_envoyer").set(payload)
         print(f"[SMS] Message écrit dans Firebase pour {station_id} ({len(message_propre)} car.)")
     except Exception as e:
         print(f"❌ ecrire_sms_a_envoyer : {e}")
@@ -436,3 +446,150 @@ def get_telephone_agriculteur(station_id: str) -> str:
     except Exception as e:
         print(f"❌ get_telephone_agriculteur : {e}")
         return ""    
+
+
+# ── Gestion des Cultures & Seuils (Système Expert) ──────────────────────────
+
+DEFAULT_CULTURES_SEUILS = {
+    "Tomate": {
+        "HUM_SOL_MIN": 40.0,
+        "HUM_SOL_MAX": 70.0,
+        "TEMP_AIR_MIN": 15.0,
+        "TEMP_AIR_MAX": 30.0,
+        "HUM_AIR_MIN": 50.0,
+        "HUM_AIR_MAX": 85.0,
+        "VENT_MAX": 25.0
+    },
+    "Poivron": {
+        "HUM_SOL_MIN": 45.0,
+        "HUM_SOL_MAX": 75.0,
+        "TEMP_AIR_MIN": 18.0,
+        "TEMP_AIR_MAX": 32.0,
+        "HUM_AIR_MIN": 50.0,
+        "HUM_AIR_MAX": 85.0,
+        "VENT_MAX": 20.0
+    },
+    "Aubergine": {
+        "HUM_SOL_MIN": 40.0,
+        "HUM_SOL_MAX": 70.0,
+        "TEMP_AIR_MIN": 20.0,
+        "TEMP_AIR_MAX": 35.0,
+        "HUM_AIR_MIN": 45.0,
+        "HUM_AIR_MAX": 80.0,
+        "VENT_MAX": 25.0
+    },
+    "Mais": {
+        "HUM_SOL_MIN": 35.0,
+        "HUM_SOL_MAX": 75.0,
+        "TEMP_AIR_MIN": 10.0,
+        "TEMP_AIR_MAX": 35.0,
+        "HUM_AIR_MIN": 40.0,
+        "HUM_AIR_MAX": 90.0,
+        "VENT_MAX": 35.0
+    },
+    "Oignon": {
+        "HUM_SOL_MIN": 30.0,
+        "HUM_SOL_MAX": 60.0,
+        "TEMP_AIR_MIN": 10.0,
+        "TEMP_AIR_MAX": 32.0,
+        "HUM_AIR_MIN": 40.0,
+        "HUM_AIR_MAX": 80.0,
+        "VENT_MAX": 30.0
+    }
+}
+
+
+def get_station_culture(station_id: str) -> str:
+    """Retourne la culture configurée pour la station (par défaut 'Tomate')."""
+    try:
+        ref = db.reference(f"stations/{station_id}/culture")
+        culture = ref.get()
+        return culture if culture else "Tomate"
+    except Exception as e:
+        print(f"❌ get_station_culture({station_id}) : {e}")
+        return "Tomate"
+
+
+def set_station_culture(station_id: str, culture: str) -> bool:
+    """Enregistre la culture configurée pour la station."""
+    try:
+        db.reference(f"stations/{station_id}/culture").set(culture)
+        return True
+    except Exception as e:
+        print(f"❌ set_station_culture({station_id}, {culture}) : {e}")
+        return False
+
+
+def get_seuils_culture(culture: str) -> dict:
+    """Retourne les seuils d'alerte pour une culture spécifique depuis Firebase, avec fallback."""
+    try:
+        ref = db.reference(f"cultures_seuils/{culture}")
+        data = ref.get()
+        defaults = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Tomate"])
+        if data and isinstance(data, dict):
+            # Assurer que toutes les clés requises sont présentes, sinon fallback
+            for k, v in defaults.items():
+                if k not in data or data[k] is None:
+                    data[k] = v
+            return data
+        return defaults
+    except Exception as e:
+        print(f"❌ get_seuils_culture({culture}) : {e}")
+        return DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Tomate"])
+
+
+def update_seuils_culture(culture: str, seuils: dict) -> bool:
+    """Met à jour les seuils pour une culture spécifique dans Firebase."""
+    try:
+        db.reference(f"cultures_seuils/{culture}").set(seuils)
+        return True
+    except Exception as e:
+        print(f"❌ update_seuils_culture({culture}) : {e}")
+        return False
+
+
+def get_all_seuils_cultures() -> dict:
+    """Retourne les seuils de toutes les cultures fusionnés avec les valeurs par défaut."""
+    try:
+        ref = db.reference("cultures_seuils")
+        data = ref.get()
+        if not data or not isinstance(data, dict):
+            data = {}
+        result = {}
+        for c, defaults in DEFAULT_CULTURES_SEUILS.items():
+            c_data = data.get(c, {})
+            if not isinstance(c_data, dict):
+                c_data = {}
+            merged = {}
+            for k, v in defaults.items():
+                merged[k] = c_data.get(k, v)
+            result[c] = merged
+        return result
+    except Exception as e:
+        print(f"❌ get_all_seuils_cultures : {e}")
+        return DEFAULT_CULTURES_SEUILS
+
+
+def sauvegarder_prediction_courante(
+    station_id: str,
+    reco_id: int,
+    label: str,
+    conseil: str,
+    culture: str,
+    capteurs: dict,
+    previsions: dict
+):
+    """Sauvegarde la prédiction courante pour affichage direct."""
+    try:
+        from datetime import datetime
+        db.reference(f"stations/{station_id}/current_prediction").set({
+            "recommandation_id": reco_id,
+            "label": label,
+            "conseil": conseil,
+            "timestamp": datetime.now().isoformat(),
+            "culture": culture,
+            "capteurs": capteurs,
+            "previsions": previsions
+        })
+    except Exception as e:
+        print(f"❌ sauvegarder_prediction_courante({station_id}) : {e}")

@@ -50,22 +50,36 @@ def _calculer_alertes(mesures, seuils):
     temp    = mesures.get("temperature")
     hum_sol = mesures.get("humidite_sol")
     vent    = mesures.get("vitesse_vent")
-    if temp    and temp    > seuils.get("temp_max",    40): alertes.append(f"Temperature critique : {temp:.1f}C (seuil : {seuils['temp_max']}C)")
-    if temp    and temp    < seuils.get("temp_min",    15): alertes.append(f"Temperature trop basse : {temp:.1f}C (seuil : {seuils['temp_min']}C)")
-    if hum_sol and hum_sol < seuils.get("hum_sol_min", 25): alertes.append(f"Sol trop sec : {hum_sol:.1f}% (seuil : {seuils['hum_sol_min']}%)")
-    if vent    and vent    > seuils.get("vent_max",    45): alertes.append(f"Vent dangereux : {vent:.1f} km/h (seuil : {seuils['vent_max']} km/h)")
+    
+    # Support both global seuils format (lowercase) and culture seuils format (uppercase)
+    temp_max = seuils.get("TEMP_AIR_MAX") or seuils.get("temp_max") or 40.0
+    temp_min = seuils.get("TEMP_AIR_MIN") or seuils.get("temp_min") or 15.0
+    hum_sol_min = seuils.get("HUM_SOL_MIN") or seuils.get("hum_sol_min") or 25.0
+    vent_max = seuils.get("VENT_MAX") or seuils.get("vent_max") or 45.0
+    
+    if temp    and temp    > temp_max: alertes.append(f"Temperature critique : {temp:.1f}C (seuil : {temp_max}C)")
+    if temp    and temp    < temp_min: alertes.append(f"Temperature trop basse : {temp:.1f}C (seuil : {temp_min}C)")
+    if hum_sol and hum_sol < hum_sol_min: alertes.append(f"Sol trop sec : {hum_sol:.1f}% (seuil : {hum_sol_min}%)")
+    if vent    and vent    > vent_max: alertes.append(f"Vent dangereux : {vent:.1f} km/h (seuil : {vent_max} km/h)")
     return alertes
 
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
 
 def _page_accueil(station_id, nom, station_nom, region):
+    culture = st.session_state.get("culture", "Tomate")
+    
     # ── Chargement de toutes les données en premier ──
     with st.spinner("Chargement des données..."):
         meteo      = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
         mesures    = _get(f"/mesures/{station_id}", default={})
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
-        seuils     = _get("/seuils", default={"temp_max": 40, "temp_min": 15, "hum_sol_min": 25, "vent_max": 45})
+        seuils     = _get(f"/seuils/culture/{culture}", default={
+            "HUM_SOL_MIN": 40.0, "HUM_SOL_MAX": 70.0,
+            "TEMP_AIR_MIN": 15.0, "TEMP_AIR_MAX": 30.0,
+            "HUM_AIR_MIN": 50.0, "HUM_AIR_MAX": 85.0,
+            "VENT_MAX": 25.0
+        })
 
     if not mesures:
         st.error(" Impossible de récupérer les mesures. Vérifiez que le backend est démarré.")
@@ -132,12 +146,17 @@ def _page_accueil(station_id, nom, station_nom, region):
     )
     render_html(html_entete)
     st.markdown("#### Mesures en temps reel")
+    
+    # Dynamic thresholds for UI metrics
+    temp_max_val = seuils.get("TEMP_AIR_MAX") or seuils.get("temp_max") or 30.0
+    hum_sol_min_val = seuils.get("HUM_SOL_MIN") or seuils.get("hum_sol_min") or 40.0
+    
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.metric("Temperature",  f"{temp}C"    if isinstance(temp,    (int, float)) else temp,    delta="Eleve" if isinstance(temp, float) and temp > seuils.get("temp_max", 40) else None)
+    with c1: st.metric("Temperature",  f"{temp}C"    if isinstance(temp,    (int, float)) else temp,    delta="Eleve" if isinstance(temp, float) and temp > temp_max_val else None)
     with c2: st.metric("Humidite air", f"{hum_air}%"  if isinstance(hum_air, (int, float)) else hum_air)
-    with c3: st.metric("Humidite sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="Sec" if isinstance(hum_sol, float) and hum_sol < seuils.get("hum_sol_min", 25) else None)
+    with c3: st.metric("Humidite sol", f"{hum_sol}%"  if isinstance(hum_sol, (int, float)) else hum_sol, delta="Sec" if isinstance(hum_sol, float) and hum_sol < hum_sol_min_val else None)
     with c4: st.metric("Vent",         f"{vent} km/h" if isinstance(vent,    (int, float)) else vent)
-    st.caption(f"Derniere mesure : {ts}")
+    st.caption(f"Derniere mesure : {ts} &nbsp;·&nbsp; Culture : **{culture}**")
 
 
     st.markdown("#### Conseil de votre assistant agricole IA")
@@ -145,25 +164,21 @@ def _page_accueil(station_id, nom, station_nom, region):
     if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
         reco = _post("/recommandation", {"temperature": temp, "humidite_air": hum_air,
                                          "humidite_sol": hum_sol, "vitesse_vent": vent,
-                                         "nom": nom, "region": region})
+                                         "nom": nom, "region": region, "culture": culture})
         if reco:
             reco_label     = esc(reco.get('label', ''))
             reco_conseil   = esc(reco.get('conseil', ''))
             reco_confiance = int(reco.get('confiance', 0) * 100)
-            reco_source    = esc(reco.get('source', 'Regles'))
+            reco_source    = esc(reco.get('source', 'Système Expert'))
 
-            source_badge = (
-                f"<span style='background-color:#E8F5E9;color:#2E7D32;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Apprentissage ({reco_source})</span>"
-                if reco_source == "Firebase" else
-                f"<span style='background-color:#FFF3E0;color:#EF6C00;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>Regles Metier</span>"
-            )
+            source_badge = f"<span style='background-color:#E8F5E9;color:#2E7D32;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;font-weight:bold;'>{reco_source}</span>"
 
             render_html(
                 "<div class='reco-card fade-in'>"
                 + "<div class='reco-titre'>" + reco_label + "</div>"
                 + "<div class='reco-desc'>" + reco_conseil + "</div>"
                 + "<div style='margin-top:10px;color:#4A5568;font-size:0.78rem;font-weight:700;display:flex;align-items:center;'>"
-                + "Confiance du modele : " + str(reco_confiance) + "%" + source_badge
+                + "Confiance : " + str(reco_confiance) + "%" + source_badge
                 + "".join(["</", "div", "></", "div", ">"])
             )
             if st.button("Ecouter le conseil", width='stretch', key="btn_tts"):
@@ -404,7 +419,26 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        
+        st.markdown("**Culture de la Station**")
+        with st.spinner("Récupération de la culture..."):
+            culture_info = _get(f"/stations/{station_id}/culture", default={"culture": "Tomate"})
+            culture_active = culture_info.get("culture", "Tomate")
+
+        cultures_list = ["Tomate", "Poivron", "Aubergine", "Mais", "Oignon"]
+        if culture_active not in cultures_list:
+            cultures_list.append(culture_active)
+        culture_index = cultures_list.index(culture_active) if culture_active in cultures_list else 0
+        culture_sel = st.selectbox("Culture", cultures_list, index=culture_index, label_visibility="collapsed", key="agri_culture_sel")
+
+        if culture_sel != culture_active:
+            with st.spinner("Mise à jour de la culture..."):
+                _post(f"/stations/{station_id}/culture", {"culture": culture_sel})
+            st.rerun()
+
+        st.session_state["culture"] = culture_sel
+
+        st.markdown("---")
+
         region_sel = st.selectbox("Région", REGIONS,
                                   index=REGIONS.index(region) if region in REGIONS else 0,
                                   label_visibility="collapsed", key="agri_region_sel")

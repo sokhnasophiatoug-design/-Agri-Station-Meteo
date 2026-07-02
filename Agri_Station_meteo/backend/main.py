@@ -74,6 +74,16 @@ class RecommandationRequest(BaseModel):
     station_id:   Optional[str]   = "ST002"  
     nom:    Optional[str] = "Agriculteur"
     region: Optional[str] = ""
+    culture: Optional[str] = "Tomate"
+
+class SeuilsCultureRequest(BaseModel):
+    hum_sol_min: float
+    hum_sol_max: float
+    temp_min: float
+    temp_max: float
+    hum_air_min: float
+    hum_air_max: float
+    vent_max: float
 
 class TTSRequest(BaseModel):
     texte: str
@@ -190,14 +200,17 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
     sms_statut = "skipped"
     try:
         # Prévisions OpenWeather
-        gps    = firebase_service.get_station_gps(station_id)
-        prev   = weather_service.get_previsions_5j(
+        gps = firebase_service.get_station_gps(station_id)
+        prev = weather_service.get_previsions_5j(
             region = "Kaolack",
             lat    = gps.get("latitude"),
             lon    = gps.get("longitude"),
         )
         if prev.get("ok") and prev.get("liste"):
             firebase_service.sauvegarder_openweather(station_id, prev["liste"])
+
+        # Lire la culture
+        culture = firebase_service.get_station_culture(station_id)
 
         # Recommandation IA sur les capteurs reçus
         p  = float(prev.get("liste", [{}])[0].get("pluie",    0) if prev.get("ok") else 0)
@@ -214,6 +227,7 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             temperature_future = tf,
             humidite_future    = hf,
             vent_future        = vf,
+            culture            = culture
         )
 
         # Téléphone agriculteur
@@ -224,17 +238,39 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             if not telephone.startswith("+"):
                 telephone = "+221" + telephone
             conseil = reco["conseil"][:80]
+            # Sans emoji, "Station Météo" au lieu de "Agri Meteo", parentheses
             message = (
-                f"Agri Meteo {station_id} "
-                f"[{reco['label'][:30]}]\n"
-                f"{conseil}\n"
-                f"Temp:{body.temperature:.0f}C Sol:{body.humidite_sol:.0f}% Vent:{body.vitesse_vent:.0f}km/h"
+                f"Station Météo {station_id} "
+                f"({reco['label'][:30]}) "
+                f"{conseil} "
+                f"Temp:{body.temperature:.0f}C Sol:{body.humidite_sol:.0f}% Vent:{body.vitesse_vent:.0f}"
             )[:160]
-            firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
+            firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone, recommandation_id=reco["label_idx"])
             sms_statut = "ok"
             print(f"[PUSH] 📱 SMS écrit pour {station_id} → {telephone}")
 
-        # Traçabilité dataset
+        # Sauvegarder la prédiction courante
+        firebase_service.sauvegarder_prediction_courante(
+            station_id=station_id,
+            reco_id=reco["label_idx"],
+            label=reco["label"],
+            conseil=reco["conseil"],
+            culture=culture,
+            capteurs={
+                "temperature": body.temperature,
+                "humidite_sol": body.humidite_sol,
+                "humidite_air": body.humidite_air,
+                "vitesse_vent": body.vitesse_vent
+            },
+            previsions={
+                "api_temp": tf,
+                "api_pluie": p,
+                "api_hum": hf,
+                "api_vent": vf
+            }
+        )
+
+        # Traçabilité dataset (sans label)
         firebase_service.sauvegarder_dataset(station_id, {
             "temperature"       : body.temperature,
             "humidite_air"      : body.humidite_air,
@@ -244,9 +280,6 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             "temperature_future": tf,
             "humidite_future"   : hf,
             "vent_future"       : vf,
-            "label_idx"         : reco["label_idx"],
-            "label"             : reco["label"],
-            "source"            : reco["source"],
         })
 
     except Exception as e:
@@ -355,11 +388,19 @@ def forcer_mise_a_jour(station_id: str):
             hf = float(prev["liste"][0].get("humidite", humidite_air))
             vf = float(prev["liste"][0].get("vent",     0))
 
+        # Lire la culture
+        culture = firebase_service.get_station_culture(station_id)
+
         reco = ia_service.get_recommandation(
-            temperature=temperature, humidite_air=humidite_air,
-            humidite_sol=humidite_sol, vitesse_vent=vitesse_vent,
-            pluie_prevue_3h=p, temperature_future=tf,
-            humidite_future=hf, vent_future=vf,
+            temperature        = temperature,
+            humidite_air       = humidite_air,
+            humidite_sol       = humidite_sol,
+            vitesse_vent       = vitesse_vent,
+            pluie_prevue_3h    = p,
+            temperature_future = tf,
+            humidite_future    = hf,
+            vent_future        = vf,
+            culture            = culture
         )
 
         firebase_service.sauvegarder_dataset(station_id, {
@@ -371,12 +412,30 @@ def forcer_mise_a_jour(station_id: str):
             "temperature_future": tf,
             "humidite_future"   : hf,
             "vent_future"       : vf,
-            "label_idx"         : reco["label_idx"],
-            "label"             : reco["label"],
-            "source"            : reco["source"],
         })
-        rapport["dataset"] = f"ok - label={reco['label']} (conf={reco.get('confiance','?')})"
-        print(f"[MAJ] ✅ dataset mis a jour : {reco['label']}")
+        rapport["dataset"] = f"ok - label={reco['label']}"
+        print(f"[MAJ] ✅ dataset mis a jour")
+
+        # Sauvegarder la prédiction courante
+        firebase_service.sauvegarder_prediction_courante(
+            station_id=station_id,
+            reco_id=reco["label_idx"],
+            label=reco["label"],
+            conseil=reco["conseil"],
+            culture=culture,
+            capteurs={
+                "temperature": temperature,
+                "humidite_sol": humidite_sol,
+                "humidite_air": humidite_air,
+                "vitesse_vent": vitesse_vent
+            },
+            previsions={
+                "api_temp": tf,
+                "api_pluie": p,
+                "api_hum": hf,
+                "api_vent": vf
+            }
+        )
 
         # ── 5. SMS ───────────────────────────────────────────────────────────
         telephone = firebase_service.get_telephone_agriculteur(station_id)
@@ -518,6 +577,10 @@ def get_recommandation(body: RecommandationRequest):
     tf = body.temperature_future or 0.0
     hf = body.humidite_future    or 0.0
     vf = body.vent_future        or 0.0
+    culture = body.culture       or "Tomate"
+
+    # Récupérer les seuils
+    seuils = firebase_service.get_seuils_culture(culture)
 
     result = ia_service.get_recommandation(
         temperature        = body.temperature,
@@ -528,6 +591,8 @@ def get_recommandation(body: RecommandationRequest):
         temperature_future = tf,
         humidite_future    = hf,
         vent_future        = vf,
+        culture            = culture,
+        seuils             = seuils
     )
 
     result["message_vocal"] = ia_service.get_message_vocal(
@@ -541,9 +606,31 @@ def get_recommandation(body: RecommandationRequest):
         temperature_future = tf,
         humidite_future    = hf,
         vent_future        = vf,
+        culture            = culture
     )
 
-    # Traçabilité dataset — non bloquant
+    # Sauvegarder la prédiction courante
+    firebase_service.sauvegarder_prediction_courante(
+        station_id=body.station_id or "ST002",
+        reco_id=result["label_idx"],
+        label=result["label"],
+        conseil=result["conseil"],
+        culture=culture,
+        capteurs={
+            "temperature": body.temperature,
+            "humidite_sol": body.humidite_sol,
+            "humidite_air": body.humidite_air,
+            "vitesse_vent": body.vitesse_vent
+        },
+        previsions={
+            "api_temp": tf,
+            "api_pluie": p,
+            "api_hum": hf,
+            "api_vent": vf
+        }
+    )
+
+    # Traçabilité dataset — non bloquant (sans label)
     firebase_service.sauvegarder_dataset(body.station_id or "ST002", {
         "temperature"       : body.temperature,
         "humidite_air"      : body.humidite_air,
@@ -553,9 +640,6 @@ def get_recommandation(body: RecommandationRequest):
         "temperature_future": tf,
         "humidite_future"   : hf,
         "vent_future"       : vf,
-        "label_idx"         : result["label_idx"],
-        "label"             : result["label"],
-        "source"            : result["source"],
     })
 
     return result
@@ -693,6 +777,7 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
         raise HTTPException(status_code=500, detail=str(e))
 
     # ── 2. Recommandation IA ─────────────────────────────────────────────────
+    culture = firebase_service.get_station_culture(station_id)
     reco = ia_service.get_recommandation(
         temperature        = temperature,
         humidite_air       = humidite_air,
@@ -702,6 +787,7 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
         temperature_future = temperature_future,
         humidite_future    = humidite_future,
         vent_future        = vent_future,
+        culture            = culture
     )
     print(f"[SMS] 🤖 Recommandation IA : label={reco['label_idx']} — {reco['label']}")
 
@@ -719,17 +805,39 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
 
     # ── 4. Construire le message SMS (≤ 155 caractères, GSM-7bit pur) ──────────
     conseil = reco["conseil"][:80]
+    # Sans emoji, "Station Météo" au lieu de "Agri Meteo", parentheses
     message = (
-        f"Agri Meteo {station_id} "
-        f"[{reco['label'][:30]}]\n"
-        f"{conseil}\n"
-        f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}km/h"
+        f"Station Météo {station_id} "
+        f"({reco['label'][:30]}) "
+        f"{conseil} "
+        f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}"
     )
     message = firebase_service._sms_clean(message)  # garantie GSM-7bit + 155 car.
 
     # ── 5. Écrire dans Firebase → ESP32 enverra le SMS ──────────────────────
-    firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
+    firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone, recommandation_id=reco["label_idx"])
     print(f"[SMS] 📱 SMS écrit dans Firebase → {telephone}")
+
+    # Sauvegarder la prédiction courante
+    firebase_service.sauvegarder_prediction_courante(
+        station_id=station_id,
+        reco_id=reco["label_idx"],
+        label=reco["label"],
+        conseil=reco["conseil"],
+        culture=culture,
+        capteurs={
+            "temperature": temperature,
+            "humidite_sol": humidite_sol,
+            "humidite_air": humidite_air,
+            "vitesse_vent": vitesse_vent
+        },
+        previsions={
+            "api_temp": temperature_future,
+            "api_pluie": pluie_prevue_3h,
+            "api_hum": humidite_future,
+            "api_vent": vent_future
+        }
+    )
 
     return {
         "statut"         : "ok",
@@ -741,7 +849,7 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
             "timestamp"        : derniere.get("timestamp"),
             "temperature"      : temperature,
             "humidite_sol"     : humidite_sol,
-            "label"            : derniere.get("label"),
+            "label"            : reco["label"],
         },
     }
 
@@ -814,6 +922,7 @@ def get_all_stations():
             "mesures":   st_data.get("mesures", {}),
             "gps":       st_data.get("gps", {}),
             "seuils":    st_data.get("seuils", {}),
+            "culture":   st_data.get("culture", "Tomate"),
         }
     return {"stations": result}
 
@@ -856,3 +965,54 @@ def update_seuils(body: SeuilsRequest):
     if not ok:
         raise HTTPException(status_code=500, detail="Erreur de mise à jour des seuils")
     return {"statut": "ok", "message": "Seuils globaux mis à jour"}
+
+
+# ── Configuration des Cultures & Seuils ──────────────────────────────────────
+
+@app.get("/cultures", tags=["Cultures"])
+def get_cultures():
+    """Retourne les seuils de toutes les cultures."""
+    return firebase_service.get_all_seuils_cultures()
+
+
+@app.get("/seuils/culture/{culture}", tags=["Cultures"])
+def get_seuils_culture(culture: str):
+    """Retourne les seuils d'alerte pour une culture spécifique."""
+    return firebase_service.get_seuils_culture(culture)
+
+
+@app.post("/seuils/culture/{culture}", tags=["Cultures"])
+def update_seuils_culture(culture: str, body: SeuilsCultureRequest):
+    """Met à jour les seuils pour une culture spécifique."""
+    ok = firebase_service.update_seuils_culture(culture, {
+        "HUM_SOL_MIN": body.hum_sol_min,
+        "HUM_SOL_MAX": body.hum_sol_max,
+        "TEMP_AIR_MIN": body.temp_min,
+        "TEMP_AIR_MAX": body.temp_max,
+        "HUM_AIR_MIN": body.hum_air_min,
+        "HUM_AIR_MAX": body.hum_air_max,
+        "VENT_MAX": body.vent_max
+    })
+    if not ok:
+        raise HTTPException(status_code=500, detail="Erreur de mise à jour des seuils de la culture")
+    return {"statut": "ok", "message": f"Seuils pour la culture {culture} mis à jour"}
+
+
+@app.get("/stations/{station_id}/culture", tags=["Cultures"])
+def get_station_culture(station_id: str):
+    """Retourne la culture configurée pour une station."""
+    culture = firebase_service.get_station_culture(station_id)
+    return {"station_id": station_id, "culture": culture}
+
+
+class UpdateStationCultureRequest(BaseModel):
+    culture: str
+
+
+@app.post("/stations/{station_id}/culture", tags=["Cultures"])
+def update_station_culture(station_id: str, body: UpdateStationCultureRequest):
+    """Met à jour la culture pour une station."""
+    ok = firebase_service.set_station_culture(station_id, body.culture)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Erreur lors de la mise à jour de la culture de la station")
+    return {"statut": "ok", "message": f"Culture configurée sur {body.culture} pour la station {station_id}"}
