@@ -448,10 +448,6 @@ def page_agriculteur():
         st.markdown("---")
 
         auto = st.checkbox("Actualisation auto (30s)", value=True)
-        if auto:
-            st.info("Actualisation dans 30s...")
-            time.sleep(30)
-            st.rerun()
 
         st.markdown("---")
 
@@ -484,3 +480,9 @@ def page_agriculteur():
     elif "Localisation GPS" in page: _page_gps(station_id, {})
     elif "Historique"     in page: _page_historique(station_id)
     elif "Previsions"     in page: _page_previsions(station_id, region_sel)
+
+    # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page
+    if auto:
+        st.sidebar.info("Actualisation dans 30s...")
+        time.sleep(30)
+        st.rerun()
