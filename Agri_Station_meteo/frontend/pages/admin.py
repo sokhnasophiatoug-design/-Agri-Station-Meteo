@@ -277,6 +277,11 @@ def page_admin():
         filtre_region = st.selectbox("Région", regions_dispo,
                                      label_visibility="collapsed", key="admin_filtre_region")
 
+        st.markdown("---")
+
+        auto = st.checkbox("Actualisation auto (30s)", value=True)
+
+        st.markdown("---")
 
         if st.button(" Se déconnecter", width='stretch', key="btn_deco_admin"):
             deconnexion()
@@ -298,3 +303,9 @@ def page_admin():
     elif "Données Temps Réel"    in section: _page_donnees(stations_aff)
     elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs)
     elif "Seuils"                in section: _page_seuils(stations_aff)
+
+    # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page
+    if auto:
+        st.sidebar.info("Actualisation dans 30s...")
+        time.sleep(30)
+        st.rerun()
