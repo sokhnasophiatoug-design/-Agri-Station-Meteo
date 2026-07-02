@@ -242,14 +242,15 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             reco_precedente = firebase_service.get_recommandation_precedente(station_id)
             nouvelle_reco   = reco["label_idx"]
             if reco_precedente != nouvelle_reco:
-                conseil = reco["conseil"][:80]
-                message = (
-                    f"Station Météo {station_id} "
-                    f"({reco['label'][:30]}) "
-                    f"{conseil} "
-                    f"Temp:{body.temperature:.0f}C Sol:{body.humidite_sol:.0f}% Vent:{body.vitesse_vent:.0f}"
-                )[:160]
-                firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone, recommandation_id=nouvelle_reco)
+                conseil = reco["conseil"]  # Message complet, sans troncature
+                # Infos capteurs en suffixe compact
+                suffixe = (
+                    f"Temp:{body.temperature:.0f}C "
+                    f"Sol:{body.humidite_sol:.0f}% "
+                    f"Vent:{body.vitesse_vent:.0f}km/h"
+                )
+                corps = f"Station Météo {station_id} ({reco['label']}) {conseil} {suffixe}"
+                firebase_service.ecrire_sms_a_envoyer(station_id, corps, telephone, recommandation_id=nouvelle_reco)
                 sms_statut = "ok"
                 print(f"[PUSH] SMS écrit pour {station_id} (changement: {reco_precedente} -> {nouvelle_reco})")
             else:
