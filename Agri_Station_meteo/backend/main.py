@@ -199,7 +199,11 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
     # ── 4. Recommandation IA + SMS (non bloquant si erreur) ─────────────────
     sms_statut = "skipped"
     try:
-        # Prévisions OpenWeather
+        from datetime import datetime as _dt
+        # Date du push capteur (= aujourd'hui côté serveur)
+        date_push = _dt.now().date().isoformat()
+
+        # Prévisions OpenWeather — appel live en priorité
         gps = firebase_service.get_station_gps(station_id)
         prev = weather_service.get_previsions_5j(
             region = "Kaolack",
@@ -207,16 +211,29 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             lon    = gps.get("longitude"),
         )
         if prev.get("ok") and prev.get("liste"):
+            # L'API a répondu → sauvegarder dans openweather_historique (clé = date du jour)
             firebase_service.sauvegarder_openweather(station_id, prev["liste"])
+            premier_jour = prev["liste"][0]
+            p  = float(premier_jour.get("pluie",    0))
+            tf = float(premier_jour.get("temp_max", 0))
+            hf = float(premier_jour.get("humidite", 0))
+            vf = float(premier_jour.get("vent",     0))
+            print(f"[PUSH] Prévisions OW live utilisées pour {station_id} ({date_push})")
+        else:
+            # L'API a échoué → lire l'entrée openweather_historique correspondant
+            # à la date du push capteur (le jour où les mesures ont été envoyées)
+            ow_fb = firebase_service.get_openweather_du_jour(station_id, date_push)
+            p  = float(ow_fb.get("pluie_prevue_3h",    0))
+            tf = float(ow_fb.get("temperature_future", 0))
+            hf = float(ow_fb.get("humidite_future",    0))
+            vf = float(ow_fb.get("vent_future",        0))
+            if ow_fb:
+                print(f"[PUSH] Prévisions OW Firebase utilisées pour {station_id} (date: {date_push})")
+            else:
+                print(f"[PUSH] Aucune prévision OW disponible pour {station_id} — valeurs futures à 0")
 
         # Lire la culture
         culture = firebase_service.get_station_culture(station_id)
-
-        # Recommandation IA sur les capteurs reçus
-        p  = float(prev.get("liste", [{}])[0].get("pluie",    0) if prev.get("ok") else 0)
-        tf = float(prev.get("liste", [{}])[0].get("temp_max", body.temperature) if prev.get("ok") else body.temperature)
-        hf = float(prev.get("liste", [{}])[0].get("humidite", body.humidite_air) if prev.get("ok") else body.humidite_air)
-        vf = float(prev.get("liste", [{}])[0].get("vent",     0) if prev.get("ok") else 0)
 
         reco = ia_service.get_recommandation(
             temperature        = body.temperature,

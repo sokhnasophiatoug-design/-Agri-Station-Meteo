@@ -332,6 +332,63 @@ def get_openweather_historique(station_id: str) -> list:
         print(f"❌ get_openweather_historique : {e}")
         return []
 
+
+def get_openweather_du_jour(station_id: str, date_iso: str = None) -> dict:
+    """
+    Lit l'entrée OpenWeather stockée pour une date donnée (format YYYY-MM-DD).
+    Si aucune entrée exacte, retourne la plus récente antérieure ou égale à cette date.
+    Utilisé comme fallback quand l'API live OpenWeather est indisponible.
+
+    openweather_historique stocke les prévisions des 5 jours à venir
+    à chaque fois que l'ESP32 pousse des données.
+    """
+    from datetime import date as dt_date
+    try:
+        if not date_iso:
+            date_iso = dt_date.today().isoformat()
+
+        data = db.reference(f"stations/{station_id}/openweather_historique").get()
+        if not data or not isinstance(data, dict):
+            return {}
+
+        # Garder uniquement les clés au format YYYY-MM-DD (entrées récentes structurées)
+        entrees_date = {}
+        for cle, valeur in data.items():
+            if not isinstance(valeur, dict):
+                continue
+            if len(cle) == 10 and cle[4] == "-" and cle[7] == "-":
+                # Clé = date YYYY-MM-DD → correspond au jour où l'entrée a été créée
+                entrees_date[cle] = valeur
+
+        if not entrees_date:
+            return {}
+
+        # Chercher la date exacte d'abord
+        if date_iso in entrees_date:
+            print(f"[OW] Entrée exacte trouvée pour {date_iso}")
+            return entrees_date[date_iso]
+
+        # Sinon prendre la date la plus récente antérieure ou égale à date_iso
+        dates_dispo = sorted(entrees_date.keys())
+        cle_retenue = None
+        for d in dates_dispo:
+            if d <= date_iso:
+                cle_retenue = d
+            else:
+                break
+
+        if cle_retenue:
+            print(f"[OW] Entrée la plus proche utilisée : {cle_retenue} (demandée: {date_iso})")
+            return entrees_date[cle_retenue]
+
+        # Sinon la plus ancienne disponible
+        print(f"[OW] Aucune entrée avant {date_iso}, utilisation de la plus ancienne : {dates_dispo[0]}")
+        return entrees_date[dates_dispo[0]]
+
+    except Exception as e:
+        print(f"❌ get_openweather_du_jour : {e}")
+        return {}
+
 def _sms_clean(texte: str, max_car: int = 155) -> str:
     """
     Nettoie un texte pour compatibilité GSM-7bit et le tronque à max_car

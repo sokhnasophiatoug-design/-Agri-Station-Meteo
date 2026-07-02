@@ -107,12 +107,6 @@ def get_recommandation(
     hum_air_max = float(seuils.get("HUM_AIR_MAX", 85.0))
     vent_max = float(seuils.get("VENT_MAX", 25.0))
 
-    # Température future : si la valeur est 0 (pas de données OW), on utilise la temp actuelle
-    # pour éviter de déclencher faussement une alerte gel
-    tf_effective = temperature_future if temperature_future > 0.0 else temperature
-    hf_effective = humidite_future   if humidite_future   > 0.0 else humidite_air
-    vf_effective = vent_future        if vent_future        > 0.0 else vitesse_vent
-
     # LOGIQUE DÉCISIONNELLE DE L'ARBRE (PAR ORDRE DE PRIORITÉ)
     # 1. Si api_pluie_prevue > 15 mm -> Code 2 (Alerte Drainage)
     if pluie_prevue_3h > 15.0:
@@ -123,14 +117,14 @@ def get_recommandation(
     # 3. Sinon, si hum_sol > HUM_SOL_MAX -> Code 4 (Alerte Saturation)
     elif humidite_sol > hum_sol_max:
         idx = 4
-    # 4. Alerte Gel : temp capteur OU temp prévue (effective) < seuil min
-    elif temperature < temp_air_min or tf_effective < temp_air_min:
+    # 4. Sinon, si temp_air < TEMP_AIR_MIN ou api_temp < TEMP_AIR_MIN -> Code 5 (Alerte Gel)
+    elif temperature < temp_air_min or temperature_future < temp_air_min:
         idx = 5
     # 5. Sinon, si api_temp > TEMP_AIR_MAX AND api_vent > VENT_MAX AND api_hum < HUM_AIR_MIN -> Code 3 (Evapotranspiration)
-    elif tf_effective > temp_air_max and vf_effective > vent_max and hf_effective < hum_air_min:
+    elif temperature_future > temp_air_max and vent_future > vent_max and humidite_future < hum_air_min:
         idx = 3
     # 6. Sinon, si api_hum > HUM_AIR_MAX AND (18 <= api_temp <= 26) -> Code 6 (Risque phytosanitaire)
-    elif hf_effective > hum_air_max and (18.0 <= tf_effective <= 26.0):
+    elif humidite_future > hum_air_max and (18.0 <= temperature_future <= 26.0):
         idx = 6
     # 7. Sinon -> Code 0 (Conditions Optimales)
     else:
