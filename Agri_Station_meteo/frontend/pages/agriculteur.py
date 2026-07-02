@@ -200,6 +200,8 @@ def _page_accueil(station_id, nom, station_nom, region):
 def _page_gps(station_id, mesures):
     """Page dediee a la carte GPS de la station."""
     st.markdown("#### Localisation de la Parcelle")
+    # Charger les mesures en temps réel pour l'affichage de la carte
+    mesures_reelles = _get(f"/mesures/{station_id}", default={})
     gps_data = _get(f"/stations/{station_id}/gps", default={"latitude": None, "longitude": None})
     lat = gps_data.get("latitude")
     lon = gps_data.get("longitude")
@@ -207,7 +209,7 @@ def _page_gps(station_id, mesures):
         stations_dict = {
             station_id: {
                 "gps":     {"latitude": lat, "longitude": lon},
-                "mesures": mesures,
+                "mesures": mesures_reelles,
             }
         }
         afficher_carte_stations(stations_dict)

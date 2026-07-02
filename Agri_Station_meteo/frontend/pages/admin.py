@@ -186,65 +186,7 @@ def _page_seuils(stations):
         else:  st.error(f" Erreur : {resp.get('detail', 'Inconnue')}")
 
 
-def _page_modele_ia(stations):
-    st.markdown("""
-    <div class="entete-admin fade-in">
-        <div>
-            <h1> 🤖 Gestion du Système Expert IA</h1>
-            <div class="sous-titre">
-                Supervision et génération du dataset fusionné
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    badge_html = """
-    <div style="background-color: #E8F5E9; border-left: 5px solid #1B5E20; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h5 style="color: #1B5E20; margin: 0 0 5px 0; font-weight: bold;">🟢 Mode Actif : Système Expert (Arbre de Classification)</h5>
-        <p style="margin: 0; font-size: 0.9rem; color: #1B5E20; font-weight: 500;">Les recommandations sont générées à l'aide de règles agronomiques strictes associées dynamiquement à la culture choisie.</p>
-    </div>
-    """
-    st.markdown(badge_html, unsafe_allow_html=True)
-
-    if not stations:
-        st.warning("Aucune station disponible.")
-        return
-
-    # 2. Sélection de la station pour la mise à jour
-    st.markdown("###  Mise à jour du Dataset par Station")
-    st.info("La mise à jour d'une station fusionnera son historique Firebase avec les données OpenWeather pour générer le dataset de traçabilité brute.")
-    
-    station_ids = list(stations.keys())
-    station_selectionnee = st.selectbox("Sélectionnez la station à mettre à jour", station_ids)
-
-    # 3. Lancer la mise à jour
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown(f"**Station cible :** `{station_selectionnee}` ({stations[station_selectionnee].get('region', 'Région inconnue')})")
-    with col2:
-        btn_train = st.button(" Lancer la mise à jour", use_container_width=True)
-
-    if btn_train:
-        with st.spinner("Mise à jour du dataset en cours..."):
-            ok, resp = _post(f"/ia/reentainer/{station_selectionnee}", {})
-            if ok:
-                nb_entrees = resp.get("nb_entrees", 0)
-                st.success(f"🎉 Dataset de traçabilité mis à jour avec succès !")
-                st.write(f"📈 **Nombre d'entrées fusionnées :** {nb_entrees}")
-                time.sleep(2)
-                st.rerun()
-            else:
-                st.error(f"Une erreur est survenue : {resp.get('detail', 'Inconnue')}")
-
-    # 4. Explications
-    with st.expander("ℹ️ Comment fonctionne le Système Expert ?"):
-        st.markdown("""
-        Le système de recommandation utilise un arbre de classification agronomique (système expert) en format de règles strictes.
-        
-        *   **Collecte & Fusion :** Le backend combine les données physiques issues de l'ESP32 et les historiques d'OpenWeather. Il applique les règles d'irrigation métier sur chaque mesure pour générer la recommandation correspondante.
-        *   **Configuration par culture :** Chaque culture (Tomate, Poivron, Aubergine, Maïs, Oignon) possède ses propres seuils d'alerte, modifiables depuis le menu 'Seuils d'Alerte'.
-        *   **Génération du Dataset :** Le bouton 'Lancer la mise à jour' fusionne l'historique capteurs avec les données météo et génère un dataset de traçabilité brute dans Firebase.
-        """)
+# Page Système Expert supprimée (les mises à jour de dataset se font automatiquement)
 
 
 # ── Page principale avec sidebar ──────────────────────────────────────────────
@@ -326,7 +268,6 @@ def page_admin():
             " Données Temps Réel",
             " Gestion Agriculteurs",
             " Seuils d'Alerte",
-            " Système Expert (IA)",
         ], label_visibility="collapsed")
 
         st.markdown("** Filtrer par Région**")
@@ -335,17 +276,6 @@ def page_admin():
         })
         filtre_region = st.selectbox("Région", regions_dispo,
                                      label_visibility="collapsed", key="admin_filtre_region")
-
-        st.markdown(
-            "<div class='sidebar-box'>"
-            "<div style='font-weight:800;font-size:0.82rem;margin-bottom:8px;'> Réseau en Temps Réel</div>"
-            "<div style='font-size:0.82rem;line-height:1.4;'> " + str(len(stations)) + " station(s) totale(s)</div>"
-            "<div style='font-size:0.82rem;line-height:1.4;color:#A5D6A7;'>🟢 " + str(nb_actives) + " active(s)</div>"
-            "<div style='font-size:0.82rem;line-height:1.4;color:#EF9A9A;'>🔴 " + str(nb_panne) + " en panne</div>"
-            "<div style='font-size:0.82rem;line-height:1.4;opacity:0.70;margin-top:4px;'>\u200d " + str(len(agriculteurs)) + " agriculteur(s)</div>"
-            "</div>",
-            unsafe_allow_html=True
-        )
 
 
         if st.button(" Se déconnecter", width='stretch', key="btn_deco_admin"):
@@ -368,4 +298,3 @@ def page_admin():
     elif "Données Temps Réel"    in section: _page_donnees(stations_aff)
     elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs)
     elif "Seuils"                in section: _page_seuils(stations_aff)
-    elif "Système Expert"        in section: _page_modele_ia(stations_aff)
