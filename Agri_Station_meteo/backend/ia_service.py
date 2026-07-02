@@ -159,6 +159,7 @@ def safe_float(val, default=0.0) -> float:
 def construire_dataset(station_id: str) -> list:
     """
     Fusionne historique capteurs Firebase + données OpenWeather historique.
+    Chaque mesure capteur est jointe à l'entrée OpenWeather la plus proche par date.
     Sans labellisation (traçabilité brute sans label).
     """
     from firebase_service import get_historique, get_openweather_historique
@@ -166,7 +167,41 @@ def construire_dataset(station_id: str) -> list:
     capteurs    = get_historique(station_id, limit=2000)
     openweather = get_openweather_historique(station_id)
 
-    prev_defaut = openweather[0] if openweather else {}
+    # Construire un dictionnaire date -> données OW pour jointure rapide
+    # Les entrées OW sont triées par date YYYY-MM-DD
+    ow_par_date = {}
+    for ow in openweather:
+        if not isinstance(ow, dict):
+            continue
+        ts = ow.get("timestamp", "")
+        if ts:
+            date_cle = ts[:10]  # YYYY-MM-DD
+            ow_par_date[date_cle] = ow
+
+    # Trier les dates disponibles pour la recherche par proximité
+    dates_ow = sorted(ow_par_date.keys())
+
+    def trouver_ow_proche(timestamp_mesure: str) -> dict:
+        """Trouve l'entrée OW la plus proche par date."""
+        if not dates_ow:
+            return {}
+        date_mesure = timestamp_mesure[:10] if timestamp_mesure else ""
+        if not date_mesure:
+            return ow_par_date.get(dates_ow[-1], {})
+        # Chercher la date exacte d'abord
+        if date_mesure in ow_par_date:
+            return ow_par_date[date_mesure]
+        # Sinon prendre la date OW la plus proche (inférieure ou égale)
+        prev_date = None
+        for d in dates_ow:
+            if d <= date_mesure:
+                prev_date = d
+            else:
+                break
+        if prev_date:
+            return ow_par_date[prev_date]
+        # Sinon prendre le plus ancien disponible
+        return ow_par_date.get(dates_ow[0], {})
 
     dataset = []
     for mesure in capteurs:
@@ -176,29 +211,15 @@ def construire_dataset(station_id: str) -> list:
         ha  = safe_float(mesure.get("humidite_air"), 0.0)
         hs  = safe_float(mesure.get("humidite_sol"), 0.0)
         vv  = safe_float(mesure.get("vitesse_vent"), 0.0)
+        ts_mesure = mesure.get("timestamp", "")
 
-        prev = prev_defaut if isinstance(prev_defaut, dict) else {}
-        
-        # Fallback chain for OpenWeather values
-        p_val = prev.get("pluie_prevue_3h")
-        if p_val is None:
-            p_val = prev.get("pluie_future")
-        p = safe_float(p_val, 0.0)
+        # Trouver l'entrée OW la plus proche par date
+        prev = trouver_ow_proche(ts_mesure)
 
-        tf_val = prev.get("temperature_future")
-        if tf_val is None:
-            tf_val = prev.get("temp_future")
-        tf = safe_float(tf_val, t)
-
-        hf_val = prev.get("humidite_future")
-        if hf_val is None:
-            hf_val = prev.get("hum_future")
-        hf = safe_float(hf_val, ha)
-
-        vf_val = prev.get("vent_future")
-        if vf_val is None:
-            vf_val = prev.get("vent_futur")
-        vf = safe_float(vf_val, 0.0)
+        p  = safe_float(prev.get("pluie_prevue_3h"),    0.0)
+        tf = safe_float(prev.get("temperature_future"), t)
+        hf = safe_float(prev.get("humidite_future"),    ha)
+        vf = safe_float(prev.get("vent_future"),        0.0)
 
         dataset.append({
             "temperature":        t,
@@ -209,6 +230,7 @@ def construire_dataset(station_id: str) -> list:
             "temperature_future": tf,
             "humidite_future":    hf,
             "vent_future":        vf,
+            "timestamp":          ts_mesure,
         })
 
     return dataset

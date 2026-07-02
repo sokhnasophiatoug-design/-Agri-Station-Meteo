@@ -320,11 +320,7 @@ def get_openweather_historique(station_id: str) -> list:
         for cle, valeur in data.items():
             if not isinstance(valeur, dict):
                 continue
-            # Ignorer les anciennes clés push Firebase (commencent par -)
-            # Garder uniquement les clés date format YYYY-MM-DD
-            if cle.startswith("-"):
-                print(f"[OW] Clé push ignorée : {cle}")
-                continue
+            # Accepter TOUTES les entrées : clés date YYYY-MM-DD et clés push Firebase (-Xxx)
             entrees.append(valeur)
 
         # Trier par timestamp — plus récent en dernier
@@ -593,3 +589,21 @@ def sauvegarder_prediction_courante(
         })
     except Exception as e:
         print(f"❌ sauvegarder_prediction_courante({station_id}) : {e}")
+
+
+def get_recommandation_precedente(station_id: str) -> int | None:
+    """
+    Lit l'ID de la dernière recommandation envoyée par SMS (recommandation_id dans sms_a_envoyer).
+    Retourne l'entier ou None si aucun SMS n'a encore été envoyé.
+    """
+    try:
+        data = db.reference(f"stations/{station_id}/sms_a_envoyer").get()
+        if not data or not isinstance(data, dict):
+            return None
+        val = data.get("recommandation_id")
+        if val is None:
+            return None
+        return int(val)
+    except Exception as e:
+        print(f"❌ get_recommandation_precedente({station_id}) : {e}")
+        return None
