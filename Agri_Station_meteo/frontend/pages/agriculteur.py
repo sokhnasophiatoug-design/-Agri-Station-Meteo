@@ -439,8 +439,7 @@ def page_agriculteur():
 
         st.session_state["culture"] = culture_sel
 
-        st.markdown("---")
-
+        st.markdown("**Région**")
         region_sel = st.selectbox("Région", REGIONS,
                                   index=REGIONS.index(region) if region in REGIONS else 0,
                                   label_visibility="collapsed", key="agri_region_sel")
@@ -448,7 +447,7 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        auto = st.checkbox("Actualisation auto (30s)", value=False)
+        auto = st.checkbox("Actualisation auto (30s)", value=True)
         if auto:
             st.info("Actualisation dans 30s...")
             time.sleep(30)
