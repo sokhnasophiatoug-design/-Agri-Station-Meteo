@@ -352,8 +352,7 @@ def page_admin():
     elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs, stations_aff)
     elif "Seuils"                in section: _page_seuils(stations_aff)
 
-    # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page
+    # Actualisation automatique via refresh navigateur (pas de time.sleep = pas de ghost)
     if auto:
+        st.markdown('<meta http-equiv="refresh" content="1800">', unsafe_allow_html=True)
         st.sidebar.info("Actualisation dans 30 min...")
-        time.sleep(1800)
-        st.rerun()

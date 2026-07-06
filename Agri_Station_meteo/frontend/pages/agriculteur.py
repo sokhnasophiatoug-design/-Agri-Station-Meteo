@@ -500,9 +500,7 @@ def page_agriculteur():
     elif "Historique"     in page: _page_historique(station_id)
     elif "Previsions"     in page: _page_previsions(station_id, region_sel)
 
-    # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page
-    # On saute le sleep si la page vient de changer (déjà reruné ci-dessus)
+    # Actualisation automatique via refresh navigateur (pas de time.sleep = pas de ghost)
     if auto:
+        st.markdown('<meta http-equiv="refresh" content="1800">', unsafe_allow_html=True)
         st.sidebar.info("Actualisation dans 30 min...")
-        time.sleep(1800)
-        st.rerun()
