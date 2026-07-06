@@ -61,6 +61,34 @@ def _page_tableau(stations, agriculteurs):
     </div>
     """, unsafe_allow_html=True)
 
+    nb_stations      = len(stations)
+    nb_agriculteurs  = len(agriculteurs)
+
+    _CARD = (
+        'background:#ffffff;border-radius:18px;padding:20px 24px;'
+        'box-shadow:0 6px 20px rgba(0,0,0,0.14);'
+        'border-top:4px solid {color};flex:1;min-width:150px;text-align:center;'
+    )
+    _VAL  = 'font-size:2.4rem;font-weight:900;color:{color};line-height:1;font-family:"Sora",sans-serif;'
+    _LBL  = 'font-size:0.82rem;font-weight:700;color:#4A5568;margin-top:8px;'
+
+    html_kpi = (
+        '<div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">'
+
+        f'<div style="{_CARD.format(color="#1B5E20")}">'
+        f'<div style="{_VAL.format(color="#1B5E20")}">{nb_stations}</div>'
+        f'<div style="{_LBL}"> Stations totales</div>'
+        '</div>'
+
+        f'<div style="{_CARD.format(color="#00695C")}">'
+        f'<div style="{_VAL.format(color="#00695C")}">{nb_agriculteurs}</div>'
+        f'<div style="{_LBL}"> Agriculteurs</div>'
+        '</div>'
+
+        '</div>'
+    )
+    st.markdown(html_kpi, unsafe_allow_html=True)
+
     st.markdown("####  Carte GPS")
     if stations:
         afficher_carte_stations(stations)
@@ -95,7 +123,7 @@ def _page_donnees(stations):
     st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
 
-def _page_agriculteurs(agriculteurs):
+def _page_agriculteurs(agriculteurs, stations):
     st.markdown("####  Liste des agriculteurs enregistrés")
     if not agriculteurs:
         st.info("Aucun agriculteur enregistré.")
@@ -117,32 +145,40 @@ def _page_agriculteurs(agriculteurs):
         "Sédhiou", "Tambacounda", "Ziguinchor",
     ]
     with st.form("form_ajout_agriculteur", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        with c1:
-            nom_agri    = st.text_input(" Nom complet", placeholder="Ex : Ablaye DIOP")
-            email_agri  = st.text_input(" Email", placeholder="Ex : ablaye@mail.com")
-            tel_agri    = st.text_input(" Téléphone", placeholder="Ex : +221770130572")
-        with c2:
-            station_agri  = st.text_input(" ID Station associée", placeholder="Ex : ST002")
-            station_nom_a = st.text_input(" Nom de la station", placeholder="Ex : Station Kaolack Centre")
-            region_agri   = st.selectbox(" Région", REGIONS_SN)
+        col1, col2 = st.columns(2)
+        with col1:
+            prenom = st.text_input(" Prénom", placeholder="Ex : Moussa")
+            email  = st.text_input(" Email", placeholder="email@exemple.com")
+            region = st.selectbox(" Région", REGIONS_SN)
+        with col2:
+            nom  = st.text_input(" Nom", placeholder="Ex : Diallo")
+            mdp  = st.text_input("Mot de passe", type="password", placeholder="Min. 6 caractères")
+            tel  = st.text_input(" Téléphone", placeholder="+221 77 XXX XX XX")
+
+        station_ids = list(stations.keys()) if stations else ["ST002"]
+        station_id = st.selectbox(" Station",
+            options=station_ids,
+            format_func=lambda x: f" {stations[x].get('nom', x) if stations and x in stations else x} ({x})")
+            
         submitted_agri = st.form_submit_button(" Enregistrer l'agriculteur", use_container_width=True)
 
     if submitted_agri:
-        if not nom_agri or not email_agri or not station_agri:
-            st.warning("Veuillez remplir au minimum : Nom, Email et ID Station.")
+        if not prenom or not nom or not email or not mdp or not station_id:
+            st.warning("Veuillez remplir tous les champs obligatoires (Prénom, Nom, Email, Mot de passe, Station).")
         else:
+            station_nom = stations[station_id].get("nom") if (stations and station_id in stations) else station_id
             ok, resp = _post("/agriculteurs", {
-                "nom":         nom_agri,
-                "email":       email_agri,
-                "telephone":   tel_agri,
-                "station_id":  station_agri,
-                "station_nom": station_nom_a or station_agri,
-                "region":      region_agri,
+                "nom":         f"{prenom} {nom}",
+                "email":       email,
+                "password":    mdp,
+                "telephone":   tel,
+                "station_id":  station_id,
+                "station_nom": station_nom or station_id,
+                "region":      region,
                 "actif":       True,
             })
             if ok:
-                st.success(resp.get("message", f"Agriculteur {nom_agri} ajouté avec succès !"))
+                st.success(resp.get("message", f"Agriculteur {prenom} {nom} ajouté avec succès !"))
                 time.sleep(5)
                 st.rerun()
             else:
@@ -307,7 +343,7 @@ def page_admin():
 
     if   "Tableau de Bord"       in section: _page_tableau(stations_aff, agriculteurs)
     elif "Données Temps Réel"    in section: _page_donnees(stations_aff)
-    elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs)
+    elif "Gestion Agriculteurs"  in section: _page_agriculteurs(agriculteurs, stations_aff)
     elif "Seuils"                in section: _page_seuils(stations_aff)
 
     # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page

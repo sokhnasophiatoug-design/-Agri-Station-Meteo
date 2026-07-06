@@ -114,6 +114,7 @@ class RegisterRequest(BaseModel):
 class CreateAgriculteurRequest(BaseModel):
     nom:         str
     email:       str
+    password:    str
     telephone:   Optional[str] = ""
     station_id:  Optional[str] = ""
     station_nom: Optional[str] = ""
@@ -986,7 +987,7 @@ def create_agriculteur(body: CreateAgriculteurRequest):
         # 1. Création de l'utilisateur dans Firebase Auth
         user = firebase_auth.create_user(
             email=body.email,
-            password="password123",  # Mot de passe par défaut
+            password=body.password,
             display_name=body.nom
         )
         uid = user.uid
@@ -1010,7 +1011,7 @@ def create_agriculteur(body: CreateAgriculteurRequest):
 
         return {
             "statut": "ok",
-            "message": f"Agriculteur {body.nom} créé avec succès. Mot de passe temporaire : password123",
+            "message": f"Agriculteur {body.nom} créé avec succès !",
             "uid": uid
         }
     except Exception as e:
