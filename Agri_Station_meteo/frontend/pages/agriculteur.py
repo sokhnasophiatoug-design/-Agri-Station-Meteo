@@ -26,6 +26,19 @@ BACKEND = "https://agri-station-meteo.onrender.com"
 
 REGIONS = [
     "Kaolack",
+    "Dakar",
+    "Thiès",
+    "Diourbel",
+    "Fatick",
+    "Kaffrine",
+    "Kédougou",
+    "Kolda",
+    "Louga",
+    "Matam",
+    "Saint-Louis",
+    "Sédhiou",
+    "Tambacounda",
+    "Ziguinchor",
 ]
 
 
@@ -447,7 +460,7 @@ def page_agriculteur():
 
         st.markdown("---")
 
-        auto = st.checkbox("Actualisation auto (30s)", value=True)
+        auto = st.checkbox("Actualisation auto (30 min)", value=True)
 
         st.markdown("---")
 
@@ -483,6 +496,6 @@ def page_agriculteur():
 
     # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page
     if auto:
-        st.sidebar.info("Actualisation dans 30s...")
-        time.sleep(30)
+        st.sidebar.info("Actualisation dans 30 min...")
+        time.sleep(1800)
         st.rerun()

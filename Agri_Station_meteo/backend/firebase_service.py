@@ -434,7 +434,7 @@ def ecrire_sms_a_envoyer(station_id: str, message: str, telephone: str, recomman
     """
     try:
         from datetime import datetime
-        message_propre = _sms_clean(message)
+        message_propre = _sms_clean(message, max_car=350)
         payload = {
             "message"  : message_propre,
             "telephone": telephone,
@@ -499,6 +499,23 @@ def get_telephone_agriculteur(station_id: str) -> str:
     except Exception as e:
         print(f"❌ get_telephone_agriculteur : {e}")
         return ""    
+
+
+def get_profil_agriculteur(station_id: str) -> dict:
+    """
+    Retourne le profil de l'agriculteur rattaché à cette station.
+    """
+    try:
+        agriculteurs = db.reference("agriculteurs").get()
+        if not agriculteurs:
+            return {}
+        for uid, data in agriculteurs.items():
+            if data.get("station_id") == station_id and data.get("actif"):
+                return data
+        return {}
+    except Exception as e:
+        print(f"❌ get_profil_agriculteur : {e}")
+        return {}
 
 
 # ── Gestion des Cultures & Seuils (Système Expert) ──────────────────────────

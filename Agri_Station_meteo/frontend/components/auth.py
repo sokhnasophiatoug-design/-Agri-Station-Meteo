@@ -19,7 +19,20 @@ FIREBASE_SIGNUP_URL  = (
 BACKEND_URL = "https://agri-station-meteo.onrender.com"
 
 REGIONS = [
-     "Kaolack",
+    "Kaolack",
+    "Dakar",
+    "Thiès",
+    "Diourbel",
+    "Fatick",
+    "Kaffrine",
+    "Kédougou",
+    "Kolda",
+    "Louga",
+    "Matam",
+    "Saint-Louis",
+    "Sédhiou",
+    "Tambacounda",
+    "Ziguinchor",
 ]
 
 STATIONS_DISPO = {

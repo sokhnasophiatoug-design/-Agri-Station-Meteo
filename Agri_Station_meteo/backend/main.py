@@ -111,6 +111,16 @@ class RegisterRequest(BaseModel):
     firebase_path: Optional[str] = ""
 
 
+class CreateAgriculteurRequest(BaseModel):
+    nom:         str
+    email:       str
+    telephone:   Optional[str] = ""
+    station_id:  Optional[str] = ""
+    station_nom: Optional[str] = ""
+    region:      Optional[str] = ""
+    actif:       Optional[bool] = True
+
+
 @app.get("/", tags=["Santé"])
 def health():
     return {"statut": "ok", "service": "Station Météo Agricole API v1.0"}
@@ -259,14 +269,12 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             reco_precedente = firebase_service.get_recommandation_precedente(station_id)
             nouvelle_reco   = reco["label_idx"]
             if reco_precedente != nouvelle_reco:
-                conseil = reco["conseil"]  # Message complet, sans troncature
-                # Infos capteurs en suffixe compact
-                suffixe = (
-                    f"Temp:{body.temperature:.0f}C "
-                    f"Sol:{body.humidite_sol:.0f}% "
-                    f"Vent:{body.vitesse_vent:.0f}km/h"
+                profil_agri = firebase_service.get_profil_agriculteur(station_id)
+                nom_agri = profil_agri.get("nom", "Agriculteur")
+                corps = (
+                    f"Bonjour {nom_agri}, {reco['label']} : {reco['conseil']} "
+                    f"Je t'invite a te connecter pour consulter les nouvelles informations et mieux comprendre la situation."
                 )
-                corps = f"Station Météo {station_id} ({reco['label']}) {conseil} {suffixe}"
                 firebase_service.ecrire_sms_a_envoyer(station_id, corps, telephone, recommandation_id=nouvelle_reco)
                 sms_statut = "ok"
                 print(f"[PUSH] SMS écrit pour {station_id} (changement: {reco_precedente} -> {nouvelle_reco})")
@@ -469,13 +477,12 @@ def forcer_mise_a_jour(station_id: str):
         else:
             if not telephone.startswith("+"):
                 telephone = "+221" + telephone
-            conseil = reco["conseil"][:80]
+            profil_agri = firebase_service.get_profil_agriculteur(station_id)
+            nom_agri = profil_agri.get("nom", "Agriculteur")
             message = (
-                f"Agri Meteo {station_id} [{reco['label'][:30]}]\n"
-                f"{conseil}\n"
-                f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}km/h"
+                f"Bonjour {nom_agri}, {reco['label']} : {reco['conseil']} "
+                f"Je t'invite a te connecter pour consulter les nouvelles informations et mieux comprendre la situation."
             )
-            message = firebase_service._sms_clean(message)
             firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone)
             rapport["sms"] = f"ok - {len(message)} car. → {telephone}"
             print(f"[MAJ] ✅ SMS ecrit : {message[:60]}")
@@ -828,16 +835,13 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
     if not telephone.startswith("+"):
         telephone = "+221" + telephone
 
-    # ── 4. Construire le message SMS (≤ 155 caractères, GSM-7bit pur) ──────────
-    conseil = reco["conseil"][:80]
-    # Sans emoji, "Station Météo" au lieu de "Agri Meteo", parentheses
+    # ── 4. Construire le message SMS ──────────
+    profil_agri = firebase_service.get_profil_agriculteur(station_id)
+    nom_agri = profil_agri.get("nom", "Agriculteur")
     message = (
-        f"Station Météo {station_id} "
-        f"({reco['label'][:30]}) "
-        f"{conseil} "
-        f"Temp:{temperature:.0f}C Sol:{humidite_sol:.0f}% Vent:{vitesse_vent:.0f}"
+        f"Bonjour {nom_agri}, {reco['label']} : {reco['conseil']} "
+        f"Je t'invite a te connecter pour consulter les nouvelles informations et mieux comprendre la situation."
     )
-    message = firebase_service._sms_clean(message)  # garantie GSM-7bit + 155 car.
 
     # ── 5. Écrire dans Firebase → ESP32 enverra le SMS ──────────────────────
     firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone, recommandation_id=reco["label_idx"])
@@ -968,6 +972,49 @@ def get_all_agriculteurs():
     """Retourne la liste de tous les agriculteurs enregistrés."""
     data = firebase_service.get_all_agriculteurs()
     return {"agriculteurs": data}
+
+
+@app.post("/agriculteurs", tags=["Admin"])
+def create_agriculteur(body: CreateAgriculteurRequest):
+    """
+    Crée un nouvel agriculteur :
+    1. Crée le compte dans Firebase Authentication via firebase_admin.auth
+    2. Enregistre le profil dans Firebase Realtime Database via auth_service.register_agriculteur
+    """
+    from firebase_admin import auth as firebase_auth
+    try:
+        # 1. Création de l'utilisateur dans Firebase Auth
+        user = firebase_auth.create_user(
+            email=body.email,
+            password="password123",  # Mot de passe par défaut
+            display_name=body.nom
+        )
+        uid = user.uid
+
+        # 2. Enregistrement du profil dans la base de données
+        result = auth_service.register_agriculteur(uid, {
+            "nom":         body.nom,
+            "email":       body.email,
+            "telephone":   body.telephone,
+            "region":      body.region,
+            "station_id":  body.station_id,
+            "station_nom": body.station_nom,
+            "actif":       body.actif,
+        })
+        if not result.get("succes"):
+            try:
+                firebase_auth.delete_user(uid)
+            except Exception:
+                pass
+            raise HTTPException(status_code=500, detail=result.get("erreur", "Erreur d'écriture BDD"))
+
+        return {
+            "statut": "ok",
+            "message": f"Agriculteur {body.nom} créé avec succès. Mot de passe temporaire : password123",
+            "uid": uid
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Seuils d'alerte ──────────────────────────────────────────────────────────
