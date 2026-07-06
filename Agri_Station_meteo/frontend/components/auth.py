@@ -35,9 +35,28 @@ REGIONS = [
     "Ziguinchor",
 ]
 
-STATIONS_DISPO = {
-    "ST002": "Station Kaolack Centre",
-}
+
+def _charger_stations() -> dict:
+    """
+    Charge la liste des stations disponibles depuis l'API backend (Firebase).
+    Retourne un dict {station_id: nom_affiche}, ex: {"ST002": "Station Kaolack Centre"}.
+    Si le backend n'est pas accessible, retourne un fallback minimal.
+    """
+    try:
+        import requests
+        r = http_get(f"{BACKEND_URL}/stations", timeout=10)
+        if r.status_code == 200:
+            data = r.json().get("stations", {})
+            stations = {}
+            for st_id, st_data in data.items():
+                nom = st_data.get("nom") or st_data.get("station_nom") or st_id
+                stations[st_id] = nom
+            if stations:
+                return stations
+    except Exception:
+        pass
+    # Fallback si l'API ne répond pas
+    return {"ST002": "Station Kaolack Centre"}
 
 
 def _css_login():
@@ -280,6 +299,10 @@ def _form_connexion():
 def _form_inscription():
     st.markdown('<div class="info-box"> Créez votre compte. Un administrateur validera votre accès à la station.</div>',
                 unsafe_allow_html=True)
+
+    # Charger la liste des stations depuis Firebase via le backend
+    stations_dispo = _charger_stations()
+
     with st.form("form_inscription", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -292,8 +315,8 @@ def _form_inscription():
             tel  = st.text_input(" Téléphone",      placeholder="+221 77 XXX XX XX")
 
         station_id = st.selectbox(" Station",
-            options=list(STATIONS_DISPO.keys()),
-            format_func=lambda x: f" {STATIONS_DISPO[x]} ({x})")
+            options=list(stations_dispo.keys()),
+            format_func=lambda x: f" {stations_dispo[x]} ({x})")
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
         submitted = st.form_submit_button(" Créer mon compte", width='stretch')
 
@@ -312,7 +335,7 @@ def _form_inscription():
                 "uid": signup["uid"], "id_token": signup["idToken"],
                 "nom": f"{prenom} {nom}", "email": email, "telephone": tel,
                 "region": region, "station_id": station_id,
-                "station_nom": STATIONS_DISPO[station_id],
+                "station_nom": stations_dispo[station_id],
                 "firebase_path": f"stations/{station_id}",
             })
             if not profil["ok"]: st.error(f"{profil['erreur']}"); return
