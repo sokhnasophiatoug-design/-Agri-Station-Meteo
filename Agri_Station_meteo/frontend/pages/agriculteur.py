@@ -430,7 +430,13 @@ def page_agriculteur():
             "Localisation GPS",
             "Historique",
             "Previsions",
-        ], label_visibility="collapsed")
+        ], label_visibility="collapsed", key="agri_nav_radio")
+
+        # Dès que l'utilisateur change d'onglet, forcer un rerun propre
+        # pour effacer complètement le contenu de la page précédente
+        if st.session_state.get("_agri_prev_page") != page:
+            st.session_state["_agri_prev_page"] = page
+            st.rerun()
 
         st.markdown("---")
 
@@ -495,6 +501,7 @@ def page_agriculteur():
     elif "Previsions"     in page: _page_previsions(station_id, region_sel)
 
     # Actualisation automatique à la toute fin pour permettre l'affichage complet de la page
+    # On saute le sleep si la page vient de changer (déjà reruné ci-dessus)
     if auto:
         st.sidebar.info("Actualisation dans 30 min...")
         time.sleep(1800)

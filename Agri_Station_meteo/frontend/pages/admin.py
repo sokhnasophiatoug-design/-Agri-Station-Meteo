@@ -310,7 +310,13 @@ def page_admin():
             " Données Temps Réel",
             " Gestion Agriculteurs",
             " Seuils d'Alerte",
-        ], label_visibility="collapsed")
+        ], label_visibility="collapsed", key="admin_nav_radio")
+
+        # Dès que l'administrateur change d'onglet, forcer un rerun propre
+        # pour effacer complètement le contenu de la page précédente
+        if st.session_state.get("_admin_prev_section") != section:
+            st.session_state["_admin_prev_section"] = section
+            st.rerun()
 
         st.markdown("** Filtrer par Région**")
         regions_dispo = ["Toutes"] + sorted({
