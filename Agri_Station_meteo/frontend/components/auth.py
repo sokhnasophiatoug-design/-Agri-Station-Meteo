@@ -314,15 +314,17 @@ def _form_inscription():
             mdp  = st.text_input("Mot de passe",   type="password", placeholder="Min. 6 caractères")
             tel  = st.text_input(" Téléphone",      placeholder="+221 77 XXX XX XX")
 
-        station_id = st.selectbox(" Station",
-            options=list(stations_dispo.keys()),
-            format_func=lambda x: f" {stations_dispo[x]} ({x})")
+        col_st1, col_st2 = st.columns(2)
+        with col_st1:
+            station_id = st.text_input(" ID de la Station", placeholder="Ex : ST002")
+        with col_st2:
+            station_nom = st.text_input(" Nom de la Station", placeholder="Ex : Station Kaolack Centre")
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
         submitted = st.form_submit_button(" Créer mon compte", width='stretch')
 
     if submitted:
-        if not all([prenom, nom, email, mdp]):
-            st.error(" Veuillez remplir tous les champs obligatoires."); return
+        if not all([prenom, nom, email, mdp, station_id, station_nom]):
+            st.error(" Veuillez remplir tous les champs obligatoires (Prénom, Nom, Email, Mot de passe, ID Station et Nom de la Station)."); return
         if len(mdp) < 6:
             st.error(" Mot de passe trop court (min. 6 caractères)."); return
         if "@" not in email or "." not in email:
@@ -334,9 +336,9 @@ def _form_inscription():
             profil = _inscrire_agriculteur({
                 "uid": signup["uid"], "id_token": signup["idToken"],
                 "nom": f"{prenom} {nom}", "email": email, "telephone": tel,
-                "region": region, "station_id": station_id,
-                "station_nom": stations_dispo[station_id],
-                "firebase_path": f"stations/{station_id}",
+                "region": region, "station_id": station_id.strip(),
+                "station_nom": station_nom.strip(),
+                "firebase_path": f"stations/{station_id.strip()}",
             })
             if not profil["ok"]: st.error(f"{profil['erreur']}"); return
 

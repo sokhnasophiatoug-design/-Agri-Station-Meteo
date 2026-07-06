@@ -141,6 +141,12 @@ def verify_token(body: TokenRequest):
 @app.post("/auth/register", tags=["Auth"])
 def register_agriculteur(body: RegisterRequest):
     """Inscrit un nouvel agriculteur dans Firebase DB."""
+    if body.station_id:
+        firebase_service.initialiser_station(
+            station_id=body.station_id,
+            station_nom=body.station_nom or f"Station {body.station_id}",
+            region=body.region or "Kaolack"
+        )
     result = auth_service.register_agriculteur(body.uid, body.dict())
     if not result.get("succes"):
         raise HTTPException(status_code=500, detail=result.get("erreur", "Erreur d'inscription"))
@@ -991,6 +997,14 @@ def create_agriculteur(body: CreateAgriculteurRequest):
             display_name=body.nom
         )
         uid = user.uid
+
+        # Initialiser la station dans Firebase si elle n'existe pas encore
+        if body.station_id:
+            firebase_service.initialiser_station(
+                station_id=body.station_id,
+                station_nom=body.station_nom or f"Station {body.station_id}",
+                region=body.region or "Kaolack"
+            )
 
         # 2. Enregistrement du profil dans la base de données
         result = auth_service.register_agriculteur(uid, {

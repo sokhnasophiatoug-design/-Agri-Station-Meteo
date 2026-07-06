@@ -155,25 +155,25 @@ def _page_agriculteurs(agriculteurs, stations):
             mdp  = st.text_input("Mot de passe", type="password", placeholder="Min. 6 caractères")
             tel  = st.text_input(" Téléphone", placeholder="+221 77 XXX XX XX")
 
-        station_ids = list(stations.keys()) if stations else ["ST002"]
-        station_id = st.selectbox(" Station",
-            options=station_ids,
-            format_func=lambda x: f" {stations[x].get('nom', x) if stations and x in stations else x} ({x})")
+        col_st1, col_st2 = st.columns(2)
+        with col_st1:
+            station_id = st.text_input(" ID de la Station", placeholder="Ex : ST002")
+        with col_st2:
+            station_nom = st.text_input(" Nom de la Station", placeholder="Ex : Station Kaolack Centre")
             
         submitted_agri = st.form_submit_button(" Enregistrer l'agriculteur", use_container_width=True)
 
     if submitted_agri:
-        if not prenom or not nom or not email or not mdp or not station_id:
-            st.warning("Veuillez remplir tous les champs obligatoires (Prénom, Nom, Email, Mot de passe, Station).")
+        if not prenom or not nom or not email or not mdp or not station_id or not station_nom:
+            st.warning("Veuillez remplir tous les champs obligatoires (Prénom, Nom, Email, Mot de passe, ID Station et Nom Station).")
         else:
-            station_nom = stations[station_id].get("nom") if (stations and station_id in stations) else station_id
             ok, resp = _post("/agriculteurs", {
                 "nom":         f"{prenom} {nom}",
                 "email":       email,
                 "password":    mdp,
                 "telephone":   tel,
-                "station_id":  station_id,
-                "station_nom": station_nom or station_id,
+                "station_id":  station_id.strip(),
+                "station_nom": station_nom.strip(),
                 "region":      region,
                 "actif":       True,
             })

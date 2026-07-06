@@ -176,6 +176,40 @@ def get_all_stations() -> dict:
         return {}
 
 
+def initialiser_station(station_id: str, station_nom: str, region: str, culture: str = "Tomate") -> bool:
+    """
+    Initialise une nouvelle station dans Firebase si elle n'existe pas.
+    """
+    try:
+        ref = db.reference(f"stations/{station_id}")
+        # Si la station existe déjà et a un nom, on ne l'écrase pas
+        existante = ref.get()
+        if existante and isinstance(existante, dict) and existante.get("nom"):
+            return True
+
+        # Initialiser avec des données de base
+        ref.set({
+            "nom": station_nom,
+            "region": region,
+            "culture": culture,
+            "seuils": {
+                "temp_max": 40.0,
+                "temp_min": 15.0,
+                "hum_sol_min": 25.0,
+                "vent_max": 45.0
+            },
+            "gps": {
+                "latitude": 14.1652,   # Kaolack par défaut
+                "longitude": -16.0758
+            }
+        })
+        print(f"[Firebase] Station {station_id} ({station_nom}) initialisée avec succès.")
+        return True
+    except Exception as e:
+        print(f"❌ initialiser_station : {e}")
+        return False
+
+
 # ── Tous les agriculteurs (admin) ────────────────────────────────────────────
 
 def get_all_agriculteurs() -> dict:
