@@ -116,7 +116,7 @@ def _page_donnees(stations):
     for st_id, data in stations.items():
         m = data.get("mesures", {})
         rows.append({"Station ID": st_id, 
-                     "Culture": data.get("culture", "Tomate"),
+                     "Culture": data.get("culture", "Manioc"),
                      "Température (°C)": m.get("temperature", "N/A"),
                      "Humidité air (%)": m.get("humidite_air", "N/A"), "Humidité sol (%)": m.get("humidite_sol", "N/A"),
                      "Vent (km/h)": m.get("vitesse_vent", "N/A"), "Dernière mesure": m.get("timestamp", "N/A")})
@@ -189,7 +189,7 @@ def _page_seuils(stations):
     st.markdown("####  Seuils d'alerte par Culture")
     st.info(" Définissez dynamiquement les seuils agronomiques pour chaque type de culture.")
 
-    cultures_list = ["Tomate", "Poivron", "Aubergine", "Mais", "Oignon"]
+    cultures_list = ["Manioc", "Tomate", "Poivron", "Aubergine", "Oignon"]
     selected_culture = st.selectbox("Sélectionnez la culture à configurer", cultures_list)
 
     # Récupérer les seuils actuels de cette culture

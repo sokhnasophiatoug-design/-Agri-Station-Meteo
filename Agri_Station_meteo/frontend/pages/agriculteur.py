@@ -80,7 +80,7 @@ def _calculer_alertes(mesures, seuils):
 # ── Pages ─────────────────────────────────────────────────────────────────────
 
 def _page_accueil(station_id, nom, station_nom, region):
-    culture = st.session_state.get("culture", "Tomate")
+    culture = st.session_state.get("culture", "Manioc")
     
     # ── Chargement de toutes les données en premier ──
     with st.spinner("Chargement des données..."):
@@ -442,10 +442,10 @@ def page_agriculteur():
 
         st.markdown("**Culture de la Station**")
         with st.spinner("Récupération de la culture..."):
-            culture_info = _get(f"/stations/{station_id}/culture", default={"culture": "Tomate"})
-            culture_active = culture_info.get("culture", "Tomate")
+            culture_info = _get(f"/stations/{station_id}/culture", default={"culture": "Manioc"})
+            culture_active = culture_info.get("culture", "Manioc")
 
-        cultures_list = ["Tomate", "Poivron", "Aubergine", "Mais", "Oignon"]
+        cultures_list = ["Manioc", "Tomate", "Poivron", "Aubergine", "Oignon"]
         if culture_active not in cultures_list:
             cultures_list.append(culture_active)
         culture_index = cultures_list.index(culture_active) if culture_active in cultures_list else 0

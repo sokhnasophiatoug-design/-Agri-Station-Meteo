@@ -74,7 +74,7 @@ class RecommandationRequest(BaseModel):
     station_id:   Optional[str]   = "ST002"  
     nom:    Optional[str] = "Agriculteur"
     region: Optional[str] = ""
-    culture: Optional[str] = "Tomate"
+    culture: Optional[str] = "Manioc"
 
 class SeuilsCultureRequest(BaseModel):
     hum_sol_min: float
@@ -616,7 +616,7 @@ def get_recommandation(body: RecommandationRequest):
     tf = body.temperature_future or 0.0
     hf = body.humidite_future    or 0.0
     vf = body.vent_future        or 0.0
-    culture = body.culture       or "Tomate"
+    culture = body.culture       or "Manioc"
 
     # Récupérer les seuils
     seuils = firebase_service.get_seuils_culture(culture)
@@ -958,7 +958,7 @@ def get_all_stations():
             "mesures":   st_data.get("mesures", {}),
             "gps":       st_data.get("gps", {}),
             "seuils":    st_data.get("seuils", {}),
-            "culture":   st_data.get("culture", "Tomate"),
+            "culture":   st_data.get("culture", "Manioc"),
         }
     return {"stations": result}
 

@@ -176,7 +176,7 @@ def get_all_stations() -> dict:
         return {}
 
 
-def initialiser_station(station_id: str, station_nom: str, region: str, culture: str = "Tomate") -> bool:
+def initialiser_station(station_id: str, station_nom: str, region: str, culture: str = "Manioc") -> bool:
     """
     Initialise une nouvelle station dans Firebase si elle n'existe pas.
     """
@@ -555,6 +555,15 @@ def get_profil_agriculteur(station_id: str) -> dict:
 # ── Gestion des Cultures & Seuils (Système Expert) ──────────────────────────
 
 DEFAULT_CULTURES_SEUILS = {
+    "Manioc": {
+        "HUM_SOL_MIN": 30.0,
+        "HUM_SOL_MAX": 75.0,
+        "TEMP_AIR_MIN": 18.0,
+        "TEMP_AIR_MAX": 38.0,
+        "HUM_AIR_MIN": 40.0,
+        "HUM_AIR_MAX": 85.0,
+        "VENT_MAX": 30.0
+    },
     "Tomate": {
         "HUM_SOL_MIN": 40.0,
         "HUM_SOL_MAX": 70.0,
@@ -582,15 +591,6 @@ DEFAULT_CULTURES_SEUILS = {
         "HUM_AIR_MAX": 80.0,
         "VENT_MAX": 25.0
     },
-    "Mais": {
-        "HUM_SOL_MIN": 35.0,
-        "HUM_SOL_MAX": 75.0,
-        "TEMP_AIR_MIN": 10.0,
-        "TEMP_AIR_MAX": 35.0,
-        "HUM_AIR_MIN": 40.0,
-        "HUM_AIR_MAX": 90.0,
-        "VENT_MAX": 35.0
-    },
     "Oignon": {
         "HUM_SOL_MIN": 30.0,
         "HUM_SOL_MAX": 60.0,
@@ -608,10 +608,10 @@ def get_station_culture(station_id: str) -> str:
     try:
         ref = db.reference(f"stations/{station_id}/culture")
         culture = ref.get()
-        return culture if culture else "Tomate"
+        return culture if culture else "Manioc"
     except Exception as e:
         print(f"❌ get_station_culture({station_id}) : {e}")
-        return "Tomate"
+        return "Manioc"
 
 
 def set_station_culture(station_id: str, culture: str) -> bool:
@@ -629,7 +629,7 @@ def get_seuils_culture(culture: str) -> dict:
     try:
         ref = db.reference(f"cultures_seuils/{culture}")
         data = ref.get()
-        defaults = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Tomate"])
+        defaults = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Manioc"])
         if data and isinstance(data, dict):
             # Assurer que toutes les clés requises sont présentes, sinon fallback
             for k, v in defaults.items():
@@ -639,7 +639,7 @@ def get_seuils_culture(culture: str) -> dict:
         return defaults
     except Exception as e:
         print(f"❌ get_seuils_culture({culture}) : {e}")
-        return DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Tomate"])
+        return DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Manioc"])
 
 
 def update_seuils_culture(culture: str, seuils: dict) -> bool:

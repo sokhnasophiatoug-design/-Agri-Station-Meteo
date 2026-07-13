@@ -86,7 +86,7 @@ def get_recommandation(
         except Exception:
             try:
                 from firebase_service import DEFAULT_CULTURES_SEUILS
-                seuils = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Tomate"])
+                seuils = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Manioc"])
             except Exception:
                 # Fallback ultime au cas où
                 seuils = {
