@@ -1,22 +1,24 @@
 """
-ia_service.py — Classifieur expert agricole à 8 features / 7 classes
-===================================================================
+ia_service.py — Classifieur expert agricole à 7 classes
+=========================================================
 
-Entrées (8 features) :
-  Capteurs ESP32 temps réel :
+Sources de données :
+  Capteurs ESP32 temps réel (mesures actuelles) :
     temperature (°C), humidite_air (%), humidite_sol (%), vitesse_vent (km/h)
-  Prévisions OpenWeather :
-    pluie_prevue_3h (mm), temperature_future (°C), humidite_future (%), vent_future (km/h)
+  OpenWeather (prévisions) :
+    pluie_prevue_3h (mm) — seule donnée sans capteur ESP32
 
 Classes prédites (priorité décroissante) :
-  2 → 🌧️ Alerte Drainage         (pluie prévue > 15 mm)
-  1 → 🏜️ Alerte Sécheresse       (sol < HUM_SOL_MIN)
-  4 → 💧 Alerte Saturation       (sol > HUM_SOL_MAX)
-  5 → ❄️ Alerte Gel / Froid      (temp < TEMP_MIN ou prévue < TEMP_MIN)
-  3 → ☀️ Alerte Évapotranspiration (prévue > TEMP_MAX et vent prévu > VENT_MAX et hum prévue < HUM_AIR_MIN)
-  6 → 🍄 Alerte Risque de Maladies (hum prévue > HUM_AIR_MAX et 18 <= temp prévue <= 26)
-  0 → ✅ Conditions Optimales
+  2 -> Alerte Drainage         (pluie prevue > PLUIE_MAX)
+  1 -> Alerte Secheresse       (sol < HUM_SOL_MIN ET pluie < PLUIE_MIN)
+  4 -> Alerte Saturation       (sol > HUM_SOL_MAX)
+  5 -> Alerte Gel / Froid      (temp ESP32 < TEMP_MIN OU temp future < TEMP_MIN)
+  3 -> Alerte Evapotranspiration (temp ESP32 > TEMP_MAX ET vent > VENT_MAX ET hum_air < HUM_AIR_MIN)
+  6 -> Alerte Risque de Maladies (hum_air > HUM_AIR_MAX ET TEMP_MIN <= temp <= TEMP_MAX)
+  0 -> Conditions Optimales
 """
+
+from datetime import datetime
 
 # ── Métadonnées des 7 classes ────────────────────────────────────────────────
 
@@ -40,26 +42,159 @@ EMOJIS = {
     6: "🍄"
 }
 
-CONSEILS_DETAILLES = {
-    0: "Les conditions actuelles et les prévisions à venir sont optimales pour vos cultures.",
-    1: "L'humidité du sol est basse et aucune pluie n'est prévue. Un arrosage est recommandé tôt le matin ou en soirée.",
-    2: "Précipitations abondantes attendues par météo. Pensez à vérifier le drainage de vos champs et suspendez l'arrosage.",
-    3: "la meteo prévoit de fortes températures, du vent et un air très sec. Risque d'un dessèchement accéléré, surveillez vos cultures.",
-    4: "Le sol est saturé en eau. Risque d'asphyxie des racines. Suspendez toute irrigation.",
-    5: "Baisse critique des températures prévue par la meteo ou mesurée par les capteurs. Risque de gel pour vos cultures.",
-    6: "la meteo prévoit une humidité de l'air très élevée combinée à des températures douces. Risque important de développement de maladies (champignons, mildiou). Inspectez le feuillage."
-}
-
 FEATURES = [
-    "temperature",
-    "humidite_air",
-    "humidite_sol",
-    "vitesse_vent",
-    "pluie_prevue_3h",
-    "temperature_future",
-    "humidite_future",
-    "vent_future",
+    "temperature", "humidite_air", "humidite_sol", "vitesse_vent",
+    "pluie_prevue_3h", "temperature_future", "humidite_future", "vent_future",
 ]
+
+
+# ── Génération des conseils dynamiques ───────────────────────────────────────
+
+def _conseil_dynamique(
+    idx: int,
+    temperature: float,
+    humidite_air: float,
+    humidite_sol: float,
+    vitesse_vent: float,
+    pluie_prevue_3h: float,
+    pluie_min: float,
+    temp_air_min: float,
+    heure_creneau: str = None,
+    mode: str = "maintenant"
+) -> str:
+    """
+    Génère un conseil concret avec les vraies valeurs injectées.
+    mode='maintenant' -> situation actuelle ESP32
+    mode='planning'   -> créneau futur de la journée
+    """
+    if idx == 2:
+        if mode == "planning":
+            return (
+                f"Ouvrez les canaux de drainage avant {heure_creneau} — "
+                f"{pluie_prevue_3h:.0f} mm de pluie arrivent."
+            )
+        return (
+            f"Fortes précipitations imminentes ({pluie_prevue_3h:.0f} mm). "
+            f"Vérifiez le drainage et suspendez immédiatement l'arrosage."
+        )
+
+    elif idx == 1:
+        if pluie_prevue_3h > 0:
+            if mode == "planning":
+                return (
+                    f"Sol sec à {heure_creneau} et pluie prévue ({pluie_prevue_3h:.1f} mm) "
+                    f"insuffisante (besoin : {pluie_min:.0f} mm). Irriguez tôt le matin."
+                )
+            return (
+                f"Sol trop sec ({humidite_sol:.0f}%) et la pluie prévue "
+                f"({pluie_prevue_3h:.1f} mm) est insuffisante (besoin : {pluie_min:.0f} mm). "
+                f"Un arrosage d'appoint est recommandé."
+            )
+        else:
+            if mode == "planning":
+                return (
+                    f"Sol sec prévu à {heure_creneau} et aucune pluie attendue. "
+                    f"Irriguez tôt le matin ou en soirée."
+                )
+            return (
+                f"Sol trop sec ({humidite_sol:.0f}%) et aucune pluie prévue. "
+                f"Arrosez tôt le matin ou en soirée pour éviter l'évaporation."
+            )
+
+    elif idx == 4:
+        if mode == "planning":
+            return f"Sol encore saturé à {heure_creneau} — aucun arrosage sur ce créneau."
+        return (
+            f"Sol saturé en eau ({humidite_sol:.0f}%). "
+            f"Risque d'asphyxie des racines. Arrêtez toute irrigation."
+        )
+
+    elif idx == 5:
+        if mode == "planning":
+            return (
+                f"Température attendue à {temperature:.0f}°C à {heure_creneau}, "
+                f"sous le seuil de {temp_air_min:.0f}°C. Couvrez vos plants cette nuit."
+            )
+        return (
+            f"Température critique ({temperature:.0f}°C), seuil minimal : {temp_air_min:.0f}°C. "
+            f"Risque de gel — protégez vos cultures immédiatement."
+        )
+
+    elif idx == 3:
+        if mode == "planning":
+            return (
+                f"Chaleur ({temperature:.0f}°C) + vent ({vitesse_vent:.0f} km/h) "
+                f"+ air sec ({humidite_air:.0f}%) à {heure_creneau}. "
+                f"Ne gaspillez pas d'eau — tout s'évapore rapidement."
+            )
+        return (
+            f"Chaleur forte ({temperature:.0f}°C), vent ({vitesse_vent:.0f} km/h) "
+            f"et air très sec ({humidite_air:.0f}%). "
+            f"L'eau s'évapore rapidement — évitez d'irriguer maintenant."
+        )
+
+    elif idx == 6:
+        if mode == "planning":
+            return (
+                f"Air très humide ({humidite_air:.0f}%) et température "
+                f"({temperature:.0f}°C) favorable aux champignons à {heure_creneau}. "
+                f"Inspectez le feuillage en soirée."
+            )
+        return (
+            f"Air très humide ({humidite_air:.0f}%) et température "
+            f"({temperature:.0f}°C) idéale pour les pathogènes. "
+            f"Risque de mildiou — inspectez le feuillage dès maintenant."
+        )
+
+    else:  # idx == 0
+        if mode == "planning":
+            return f"Conditions idéales à {heure_creneau} — bon créneau pour irriguer, semer ou traiter."
+        return (
+            "Conditions optimales. Vos cultures se portent bien. "
+            "Continuez le suivi normal."
+        )
+
+
+# ── Moteur de décision principal ─────────────────────────────────────────────
+
+def _appliquer_regles(
+    temperature: float,
+    humidite_air: float,
+    humidite_sol: float,
+    vitesse_vent: float,
+    pluie_prevue_3h: float,
+    temperature_future: float,
+    hum_sol_min: float,
+    hum_sol_max: float,
+    temp_air_min: float,
+    temp_air_max: float,
+    hum_air_min: float,
+    hum_air_max: float,
+    vent_max: float,
+    pluie_max: float,
+    pluie_min: float,
+) -> int:
+    """Applique les règles dans l'ordre de priorité et retourne l'index."""
+    # 1. Pluie abondante -> Drainage
+    if pluie_prevue_3h > pluie_max:
+        return 2
+    # 2. Sol sec + pluie insuffisante -> Secheresse / Irrigation
+    if humidite_sol < hum_sol_min and pluie_prevue_3h < pluie_min:
+        return 1
+    # 3. Sol gorge -> Saturation
+    if humidite_sol > hum_sol_max:
+        return 4
+    # 4. Froid : ESP32 OU prevision OpenWeather (risque nocturne)
+    if temperature < temp_air_min or temperature_future < temp_air_min:
+        return 5
+    # 5. Chaleur + vent + air sec -> Evapotranspiration (ESP32 temps reel)
+    if temperature > temp_air_max and vitesse_vent > vent_max and humidite_air < hum_air_min:
+        return 3
+    # 6. Air sature + temperature dans plage optimale culture -> Maladies (ESP32)
+    if humidite_air > hum_air_max and (temp_air_min <= temperature <= temp_air_max):
+        return 6
+    # 7. Tout va bien
+    return 0
 
 
 # ── API publique ─────────────────────────────────────────────────────────────
@@ -73,12 +208,10 @@ def get_recommandation(
     temperature_future: float = 0.0,
     humidite_future: float = 0.0,
     vent_future: float = 0.0,
-    culture: str = "Tomate",
+    culture: str = "Manioc",
     seuils: dict = None
 ) -> dict:
-    """
-    Prédit la recommandation à partir des 8 features en utilisant le système expert.
-    """
+    """Predit la recommandation en mode temps reel (ESP32 + pluie OpenWeather)."""
     if seuils is None:
         try:
             from firebase_service import get_seuils_culture
@@ -88,15 +221,11 @@ def get_recommandation(
                 from firebase_service import DEFAULT_CULTURES_SEUILS
                 seuils = DEFAULT_CULTURES_SEUILS.get(culture, DEFAULT_CULTURES_SEUILS["Manioc"])
             except Exception:
-                # Fallback ultime au cas où
                 seuils = {
-                    "HUM_SOL_MIN": 40.0,
-                    "HUM_SOL_MAX": 70.0,
-                    "TEMP_AIR_MIN": 15.0,
-                    "TEMP_AIR_MAX": 30.0,
-                    "HUM_AIR_MIN": 50.0,
-                    "HUM_AIR_MAX": 85.0,
-                    "VENT_MAX": 25.0
+                    "HUM_SOL_MIN": 40.0, "HUM_SOL_MAX": 70.0,
+                    "TEMP_AIR_MIN": 15.0, "TEMP_AIR_MAX": 30.0,
+                    "HUM_AIR_MIN": 50.0, "HUM_AIR_MAX": 85.0,
+                    "VENT_MAX": 25.0, "PLUIE_MAX": 15.0, "PLUIE_MIN": 5.0
                 }
 
     hum_sol_min  = float(seuils.get("HUM_SOL_MIN",  40.0))
@@ -109,35 +238,17 @@ def get_recommandation(
     pluie_max    = float(seuils.get("PLUIE_MAX",     15.0))
     pluie_min    = float(seuils.get("PLUIE_MIN",      5.0))
 
-    # LOGIQUE DÉCISIONNELLE DE L'ARBRE (PAR ORDRE DE PRIORITÉ)
-    # 1. Si api_pluie_prevue > PLUIE_MAX -> Code 2 (Alerte Drainage)
-    if pluie_prevue_3h > pluie_max:
-        idx = 2
-    # 2. Sinon, si hum_sol < HUM_SOL_MIN et pluie_prevue_3h < PLUIE_MIN -> Code 1 (Alerte Sécheresse / Irrigation)
-    elif humidite_sol < hum_sol_min and pluie_prevue_3h < pluie_min:
-        idx = 1
-    # 3. Sinon, si hum_sol > HUM_SOL_MAX -> Code 4 (Alerte Saturation)
-    elif humidite_sol > hum_sol_max:
-        idx = 4
-    # 4. Sinon, si temp_air < TEMP_AIR_MIN ou api_temp < TEMP_AIR_MIN -> Code 5 (Alerte Gel)
-    elif temperature < temp_air_min or temperature_future < temp_air_min:
-        idx = 5
-    # 5. Sinon, si api_temp > TEMP_AIR_MAX AND api_vent > VENT_MAX AND api_hum < HUM_AIR_MIN -> Code 3 (Evapotranspiration)
-    elif temperature_future > temp_air_max and vent_future > vent_max and humidite_future < hum_air_min:
-        idx = 3
-    # 6. Sinon, si api_hum > HUM_AIR_MAX AND (18 <= api_temp <= 26) -> Code 6 (Risque phytosanitaire)
-    elif humidite_future > hum_air_max and (18.0 <= temperature_future <= 26.0):
-        idx = 6
-    # 7. Sinon -> Code 0 (Conditions Optimales)
-    else:
-        idx = 0
+    idx = _appliquer_regles(
+        temperature, humidite_air, humidite_sol, vitesse_vent,
+        pluie_prevue_3h, temperature_future,
+        hum_sol_min, hum_sol_max, temp_air_min, temp_air_max,
+        hum_air_min, hum_air_max, vent_max, pluie_max, pluie_min
+    )
 
-    conseil = CONSEILS_DETAILLES[idx]
-    if idx == 1:
-        if pluie_prevue_3h > 0:
-            conseil = f"L'humidité du sol est basse et la pluie prévue ({pluie_prevue_3h:.1f} mm) est insuffisante pour couvrir le besoin minimal ({pluie_min:.1f} mm). Un arrosage d'appoint est recommandé."
-        else:
-            conseil = "L'humidité du sol est basse et aucune pluie n'est prévue. Un arrosage est recommandé tôt le matin ou en soirée."
+    conseil = _conseil_dynamique(
+        idx, temperature, humidite_air, humidite_sol, vitesse_vent,
+        pluie_prevue_3h, pluie_min, temp_air_min, mode="maintenant"
+    )
 
     return {
         "label_idx": idx,
@@ -149,8 +260,103 @@ def get_recommandation(
     }
 
 
+# ── Planning journée — 8 créneaux de 3h ──────────────────────────────────────
+
+def planning_journee(
+    station_id: str,
+    region: str = "Kaolack",
+    seuils: dict = None,
+    humidite_sol_actuelle: float = 50.0,
+) -> list:
+    """
+    Génère les recommandations pour les 8 créneaux de 3h de la journée en cours.
+    - temperature, humidite_air, vitesse_vent, pluie : valeurs OpenWeather (prévisions)
+    - humidite_sol : dernière valeur ESP32 connue (pas de capteur futur)
+    Retourne une liste de dicts : heure + recommandation IA + conseil dynamique.
+    """
+    import weather_service
+
+    try:
+        raw = weather_service.get_crenaux_journee(region=region)
+        if not raw.get("ok"):
+            return []
+        crenaux = raw.get("crenaux", [])
+    except Exception:
+        return []
+
+    if seuils is None:
+        try:
+            from firebase_service import get_seuils_culture, get_station_culture
+            culture = get_station_culture(station_id)
+            seuils = get_seuils_culture(culture)
+        except Exception:
+            seuils = {
+                "HUM_SOL_MIN": 40.0, "HUM_SOL_MAX": 70.0,
+                "TEMP_AIR_MIN": 15.0, "TEMP_AIR_MAX": 30.0,
+                "HUM_AIR_MIN": 50.0, "HUM_AIR_MAX": 85.0,
+                "VENT_MAX": 25.0, "PLUIE_MAX": 15.0, "PLUIE_MIN": 5.0
+            }
+
+    hum_sol_min  = float(seuils.get("HUM_SOL_MIN",  40.0))
+    hum_sol_max  = float(seuils.get("HUM_SOL_MAX",  70.0))
+    temp_air_min = float(seuils.get("TEMP_AIR_MIN", 15.0))
+    temp_air_max = float(seuils.get("TEMP_AIR_MAX", 30.0))
+    hum_air_min  = float(seuils.get("HUM_AIR_MIN",  50.0))
+    hum_air_max  = float(seuils.get("HUM_AIR_MAX",  85.0))
+    vent_max     = float(seuils.get("VENT_MAX",      25.0))
+    pluie_max    = float(seuils.get("PLUIE_MAX",     15.0))
+    pluie_min    = float(seuils.get("PLUIE_MIN",      5.0))
+
+    planning = []
+    heure_actuelle = datetime.now().hour
+
+    for creneau in crenaux:
+        temp      = float(creneau.get("temperature", 25.0))
+        hum_air   = float(creneau.get("humidite",    60.0))
+        vent      = float(creneau.get("vent",        10.0))
+        pluie     = float(creneau.get("pluie",        0.0))
+        heure_str = creneau.get("heure", "00h00")
+
+        # Pour le gel, temperature future = temperature du creneau
+        idx = _appliquer_regles(
+            temperature=temp, humidite_air=hum_air,
+            humidite_sol=humidite_sol_actuelle, vitesse_vent=vent,
+            pluie_prevue_3h=pluie, temperature_future=temp,
+            hum_sol_min=hum_sol_min, hum_sol_max=hum_sol_max,
+            temp_air_min=temp_air_min, temp_air_max=temp_air_max,
+            hum_air_min=hum_air_min, hum_air_max=hum_air_max,
+            vent_max=vent_max, pluie_max=pluie_max, pluie_min=pluie_min
+        )
+
+        conseil = _conseil_dynamique(
+            idx, temp, hum_air, humidite_sol_actuelle, vent,
+            pluie, pluie_min, temp_air_min,
+            heure_creneau=heure_str, mode="planning"
+        )
+
+        # Créneau passé si son heure < heure actuelle
+        try:
+            heure_num = int(heure_str[:2])
+        except Exception:
+            heure_num = 0
+
+        planning.append({
+            "heure":        heure_str,
+            "passe":        heure_num < heure_actuelle,
+            "label_idx":    idx,
+            "label":        LABELS[idx],
+            "emoji":        EMOJIS[idx],
+            "conseil":      conseil,
+            "temperature":  temp,
+            "humidite_air": hum_air,
+            "vitesse_vent": vent,
+            "pluie":        pluie,
+        })
+
+    return planning
+
+
 def get_source_modele() -> str:
-    """Retourne la source du modèle : toujours 'Système Expert'."""
     return "Système Expert"
 
 
@@ -166,51 +372,36 @@ def safe_float(val, default=0.0) -> float:
 # ── Construction du dataset depuis Firebase ──────────────────────────────────
 
 def construire_dataset(station_id: str) -> list:
-    """
-    Fusionne historique capteurs Firebase + données OpenWeather historique.
-    Chaque mesure capteur est jointe à l'entrée OpenWeather la plus proche par date.
-    Sans labellisation (traçabilité brute sans label).
-    """
     from firebase_service import get_historique, get_openweather_historique
 
     capteurs    = get_historique(station_id, limit=2000)
     openweather = get_openweather_historique(station_id)
 
-    # Construire un dictionnaire date -> données OW pour jointure rapide
-    # Les entrées OW sont triées par date YYYY-MM-DD
     ow_par_date = {}
     for ow in openweather:
         if not isinstance(ow, dict):
             continue
         ts = ow.get("timestamp", "")
         if ts:
-            date_cle = ts[:10]  # YYYY-MM-DD
-            ow_par_date[date_cle] = ow
+            ow_par_date[ts[:10]] = ow
 
-    # Trier les dates disponibles pour la recherche par proximité
     dates_ow = sorted(ow_par_date.keys())
 
-    def trouver_ow_proche(timestamp_mesure: str) -> dict:
-        """Trouve l'entrée OW la plus proche par date."""
+    def trouver_ow_proche(ts_mesure: str) -> dict:
         if not dates_ow:
             return {}
-        date_mesure = timestamp_mesure[:10] if timestamp_mesure else ""
+        date_mesure = ts_mesure[:10] if ts_mesure else ""
         if not date_mesure:
             return ow_par_date.get(dates_ow[-1], {})
-        # Chercher la date exacte d'abord
         if date_mesure in ow_par_date:
             return ow_par_date[date_mesure]
-        # Sinon prendre la date OW la plus proche (inférieure ou égale)
-        prev_date = None
+        prev = None
         for d in dates_ow:
             if d <= date_mesure:
-                prev_date = d
+                prev = d
             else:
                 break
-        if prev_date:
-            return ow_par_date[prev_date]
-        # Sinon prendre le plus ancien disponible
-        return ow_par_date.get(dates_ow[0], {})
+        return ow_par_date.get(prev or dates_ow[0], {})
 
     dataset = []
     for mesure in capteurs:
@@ -221,24 +412,16 @@ def construire_dataset(station_id: str) -> list:
         hs  = safe_float(mesure.get("humidite_sol"), 0.0)
         vv  = safe_float(mesure.get("vitesse_vent"), 0.0)
         ts_mesure = mesure.get("timestamp", "")
-
-        # Trouver l'entrée OW la plus proche par date
         prev = trouver_ow_proche(ts_mesure)
-
-        p  = safe_float(prev.get("pluie_prevue_3h"),    0.0)
-        tf = safe_float(prev.get("temperature_future"), t)
-        hf = safe_float(prev.get("humidite_future"),    ha)
-        vf = safe_float(prev.get("vent_future"),        0.0)
-
         dataset.append({
             "temperature":        t,
             "humidite_air":       ha,
             "humidite_sol":       hs,
             "vitesse_vent":       vv,
-            "pluie_prevue_3h":    p,
-            "temperature_future": tf,
-            "humidite_future":    hf,
-            "vent_future":        vf,
+            "pluie_prevue_3h":    safe_float(prev.get("pluie_prevue_3h"),    0.0),
+            "temperature_future": safe_float(prev.get("temperature_future"), t),
+            "humidite_future":    safe_float(prev.get("humidite_future"),    ha),
+            "vent_future":        safe_float(prev.get("vent_future"),        0.0),
             "timestamp":          ts_mesure,
         })
 
@@ -246,127 +429,74 @@ def construire_dataset(station_id: str) -> list:
 
 
 def generer_dataset_sur_firebase(station_id: str) -> dict:
-    """
-    Génère le dataset fusionné depuis Firebase et l'écrit dans
-    stations/{station_id}/dataset.
-    """
     from firebase_service import sauvegarder_dataset
-
     dataset = construire_dataset(station_id)
     if not dataset:
-        return {
-            "succes": False,
-            "message": "Aucun dataset à sauvegarder — historique ou OpenWeather vide.",
-            "nb_entrees": 0,
-        }
-
+        return {"succes": False, "message": "Historique ou OpenWeather vide.", "nb_entrees": 0}
     sauvegarder_dataset(station_id, dataset)
-    return {
-        "succes": True,
-        "message": "Dataset fusionné sauvegardé dans Firebase.",
-        "nb_entrees": len(dataset),
-    }
+    return {"succes": True, "message": "Dataset fusionné sauvegardé.", "nb_entrees": len(dataset)}
 
-
-# ── Ré-entraînement depuis Firebase (Mocké pour Système Expert) ───────────────
 
 def predire_depuis_firebase(station_id: str, region: str = "Kaolack") -> dict:
-    """
-    Prédit la recommandation pour demain en prenant :
-      - la DERNIÈRE mesure réelle ESP32 depuis Firebase
-      - les prévisions OpenWeather actuelles
-    """
     from firebase_service import get_historique, get_station_culture
     import weather_service
 
-    # 1. Dernière mesure capteurs (ESP32)
     historique = get_historique(station_id, limit=1)
     if not historique:
-        return {
-            "erreur": f"Aucune mesure capteur disponible pour {station_id}",
-            "succes": False,
-        }
-    derniere = historique[0]
+        return {"erreur": f"Aucune mesure capteur pour {station_id}", "succes": False}
+    d = historique[0]
+    t   = safe_float(d.get("temperature"),  0.0)
+    ha  = safe_float(d.get("humidite_air"), 0.0)
+    hs  = safe_float(d.get("humidite_sol"), 0.0)
+    vv  = safe_float(d.get("vitesse_vent"), 0.0)
 
-    t   = safe_float(derniere.get("temperature"),  0.0)
-    ha  = safe_float(derniere.get("humidite_air"), 0.0)
-    hs  = safe_float(derniere.get("humidite_sol"), 0.0)
-    vv  = safe_float(derniere.get("vitesse_vent"), 0.0)
-
-    # 2. Prévisions OpenWeather (prochain créneau 3h)
     try:
         snap = weather_service.snapshot_openweather_ia(region=region)
-        p    = safe_float(snap.get("pluie_prevue_3h"),    0.0)
-        tf   = safe_float(snap.get("temperature_future"), t)
-        hf   = safe_float(snap.get("humidite_future"),    ha)
-        vf   = safe_float(snap.get("vent_future"),        0.0)
+        p  = safe_float(snap.get("pluie_prevue_3h"),    0.0)
+        tf = safe_float(snap.get("temperature_future"), t)
+        hf = safe_float(snap.get("humidite_future"),    ha)
+        vf = safe_float(snap.get("vent_future"),        0.0)
     except Exception:
         p, tf, hf, vf = 0.0, t, ha, vv
 
-    # 3. Récupérer la culture
     culture = get_station_culture(station_id)
-
-    # 4. Prédiction immédiate via Système Expert
     reco = get_recommandation(t, ha, hs, vv, p, tf, hf, vf, culture=culture)
-
     return {
-        "succes": True,
-        "station_id": station_id,
-        "culture": culture,
-        "capteurs": {
-            "temperature":  t,
-            "humidite_air": ha,
-            "humidite_sol": hs,
-            "vitesse_vent": vv,
-        },
-        "previsions_meteo": {
-            "pluie_prevue_3h":    p,
-            "temperature_future": tf,
-            "humidite_future":    hf,
-            "vent_future":        vf,
-        },
+        "succes": True, "station_id": station_id, "culture": culture,
+        "capteurs": {"temperature": t, "humidite_air": ha, "humidite_sol": hs, "vitesse_vent": vv},
+        "previsions_meteo": {"pluie_prevue_3h": p, "temperature_future": tf, "humidite_future": hf, "vent_future": vf},
         **reco,
     }
 
 
 def reentainer_modele(station_id: str) -> dict:
-    """
-    (Mocké pour le Système Expert)
-    Génère le dataset brute fusionné et le stocke.
-    """
     dataset = construire_dataset(station_id)
-
     try:
         from firebase_service import sauvegarder_dataset
         if dataset:
             sauvegarder_dataset(station_id, dataset)
     except Exception as e:
-        print(f"⚠️ Impossible de sauvegarder le dataset complet pour {station_id} : {e}")
-
+        print(f"Impossible de sauvegarder dataset pour {station_id} : {e}")
     return {
         "statut": "firebase",
-        "message": "Système expert configuré avec succès et dataset mis à jour.",
+        "message": "Système expert configuré et dataset mis à jour.",
         "nb_entrees": len(dataset),
         "score": 1.0
     }
 
 
-# ── Message vocal agriculteur ────────────────────────────────────────────────
+# ── Message vocal agriculteur ─────────────────────────────────────────────────
 
 def get_message_vocal(
-    nom: str,
-    region: str,
-    temperature: float,
-    humidite_air: float,
-    humidite_sol: float,
-    vitesse_vent: float,
+    nom: str, region: str,
+    temperature: float, humidite_air: float,
+    humidite_sol: float, vitesse_vent: float,
     pluie_prevue_3h: float = 0.0,
     temperature_future: float = 0.0,
     humidite_future: float = 0.0,
     vent_future: float = 0.0,
-    culture: str = "Tomate",
+    culture: str = "Manioc",
 ) -> str:
-    """Génère un message vocal adapté aux agriculteurs peu alphabétisés."""
     reco = get_recommandation(
         temperature, humidite_air, humidite_sol, vitesse_vent,
         pluie_prevue_3h, temperature_future, humidite_future, vent_future,

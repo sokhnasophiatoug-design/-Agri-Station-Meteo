@@ -201,3 +201,60 @@ def save_openweather_to_firebase(db, station_id: str, snapshot: dict):
 
     ref = db.reference(f"stations/{station_id}/openweather_historique")
     ref.push(snapshot)
+
+
+def get_crenaux_journee(region: str = "Kaolack", lat: float = None, lon: float = None) -> dict:
+    """
+    Retourne les créneaux de 3h de la journée en cours (aujourd'hui uniquement).
+    Chaque créneau contient : heure, temperature, humidite, vent, pluie.
+    OpenWeather /forecast donne les données par tranches de 3h.
+    """
+    try:
+        ville = REGION_VILLE.get(region, region)
+        params = {
+            "appid": OPENWEATHER_API_KEY,
+            "units": "metric",
+            "lang":  "fr",
+            "cnt":   16,  # 16 créneaux = 2 jours max, on filtre aujourd'hui
+        }
+        if ville:
+            params["q"] = f"{ville},SN"
+        elif lat and lon:
+            params["lat"] = lat
+            params["lon"] = lon
+        else:
+            params["lat"] = DEFAULT_LAT
+            params["lon"] = DEFAULT_LON
+
+        resp = requests.get(f"{BASE_URL}/forecast", params=params, timeout=10)
+        resp.raise_for_status()
+        raw = resp.json()
+
+        aujourd_hui = datetime.now().strftime("%Y-%m-%d")
+        crenaux = []
+
+        for item in raw.get("list", []):
+            dt_txt = item.get("dt_txt", "")
+            if not dt_txt.startswith(aujourd_hui):
+                continue
+            # Heure au format "09h00"
+            heure_iso = dt_txt[11:16]  # "09:00"
+            heure_str = heure_iso.replace(":", "h")  # "09h00"
+
+            crenaux.append({
+                "heure":       heure_str,
+                "temperature": round(item["main"]["temp"], 1),
+                "humidite":    item["main"]["humidity"],
+                "vent":        round(item["wind"]["speed"] * 3.6, 1),
+                "pluie":       round(float(item.get("rain", {}).get("3h", 0)), 1),
+                "description": item["weather"][0]["description"].capitalize(),
+                "icone":       item["weather"][0]["icon"],
+                "risque_pluie": int(item.get("pop", 0) * 100),
+            })
+
+        return {"ok": True, "crenaux": crenaux, "ville": raw.get("city", {}).get("name", ville)}
+
+    except requests.Timeout:
+        return {"ok": False, "erreur": "Délai dépassé"}
+    except Exception as e:
+        return {"ok": False, "erreur": str(e)}

@@ -699,19 +699,54 @@ def get_ia_status():
 @app.get("/ia/predire/{station_id}", tags=["IA"])
 def predire_auto(station_id: str, region: str = "Kaolack"):
     """
-    Recommandation automatique pour demain — aucun paramètre à passer.
-
-    Le backend va chercher lui-même :
-      1. La DERNIÈRE mesure réelle ESP32 depuis Firebase (temperature, humidite_air, humidite_sol, vitesse_vent)
-      2. Les prévisions OpenWeather actuelles (pluie_prevue_3h, temperature_future, humidite_future, vent_future)
-
-    Puis applique l'arbre de décision et retourne la recommandation.
-    Fonctionne dès la première mesure reçue — aucune attente.
+    Recommandation automatique — aucun paramètre à passer.
+    Le backend va chercher lui-même la dernière mesure ESP32 + prévisions OpenWeather.
     """
     result = ia_service.predire_depuis_firebase(station_id, region=region)
     if not result.get("succes"):
         raise HTTPException(status_code=404, detail=result.get("erreur", "Aucune donnée"))
     return result
+
+
+@app.get("/ia/planning/{station_id}", tags=["IA"])
+def planning_journee(station_id: str, region: str = "Kaolack"):
+    """
+    Retourne les recommandations IA pour les 8 créneaux de 3h de la journée en cours.
+    Utilise :
+      - OpenWeather pour temperature, humidite_air, vent, pluie de chaque créneau
+      - Dernière mesure ESP32 pour humidite_sol (pas de capteur futur)
+    Chaque créneau contient : heure, label, emoji, conseil dynamique, données météo.
+    """
+    # Récupérer la culture et les seuils de la station
+    culture = firebase_service.get_station_culture(station_id)
+    seuils  = firebase_service.get_seuils_culture(culture)
+
+    # Récupérer la dernière humidité du sol mesurée par l'ESP32
+    try:
+        mesures = firebase_service.get_mesures(station_id)
+        humidite_sol = float(mesures.get("humidite_sol", 50.0) or 50.0)
+    except Exception:
+        humidite_sol = 50.0
+
+    planning = ia_service.planning_journee(
+        station_id=station_id,
+        region=region,
+        seuils=seuils,
+        humidite_sol_actuelle=humidite_sol,
+    )
+
+    if not planning:
+        raise HTTPException(
+            status_code=503,
+            detail="Impossible de récupérer les prévisions OpenWeather pour le planning."
+        )
+
+    return {
+        "station_id": station_id,
+        "culture":    culture,
+        "date":       __import__("datetime").datetime.now().strftime("%Y-%m-%d"),
+        "planning":   planning,
+    }
 
 
 @app.post("/ia/dataset/{station_id}", tags=["IA"])
@@ -844,13 +879,41 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
     if not telephone.startswith("+"):
         telephone = "+221" + telephone
 
-    # ── 4. Construire le message SMS ──────────
-    profil_agri = firebase_service.get_profil_agriculteur(station_id)
-    nom_agri = profil_agri.get("nom", "Agriculteur")
-    message = (
-        f"Bonjour {nom_agri}, {reco['label']} : {reco['conseil']} "
-        f"Je t'invite a te connecter pour consulter les nouvelles informations et mieux comprendre la situation."
-    )
+    # ── 4. Construire le message SMS — Option C ──────────────────────────────
+    profil_agri  = firebase_service.get_profil_agriculteur(station_id)
+    nom_agri     = profil_agri.get("nom", "Agriculteur")
+
+    # Situation actuelle (ESP32)
+    ligne_now = f"[Maintenant] {reco['emoji']} {reco['conseil']}"
+
+    # Planning du jour : récupérer les créneaux futurs critiques (idx != 0)
+    try:
+        planning = ia_service.planning_journee(
+            station_id=station_id, region=region,
+            seuils=firebase_service.get_seuils_culture(culture),
+            humidite_sol_actuelle=humidite_sol,
+        )
+        # Garder seulement les créneaux non passés avec une alerte (idx != 0), max 3
+        alertes_jour = [
+            f"• {c['heure']} {c['emoji']} {c['conseil']}"
+            for c in planning
+            if not c.get("passe") and c["label_idx"] != 0
+        ][:3]
+    except Exception:
+        alertes_jour = []
+
+    if alertes_jour:
+        planning_bloc = "Aujourd'hui :\n" + "\n".join(alertes_jour)
+        message = f"Bonjour {nom_agri},\n{ligne_now}\n\n{planning_bloc}"
+    else:
+        message = (
+            f"Bonjour {nom_agri},\n{ligne_now}\n\n"
+            f"Aucune alerte prevue aujourd'hui. Bonne journee !"
+        )
+
+    # Tronquer à 320 caractères (2 SMS GSM)
+    if len(message) > 320:
+        message = message[:317] + "..."
 
     # ── 5. Écrire dans Firebase → ESP32 enverra le SMS ──────────────────────
     firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone, recommandation_id=reco["label_idx"])
