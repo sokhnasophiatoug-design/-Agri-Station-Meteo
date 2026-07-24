@@ -74,64 +74,50 @@ def _conseil_dynamique(
                 f"{pluie_prevue_3h:.0f} mm de pluie arrivent."
             )
         return (
-            f"Fortes précipitations imminentes ({pluie_prevue_3h:.0f} mm). "
-            f"Vérifiez le drainage et suspendez immédiatement l'arrosage."
+            f"Fortes pluies prevues ({pluie_prevue_3h:.0f} mm). "
+            f"Verifiez le drainage et suspendez l'arrosage."
         )
 
     elif idx == 1:
         if pluie_prevue_3h > 0:
             if mode == "planning":
                 return (
-                    f"Sol sec à {heure_creneau} et pluie prévue ({pluie_prevue_3h:.1f} mm) "
-                    f"insuffisante (besoin : {pluie_min:.0f} mm). Irriguez tôt le matin."
+                    f"Sol sec a {heure_creneau} et pluie prevue ({pluie_prevue_3h:.1f} mm) "
+                    f"insuffisante (besoin : {pluie_min:.0f} mm). Irriguez tot le matin."
                 )
             return (
-                f"Sol trop sec ({humidite_sol:.0f}%) et la pluie prévue "
-                f"({pluie_prevue_3h:.1f} mm) est insuffisante (besoin : {pluie_min:.0f} mm). "
-                f"Un arrosage d'appoint est recommandé."
+                f"La pluie prevue ({pluie_prevue_3h:.1f} mm) est insuffisante "
+                f"(besoin : {pluie_min:.0f} mm). Un arrosage d'appoint est recommande."
             )
         else:
             if mode == "planning":
                 return (
-                    f"Sol sec prévu à {heure_creneau} et aucune pluie attendue. "
-                    f"Irriguez tôt le matin ou en soirée."
+                    f"Sol sec prevu a {heure_creneau} et aucune pluie attendue. "
+                    f"Irriguez tot le matin ou en soiree."
                 )
-            return (
-                f"Sol trop sec ({humidite_sol:.0f}%) et aucune pluie prévue. "
-                f"Arrosez tôt le matin ou en soirée pour éviter l'évaporation."
-            )
+            return "Sol trop sec et aucune pluie prevue. Arrosez tot le matin ou en soiree."
 
     elif idx == 4:
         if mode == "planning":
-            return f"Sol encore saturé à {heure_creneau} — aucun arrosage sur ce créneau."
-        return (
-            f"Sol saturé en eau ({humidite_sol:.0f}%). "
-            f"Risque d'asphyxie des racines. Arrêtez toute irrigation."
-        )
+            return f"Sol encore sature a {heure_creneau} — aucun arrosage sur ce creneau."
+        return "Sol sature en eau. Risque d'asphyxie des racines. Arretez toute irrigation."
 
     elif idx == 5:
         if mode == "planning":
             return (
-                f"Température attendue à {temperature:.0f}°C à {heure_creneau}, "
+                f"Temperature prevue a {temperature:.0f}°C a {heure_creneau}, "
                 f"sous le seuil de {temp_air_min:.0f}°C. Couvrez vos plants cette nuit."
             )
-        return (
-            f"Température critique ({temperature:.0f}°C), seuil minimal : {temp_air_min:.0f}°C. "
-            f"Risque de gel — protégez vos cultures immédiatement."
-        )
+        return "Risque de gel detecte par les capteurs. Protegez vos cultures immediatement."
 
     elif idx == 3:
         if mode == "planning":
             return (
                 f"Chaleur ({temperature:.0f}°C) + vent ({vitesse_vent:.0f} km/h) "
-                f"+ air sec ({humidite_air:.0f}%) à {heure_creneau}. "
-                f"Ne gaspillez pas d'eau — tout s'évapore rapidement."
+                f"+ air sec ({humidite_air:.0f}%) a {heure_creneau}. "
+                f"Ne gaspillez pas d'eau — tout s'evapore rapidement."
             )
-        return (
-            f"Chaleur forte ({temperature:.0f}°C), vent ({vitesse_vent:.0f} km/h) "
-            f"et air très sec ({humidite_air:.0f}%). "
-            f"L'eau s'évapore rapidement — évitez d'irriguer maintenant."
-        )
+        return "Chaleur forte, vent et air tres sec. L'eau s'evapore — evitez d'irriguer maintenant."
 
     elif idx == 6:
         if mode == "planning":
