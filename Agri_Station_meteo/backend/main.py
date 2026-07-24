@@ -84,6 +84,7 @@ class SeuilsCultureRequest(BaseModel):
     hum_air_min: float
     hum_air_max: float
     vent_max: float
+    pluie_max: float = 15.0
 
 class TTSRequest(BaseModel):
     texte: str
@@ -1078,7 +1079,8 @@ def update_seuils_culture(culture: str, body: SeuilsCultureRequest):
         "TEMP_AIR_MAX": body.temp_max,
         "HUM_AIR_MIN": body.hum_air_min,
         "HUM_AIR_MAX": body.hum_air_max,
-        "VENT_MAX": body.vent_max
+        "VENT_MAX": body.vent_max,
+        "PLUIE_MAX": body.pluie_max,
     })
     if not ok:
         raise HTTPException(status_code=500, detail="Erreur de mise à jour des seuils de la culture")

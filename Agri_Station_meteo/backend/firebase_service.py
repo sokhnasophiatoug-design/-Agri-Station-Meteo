@@ -562,7 +562,8 @@ DEFAULT_CULTURES_SEUILS = {
         "TEMP_AIR_MAX": 38.0,
         "HUM_AIR_MIN": 40.0,
         "HUM_AIR_MAX": 85.0,
-        "VENT_MAX": 30.0
+        "VENT_MAX": 30.0,
+        "PLUIE_MAX": 20.0
     },
     "Tomate": {
         "HUM_SOL_MIN": 40.0,
@@ -571,7 +572,8 @@ DEFAULT_CULTURES_SEUILS = {
         "TEMP_AIR_MAX": 30.0,
         "HUM_AIR_MIN": 50.0,
         "HUM_AIR_MAX": 85.0,
-        "VENT_MAX": 25.0
+        "VENT_MAX": 25.0,
+        "PLUIE_MAX": 15.0
     },
     "Poivron": {
         "HUM_SOL_MIN": 45.0,
@@ -580,7 +582,8 @@ DEFAULT_CULTURES_SEUILS = {
         "TEMP_AIR_MAX": 32.0,
         "HUM_AIR_MIN": 50.0,
         "HUM_AIR_MAX": 85.0,
-        "VENT_MAX": 20.0
+        "VENT_MAX": 20.0,
+        "PLUIE_MAX": 15.0
     },
     "Aubergine": {
         "HUM_SOL_MIN": 40.0,
@@ -589,7 +592,8 @@ DEFAULT_CULTURES_SEUILS = {
         "TEMP_AIR_MAX": 35.0,
         "HUM_AIR_MIN": 45.0,
         "HUM_AIR_MAX": 80.0,
-        "VENT_MAX": 25.0
+        "VENT_MAX": 25.0,
+        "PLUIE_MAX": 18.0
     },
     "Oignon": {
         "HUM_SOL_MIN": 30.0,
@@ -598,7 +602,8 @@ DEFAULT_CULTURES_SEUILS = {
         "TEMP_AIR_MAX": 32.0,
         "HUM_AIR_MIN": 40.0,
         "HUM_AIR_MAX": 80.0,
-        "VENT_MAX": 30.0
+        "VENT_MAX": 30.0,
+        "PLUIE_MAX": 12.0
     }
 }
 

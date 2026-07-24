@@ -197,35 +197,40 @@ def _page_seuils(stations):
         "HUM_SOL_MIN": 40.0, "HUM_SOL_MAX": 70.0,
         "TEMP_AIR_MIN": 15.0, "TEMP_AIR_MAX": 30.0,
         "HUM_AIR_MIN": 50.0, "HUM_AIR_MAX": 85.0,
-        "VENT_MAX": 25.0
+        "VENT_MAX": 25.0, "PLUIE_MAX": 15.0
     })
 
     with st.form("form_seuils_culture"):
         sc1, sc2 = st.columns(2)
         with sc1:
-            hum_sol_min = st.number_input(" Humidité sol min (%)", value=float(seuils_actuels.get("HUM_SOL_MIN", 40.0)), step=1.0)
-            hum_sol_max = st.number_input(" Humidité sol max (%)", value=float(seuils_actuels.get("HUM_SOL_MAX", 70.0)), step=1.0)
-            temp_min = st.number_input("❄️ Température min air (°C)", value=float(seuils_actuels.get("TEMP_AIR_MIN", 15.0)), step=0.5)
-            temp_max = st.number_input(" Température max air (°C)", value=float(seuils_actuels.get("TEMP_AIR_MAX", 30.0)), step=0.5)
+            hum_sol_min  = st.number_input(" Humidité sol min (%)",              value=float(seuils_actuels.get("HUM_SOL_MIN",  40.0)), step=1.0)
+            hum_sol_max  = st.number_input(" Humidité sol max (%)",              value=float(seuils_actuels.get("HUM_SOL_MAX",  70.0)), step=1.0)
+            temp_min     = st.number_input("❄️ Température min air (°C)",        value=float(seuils_actuels.get("TEMP_AIR_MIN", 15.0)), step=0.5)
+            temp_max     = st.number_input(" Température max air (°C)",          value=float(seuils_actuels.get("TEMP_AIR_MAX", 30.0)), step=0.5)
         with sc2:
-            hum_air_min = st.number_input(" Humidité air min (%)", value=float(seuils_actuels.get("HUM_AIR_MIN", 50.0)), step=1.0)
-            hum_air_max = st.number_input(" Humidité air max (%)", value=float(seuils_actuels.get("HUM_AIR_MAX", 85.0)), step=1.0)
-            vent_max = st.number_input(" Vitesse vent max (km/h)", value=float(seuils_actuels.get("VENT_MAX", 25.0)), step=1.0)
-            
+            hum_air_min  = st.number_input(" Humidité air min (%)",              value=float(seuils_actuels.get("HUM_AIR_MIN",  50.0)), step=1.0)
+            hum_air_max  = st.number_input(" Humidité air max (%)",              value=float(seuils_actuels.get("HUM_AIR_MAX",  85.0)), step=1.0)
+            vent_max     = st.number_input(" Vitesse vent max (km/h)",           value=float(seuils_actuels.get("VENT_MAX",     25.0)), step=1.0)
+            pluie_max    = st.number_input("🌧️ Pluie max déclenchant drainage (mm)",
+                                           value=float(seuils_actuels.get("PLUIE_MAX", 15.0)), step=1.0,
+                                           help="Au-delà de ce seuil de pluie prévue (sur 3h), une alerte Drainage est déclenchée.")
+
         submitted = st.form_submit_button(f" Enregistrer les seuils pour : {selected_culture}", width='stretch')
 
     if submitted:
         ok, resp = _post(f"/seuils/culture/{selected_culture}", {
             "hum_sol_min": hum_sol_min,
             "hum_sol_max": hum_sol_max,
-            "temp_min": temp_min,
-            "temp_max": temp_max,
+            "temp_min":    temp_min,
+            "temp_max":    temp_max,
             "hum_air_min": hum_air_min,
             "hum_air_max": hum_air_max,
-            "vent_max": vent_max
+            "vent_max":    vent_max,
+            "pluie_max":   pluie_max,
         })
         if ok: st.success(f" Seuils pour la culture {selected_culture} mis à jour avec succès !")
         else:  st.error(f" Erreur : {resp.get('detail', 'Inconnue')}")
+
 
 
 # Page Système Expert supprimée (les mises à jour de dataset se font automatiquement)
