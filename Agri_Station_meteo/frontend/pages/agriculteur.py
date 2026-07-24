@@ -267,9 +267,9 @@ def _page_accueil(station_id, nom, station_nom, region):
                 f"</div>"
                 # Données météo (compact)
                 f"<div style='text-align:right;font-size:0.72rem;color:#2e7d32;font-weight:600;white-space:nowrap;'>"
-                f"{creneau.get('temperature','--')}°C<br>"
-                f"{creneau.get('vitesse_vent','--')} km/h<br>"
-                f"{creneau.get('pluie','--')} mm"
+                f"🌡️ {creneau.get('temperature','--')}°C<br>"
+                f"💨 {creneau.get('vitesse_vent','--')} km/h<br>"
+                f"🌧️ {creneau.get('pluie','--')} mm"
                 f"</div>"
                 f"</div>"
             )
