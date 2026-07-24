@@ -134,7 +134,7 @@ def _conseil_dynamique(
 
     else:  # idx == 0
         if mode == "planning":
-            return f"Conditions idéales à {heure_creneau} — bon créneau pour irriguer, semer ou traiter."
+            return f"Toutes les conditions sont favorables a {heure_creneau}."
         return (
             "Conditions optimales. Vos cultures se portent bien. "
             "Continuez le suivi normal."
