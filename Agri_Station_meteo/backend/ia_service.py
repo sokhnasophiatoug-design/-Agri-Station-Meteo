@@ -107,13 +107,18 @@ def get_recommandation(
     hum_air_max  = float(seuils.get("HUM_AIR_MAX",  85.0))
     vent_max     = float(seuils.get("VENT_MAX",      25.0))
     pluie_max    = float(seuils.get("PLUIE_MAX",     15.0))
+    pluie_min    = float(seuils.get("PLUIE_MIN",      2.0))
+
+    # Seuil sol "limite basse" = entre HUM_SOL_MIN et HUM_SOL_MIN + 10%
+    hum_sol_limite = hum_sol_min + 10.0
 
     # LOGIQUE DÉCISIONNELLE DE L'ARBRE (PAR ORDRE DE PRIORITÉ)
     # 1. Si api_pluie_prevue > PLUIE_MAX -> Code 2 (Alerte Drainage)
     if pluie_prevue_3h > pluie_max:
         idx = 2
-    # 2. Sinon, si hum_sol < HUM_SOL_MIN -> Code 1 (Alerte Sécheresse)
-    elif humidite_sol < hum_sol_min:
+    # 2. Sinon, si hum_sol < HUM_SOL_MIN
+    #    OU si sol en limite basse ET pluie prévue < PLUIE_MIN -> Code 1 (Alerte Sécheresse)
+    elif humidite_sol < hum_sol_min or (humidite_sol < hum_sol_limite and pluie_prevue_3h < pluie_min):
         idx = 1
     # 3. Sinon, si hum_sol > HUM_SOL_MAX -> Code 4 (Alerte Saturation)
     elif humidite_sol > hum_sol_max:
