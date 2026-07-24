@@ -556,15 +556,15 @@ def get_profil_agriculteur(station_id: str) -> dict:
 
 DEFAULT_CULTURES_SEUILS = {
     "Manioc": {
-        "HUM_SOL_MIN": 30.0,
-        "HUM_SOL_MAX": 75.0,
-        "TEMP_AIR_MIN": 18.0,
-        "TEMP_AIR_MAX": 38.0,
-        "HUM_AIR_MIN": 40.0,
-        "HUM_AIR_MAX": 85.0,
-        "VENT_MAX": 30.0,
-        "PLUIE_MAX": 20.0,
-        "PLUIE_MIN": 5.0
+        "HUM_SOL_MIN":  50.0,
+        "HUM_SOL_MAX":  75.0,
+        "TEMP_AIR_MIN": 25.0,
+        "TEMP_AIR_MAX": 32.0,
+        "HUM_AIR_MIN":  60.0,
+        "HUM_AIR_MAX":  80.0,
+        "VENT_MAX":     27.5,
+        "PLUIE_MAX":    20.0,
+        "PLUIE_MIN":     5.0
     },
     "Tomate": {
         "HUM_SOL_MIN": 40.0,
