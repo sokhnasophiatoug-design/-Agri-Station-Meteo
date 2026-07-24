@@ -172,156 +172,132 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.caption(f"Derniere mesure : {ts} &nbsp;·&nbsp; Culture : **{culture}**")
 
 
-    # ── Recommandation IA + Timeline Planning ────────────────────────────────
-    st.markdown("#### 🤖 Assistant Agricole IA")
+    # ── Planning du Jour + Conseil Actuel (une seule vue unifiée) ────────────
+    st.markdown("#### Planning de la Journee")
 
     if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
-        # --- PARTIE 1 : Situation actuelle (ESP32) ---
+        # Recommandation ESP32 (situation actuelle)
         reco = _post("/recommandation", {
             "temperature": temp, "humidite_air": hum_air,
             "humidite_sol": hum_sol, "vitesse_vent": vent,
             "nom": nom, "region": region, "culture": culture
         })
 
-        # --- PARTIE 2 : Planning du jour (OpenWeather) ---
+        # Planning du jour — créneaux OpenWeather
         planning_data = _get(f"/ia/planning/{station_id}?region={region}", default={"planning": []})
         planning = planning_data.get("planning", [])
 
-        # --- Couleur selon index ---
+        # Couleurs par type d'alerte (fond blanc, bordure colorée)
         COULEURS = {
-            0: ("#00d97e", "#003d20", "rgba(0,217,126,0.1)"),
-            1: ("#f5a623", "#3d2800", "rgba(245,166,35,0.12)"),
-            2: ("#4fc3f7", "#003952", "rgba(79,195,247,0.12)"),
-            3: ("#ff7043", "#3d1400", "rgba(255,112,67,0.12)"),
-            4: ("#29b6f6", "#003952", "rgba(41,182,246,0.12)"),
-            5: ("#b0bec5", "#1a2a30", "rgba(176,190,197,0.12)"),
-            6: ("#ce93d8", "#2d003d", "rgba(206,147,216,0.12)"),
+            0: ("#2e7d32", "#f0faf1"),   # vert
+            1: ("#e65100", "#fff8f0"),   # orange
+            2: ("#0277bd", "#f0f8ff"),   # bleu
+            3: ("#bf360c", "#fff3f0"),   # rouge-orangé
+            4: ("#01579b", "#f0f7ff"),   # bleu foncé
+            5: ("#546e7a", "#f5f7f8"),   # gris bleuté
+            6: ("#6a1b9a", "#fdf4ff"),   # violet
         }
 
+        heure_now = datetime.now().hour
+
+        # ── Timeline unifiée : "Maintenant" (ESP32) + créneaux du jour ──
+        html_tl = (
+            "<div style='background:#fff;border-radius:14px;border:1px solid #e2e8f0;"
+            "overflow:hidden;margin-bottom:16px;'>"
+        )
+
+        # Slot "Maintenant" — données ESP32
         if reco:
-            idx_now  = reco.get("label_idx", 0)
-            c_now    = COULEURS.get(idx_now, COULEURS[0])
-
-            # Trouver la prédiction du créneau actuel pour confirmation
-            heure_now = datetime.now().hour
-            pred_idx  = idx_now  # par défaut pas de créneau futur trouvé
-            statut_confirmation = None
-            for c in planning:
-                try:
-                    h = int(c["heure"][:2])
-                except Exception:
-                    h = -1
-                if h <= heure_now:
-                    pred_idx = c["label_idx"]
-                    break
-
-            if pred_idx == idx_now:
-                if idx_now == 0:
-                    statut_confirmation = ("🟢", "#00d97e", "CONFIRMÉ", "ESP32 et météo indiquent des conditions optimales")
-                else:
-                    statut_confirmation = ("🔴", "#ff5252", "ALERTE RENFORCÉE", "ESP32 et météo signalent le même problème")
-            else:
-                if idx_now == 0 and pred_idx != 0:
-                    statut_confirmation = ("🟡", "#f5a623", "DIVERGENCE", "Capteurs OK mais la météo prévoit un risque")
-                else:
-                    statut_confirmation = ("🟡", "#f5a623", "SURVEILLANCE", "Situation évolutive — restez attentif")
-
-            # Bloc situation actuelle
-            badge_confirm = ""
-            if statut_confirmation:
-                ic, col, lab, desc = statut_confirmation
-                badge_confirm = (
-                    f"<div style='display:flex;align-items:center;gap:8px;"
-                    f"background:rgba(255,255,255,0.05);border-radius:8px;"
-                    f"padding:6px 12px;margin-top:10px;'>"
-                    f"<span style='font-size:1.1rem'>{ic}</span>"
-                    f"<span style='color:{col};font-weight:800;font-size:0.8rem'>{lab}</span>"
-                    f"<span style='color:#a0aec0;font-size:0.75rem'>— {esc(desc)}</span>"
-                    f"</div>"
-                )
-
-            render_html(
-                f"<div style='background:{c_now[2]};border-left:4px solid {c_now[0]};"
-                f"border-radius:12px;padding:16px 18px;margin-bottom:12px;'>"
-                f"<div style='font-size:0.72rem;color:{c_now[0]};font-weight:800;"
-                f"letter-spacing:0.08em;margin-bottom:6px'>📡 MAINTENANT — {datetime.now().strftime('%H:%M')}</div>"
-                f"<div style='font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:4px'>"
-                f"{esc(reco.get('emoji',''))} {esc(reco.get('label',''))}</div>"
-                f"<div style='color:#cbd5e0;font-size:0.85rem;line-height:1.5'>{esc(reco.get('conseil',''))}</div>"
-                + badge_confirm +
+            idx_now = reco.get("label_idx", 0)
+            col_now, bg_now = COULEURS.get(idx_now, COULEURS[0])
+            html_tl += (
+                f"<div style='display:flex;align-items:flex-start;gap:14px;"
+                f"padding:14px 18px;background:{bg_now};"
+                f"border-left:4px solid {col_now};border-bottom:1px solid #e2e8f0;'>"
+                # Heure
+                f"<div style='min-width:90px;'>"
+                f"<div style='font-size:0.75rem;font-weight:800;color:{col_now};"
+                f"letter-spacing:0.06em;'>MAINTENANT</div>"
+                f"<div style='font-size:0.72rem;color:#718096;'>{datetime.now().strftime('%H:%M')} — Capteurs</div>"
+                f"</div>"
+                # Alerte + conseil
+                f"<div style='flex:1;'>"
+                f"<div style='font-size:0.92rem;font-weight:700;color:#1a202c;margin-bottom:3px;'>"
+                f"{esc(reco.get('label', ''))}</div>"
+                f"<div style='font-size:0.82rem;color:#4a5568;line-height:1.5;'>"
+                f"{esc(reco.get('conseil', ''))}</div>"
+                f"</div>"
                 f"</div>"
             )
 
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("🔊 Écouter le conseil", width='stretch', key="btn_tts"):
-                    try:
-                        resp = http_post(f"{BACKEND}/tts",
-                                     json={"texte": reco.get("message_vocal", reco.get("conseil", "")),
-                                         "lent": False}, timeout=15)
-                        if resp.status_code == 200:
-                            st.audio(resp.content, format="audio/mp3")
-                        else:
-                            st.error("Erreur lors de la generation audio")
-                    except Exception as e:
-                        st.error(f"Service vocal indisponible : {e}")
+        # Slots du jour — données OpenWeather
+        for creneau in planning:
+            idx_c   = creneau.get("label_idx", 0)
+            col_c, bg_c = COULEURS.get(idx_c, COULEURS[0])
+            passe   = creneau.get("passe", False)
+            heure_c = creneau.get("heure", "")
+            try:
+                h_c      = int(heure_c[:2])
+                en_cours = (h_c <= heure_now < h_c + 3)
+            except Exception:
+                en_cours = False
 
-        else:
-            st.info("Recommandation IA indisponible — vérifiez le backend.")
+            opacity  = "0.45" if passe else "1"
+            border_l = f"4px solid {col_c}" if en_cours else f"3px solid {col_c}"
+            bg_slot  = bg_c if not passe else "#fafafa"
+            marker   = " (en cours)" if en_cours else ""
 
-        # --- PARTIE 2 : Timeline du jour ---
-        if planning:
-            st.markdown("#### 📅 Planning de la Journée")
-            heure_now = datetime.now().hour
+            html_tl += (
+                f"<div style='display:flex;align-items:flex-start;gap:14px;"
+                f"padding:12px 18px;background:{bg_slot};"
+                f"border-left:{border_l};border-bottom:1px solid #e2e8f0;"
+                f"opacity:{opacity};'>"
+                # Heure
+                f"<div style='min-width:90px;'>"
+                f"<div style='font-size:0.82rem;font-weight:700;color:{col_c};'>"
+                f"{esc(heure_c)}{marker}</div>"
+                f"<div style='font-size:0.7rem;color:#a0aec0;'>Prevision meteo</div>"
+                f"</div>"
+                # Alerte + conseil
+                f"<div style='flex:1;'>"
+                f"<div style='font-size:0.88rem;font-weight:700;color:#1a202c;margin-bottom:3px;'>"
+                f"{esc(creneau.get('label', ''))}</div>"
+                f"<div style='font-size:0.8rem;color:#4a5568;line-height:1.5;'>"
+                f"{esc(creneau.get('conseil', ''))}</div>"
+                f"</div>"
+                # Données météo (compact)
+                f"<div style='text-align:right;font-size:0.72rem;color:#a0aec0;white-space:nowrap;'>"
+                f"{creneau.get('temperature','--')}°C<br>"
+                f"{creneau.get('vitesse_vent','--')} km/h<br>"
+                f"{creneau.get('pluie','--')} mm"
+                f"</div>"
+                f"</div>"
+            )
 
-            html_timeline = "<div style='display:flex;flex-direction:column;gap:6px;'>"
-            for creneau in planning:
-                idx_c   = creneau.get("label_idx", 0)
-                c_col   = COULEURS.get(idx_c, COULEURS[0])
-                passe   = creneau.get("passe", False)
-                heure_c = creneau.get("heure", "")
-                # Créneau en cours
+        html_tl += "</div>"
+        render_html(html_tl)
+
+        # ── Bouton écouter le conseil actuel ──
+        if reco:
+            if st.button("Ecouter le conseil", width='stretch', key="btn_tts"):
                 try:
-                    h_c = int(heure_c[:2])
-                    en_cours = (h_c <= heure_now < h_c + 3)
-                except Exception:
-                    en_cours = False
+                    resp = http_post(
+                        f"{BACKEND}/tts",
+                        json={"texte": reco.get("message_vocal", reco.get("conseil", "")), "lent": False},
+                        timeout=15
+                    )
+                    if resp.status_code == 200:
+                        st.audio(resp.content, format="audio/mp3")
+                    else:
+                        st.error("Erreur lors de la generation audio")
+                except Exception as e:
+                    st.error(f"Service vocal indisponible : {e}")
 
-                opacity   = "0.4" if passe else "1"
-                border_w  = "3px" if en_cours else "2px"
-                bg_extra  = f"border:2px solid {c_col[0]};" if en_cours else ""
-
-                html_timeline += (
-                    f"<div style='display:flex;align-items:flex-start;gap:12px;"
-                    f"opacity:{opacity};padding:10px 14px;"
-                    f"background:{c_col[2]};border-left:{border_w} solid {c_col[0]};"
-                    f"border-radius:10px;{bg_extra}'>"
-                    # Heure
-                    f"<div style='min-width:52px;font-size:0.82rem;font-weight:800;"
-                    f"color:{c_col[0]};padding-top:2px'>{esc(heure_c)}"
-                    + (" <span style='font-size:0.6rem'>▶</span>" if en_cours else "") +
-                    f"</div>"
-                    # Contenu
-                    f"<div style='flex:1'>"
-                    f"<div style='font-size:0.88rem;font-weight:700;color:#e2e8f0;margin-bottom:2px'>"
-                    f"{esc(creneau.get('emoji',''))} {esc(creneau.get('label',''))}</div>"
-                    f"<div style='font-size:0.78rem;color:#a0aec0;line-height:1.4'>{esc(creneau.get('conseil',''))}</div>"
-                    f"</div>"
-                    # Mini données météo
-                    f"<div style='text-align:right;font-size:0.7rem;color:#718096;white-space:nowrap'>"
-                    f"🌡️ {creneau.get('temperature','--')}°C<br>"
-                    f"💨 {creneau.get('vitesse_vent','--')} km/h<br>"
-                    f"🌧️ {creneau.get('pluie','--')} mm"
-                    f"</div>"
-                    f"</div>"
-                )
-            html_timeline += "</div>"
-            render_html(html_timeline)
-        else:
-            st.info("Planning du jour indisponible — OpenWeather inaccessible.")
+        if not planning:
+            st.info("Previsions du jour indisponibles — OpenWeather inaccessible.")
 
     else:
-        st.info("Données capteurs insuffisantes pour générer une recommandation.")
+        st.info("Donnees capteurs insuffisantes pour generer une recommandation.")
 
     render_html("<div class='footer'>Station Meteo Agricole · Reseau IoT Senegal · USSEIN</div>")
 
