@@ -197,7 +197,7 @@ def _page_seuils(stations):
         "HUM_SOL_MIN": 40.0, "HUM_SOL_MAX": 70.0,
         "TEMP_AIR_MIN": 15.0, "TEMP_AIR_MAX": 30.0,
         "HUM_AIR_MIN": 50.0, "HUM_AIR_MAX": 85.0,
-        "VENT_MAX": 25.0, "PLUIE_MAX": 15.0, "PLUIE_MIN": 2.0
+        "VENT_MAX": 25.0, "PLUIE_MAX": 15.0, "PLUIE_MIN": 5.0
     })
 
     with st.form("form_seuils_culture"):
@@ -207,9 +207,6 @@ def _page_seuils(stations):
             hum_sol_max  = st.number_input(" Humidité sol max (%)",              value=float(seuils_actuels.get("HUM_SOL_MAX",  70.0)), step=1.0)
             temp_min     = st.number_input("❄️ Température min air (°C)",        value=float(seuils_actuels.get("TEMP_AIR_MIN", 15.0)), step=0.5)
             temp_max     = st.number_input(" Température max air (°C)",          value=float(seuils_actuels.get("TEMP_AIR_MAX", 30.0)), step=0.5)
-            pluie_min    = st.number_input("🌦️ Pluie min attendue (mm)",
-                                           value=float(seuils_actuels.get("PLUIE_MIN", 2.0)), step=0.5,
-                                           help="En dessous de ce seuil de pluie prévue (sur 3h), et si le sol est en limite basse, une alerte Sécheresse est déclenchée.")
         with sc2:
             hum_air_min  = st.number_input(" Humidité air min (%)",              value=float(seuils_actuels.get("HUM_AIR_MIN",  50.0)), step=1.0)
             hum_air_max  = st.number_input(" Humidité air max (%)",              value=float(seuils_actuels.get("HUM_AIR_MAX",  85.0)), step=1.0)
@@ -217,6 +214,9 @@ def _page_seuils(stations):
             pluie_max    = st.number_input("🌧️ Pluie max déclenchant drainage (mm)",
                                            value=float(seuils_actuels.get("PLUIE_MAX", 15.0)), step=1.0,
                                            help="Au-delà de ce seuil de pluie prévue (sur 3h), une alerte Drainage est déclenchée.")
+            pluie_min    = st.number_input("🌧️ Pluie min requise (mm)",
+                                           value=float(seuils_actuels.get("PLUIE_MIN", 5.0)), step=1.0,
+                                           help="En dessous de ce seuil de pluie prévue, la pluie est jugée insuffisante pour les besoins de la culture et l'arrosage reste conseillé si le sol est sec.")
 
         submitted = st.form_submit_button(f" Enregistrer les seuils pour : {selected_culture}", width='stretch')
 
