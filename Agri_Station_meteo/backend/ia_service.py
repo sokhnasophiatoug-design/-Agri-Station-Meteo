@@ -63,10 +63,24 @@ def _conseil_dynamique(
     mode: str = "maintenant"
 ) -> str:
     """
-    Génère un conseil concret avec les vraies valeurs injectées.
-    mode='maintenant' -> situation actuelle ESP32
+    Génère un conseil concret adapté à la situation.
+    mode='maintenant' -> situation actuelle ESP32, action adaptée à l'heure
     mode='planning'   -> créneau futur de la journée
     """
+    # Heure actuelle (utilisée uniquement en mode maintenant)
+    h = datetime.now().hour
+
+    def _action_irrigation_maintenant() -> str:
+        """Retourne l'action d'irrigation adaptée à l'heure actuelle."""
+        if 5 <= h < 10:
+            return "Irriguez maintenant — c'est le meilleur moment de la journee."
+        elif 10 <= h < 17:
+            return "Evitez d'irriguer sous la chaleur — attendez 17h30."
+        elif 17 <= h < 21:
+            return "Irriguez maintenant — les temperatures sont plus fraiches."
+        else:
+            return "Irriguez ce matin des le lever du soleil."
+
     if idx == 2:
         if mode == "planning":
             return (
@@ -75,7 +89,7 @@ def _conseil_dynamique(
             )
         return (
             f"Fortes pluies prevues ({pluie_prevue_3h:.0f} mm). "
-            f"Verifiez le drainage et suspendez l'arrosage."
+            f"Verifiez le drainage et suspendez l'arrosage immediatement."
         )
 
     elif idx == 1:
@@ -86,8 +100,8 @@ def _conseil_dynamique(
                     f"insuffisante (besoin : {pluie_min:.0f} mm). Irriguez tot le matin."
                 )
             return (
-                f"La pluie prevue ({pluie_prevue_3h:.1f} mm) est insuffisante "
-                f"(besoin : {pluie_min:.0f} mm). Un arrosage d'appoint est recommande."
+                f"La pluie prevue ({pluie_prevue_3h:.1f} mm) ne suffira pas "
+                f"(besoin : {pluie_min:.0f} mm). {_action_irrigation_maintenant()}"
             )
         else:
             if mode == "planning":
@@ -95,7 +109,7 @@ def _conseil_dynamique(
                     f"Sol sec prevu a {heure_creneau} et aucune pluie attendue. "
                     f"Irriguez tot le matin ou en soiree."
                 )
-            return "Sol trop sec et aucune pluie prevue. Arrosez tot le matin ou en soiree."
+            return f"Sol trop sec, aucune pluie prevue. {_action_irrigation_maintenant()}"
 
     elif idx == 4:
         if mode == "planning":
@@ -108,7 +122,9 @@ def _conseil_dynamique(
                 f"Temperature prevue a {temperature:.0f}°C a {heure_creneau}, "
                 f"sous le seuil de {temp_air_min:.0f}°C. Couvrez vos plants cette nuit."
             )
-        return "Risque de gel detecte par les capteurs. Protegez vos cultures immediatement."
+        if h >= 17 or h < 8:
+            return "Temperature sous le seuil. Couvrez vos plants avant de dormir."
+        return "Temperature sous le seuil. Protegez vos cultures des maintenant."
 
     elif idx == 3:
         if mode == "planning":
@@ -122,23 +138,17 @@ def _conseil_dynamique(
     elif idx == 6:
         if mode == "planning":
             return (
-                f"Air très humide ({humidite_air:.0f}%) et température "
-                f"({temperature:.0f}°C) favorable aux champignons à {heure_creneau}. "
-                f"Inspectez le feuillage en soirée."
+                f"Air tres humide et temperature favorable aux champignons a {heure_creneau}. "
+                f"Inspectez le feuillage en soiree."
             )
-        return (
-            f"Air très humide ({humidite_air:.0f}%) et température "
-            f"({temperature:.0f}°C) idéale pour les pathogènes. "
-            f"Risque de mildiou — inspectez le feuillage dès maintenant."
-        )
+        if h >= 16:
+            return "Air tres humide et temperature propice aux maladies. Inspectez le feuillage maintenant."
+        return "Air tres humide et temperature propice aux maladies. Inspectez le feuillage ce soir."
 
     else:  # idx == 0
         if mode == "planning":
             return f"Toutes les conditions sont favorables a {heure_creneau}."
-        return (
-            "Conditions optimales. Vos cultures se portent bien. "
-            "Continuez le suivi normal."
-        )
+        return "Conditions optimales. Vos cultures se portent bien. Continuez le suivi normal."
 
 
 # ── Moteur de décision principal ─────────────────────────────────────────────
