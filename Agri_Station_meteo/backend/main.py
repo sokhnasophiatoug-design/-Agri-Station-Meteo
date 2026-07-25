@@ -279,17 +279,45 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
             nouvelle_reco   = reco["label_idx"]
             if reco_precedente != nouvelle_reco:
                 profil_agri = firebase_service.get_profil_agriculteur(station_id)
-                nom_agri = profil_agri.get("nom", "Agriculteur")
-                corps = (
-                    f"Bonjour {nom_agri}, {reco['label']} : {reco['conseil']} "
-                    f"Je t'invite a te connecter pour consulter les nouvelles informations et mieux comprendre la situation."
-                )
+                nom_agri    = profil_agri.get("nom", "Agriculteur")
+
+                # ── Format Option C : situation actuelle + planning du jour ──
+                ligne_now = f"[Maintenant] {reco['emoji']} {reco['conseil']}"
+
+                try:
+                    planning = ia_service.planning_journee(
+                        station_id=station_id,
+                        region="Kaolack",
+                        seuils=firebase_service.get_seuils_culture(culture),
+                        humidite_sol_actuelle=float(body.humidite_sol or 50.0),
+                    )
+                    alertes_jour = [
+                        f"- {c['heure']} {c['emoji']} {c['conseil']}"
+                        for c in planning
+                        if not c.get("passe") and c["label_idx"] != 0
+                    ][:3]
+                except Exception:
+                    alertes_jour = []
+
+                if alertes_jour:
+                    planning_bloc = "Aujourd'hui :\n" + "\n".join(alertes_jour)
+                    corps = f"Bonjour {nom_agri},\n{ligne_now}\n\n{planning_bloc}"
+                else:
+                    corps = (
+                        f"Bonjour {nom_agri},\n{ligne_now}\n\n"
+                        f"Aucune alerte prevue aujourd'hui."
+                    )
+
+                # Tronquer a 320 caracteres (2 SMS GSM)
+                if len(corps) > 320:
+                    corps = corps[:317] + "..."
+
                 firebase_service.ecrire_sms_a_envoyer(station_id, corps, telephone, recommandation_id=nouvelle_reco)
                 sms_statut = "ok"
-                print(f"[PUSH] SMS écrit pour {station_id} (changement: {reco_precedente} -> {nouvelle_reco})")
+                print(f"[PUSH] SMS Option C ecrit pour {station_id} (changement: {reco_precedente} -> {nouvelle_reco})")
             else:
                 sms_statut = "unchanged"
-                print(f"[PUSH] Recommandation inchangée ({nouvelle_reco}), SMS non envoyé pour {station_id}")
+                print(f"[PUSH] Recommandation inchangee ({nouvelle_reco}), SMS non envoye pour {station_id}")
 
         # Sauvegarder la prédiction courante
         firebase_service.sauvegarder_prediction_courante(

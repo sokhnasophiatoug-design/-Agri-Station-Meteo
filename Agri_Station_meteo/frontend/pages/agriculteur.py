@@ -81,9 +81,16 @@ def _calculer_alertes(mesures, seuils):
 
 def _page_accueil(station_id, nom, station_nom, region):
     culture = st.session_state.get("culture", "Manioc")
-    
+
+    # ── Auto-refresh toutes les 30 minutes (sync avec envoi ESP32) ──────────
+    # Le navigateur rechargera automatiquement la page après 1800 secondes
+    st.markdown(
+        '<meta http-equiv="refresh" content="1800">',
+        unsafe_allow_html=True
+    )
+
     # ── Chargement de toutes les données en premier ──
-    with st.spinner("Chargement des données..."):
+    with st.spinner("Chargement des donnees..."):
         meteo      = _get(f"/meteo-actuelle?region={region}", default={"ok": False})
         mesures    = _get(f"/mesures/{station_id}", default={})
         previsions = _get(f"/previsions/{station_id}?region={region}", default={"ok": False})
