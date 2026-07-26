@@ -84,14 +84,17 @@ def _conseil_dynamique(
     if idx == 2:
         if mode == "planning":
             return (
-                f"Ouvrez les canaux de drainage avant {heure_creneau} — "
-                f"{pluie_prevue_3h:.0f} mm de pluie prevus. "
-                f"Un exces d'eau provoque l'asphyxie racinaire et le lessivage des nutriments."
+                f"{pluie_prevue_3h:.0f} mm de pluie prevus avant {heure_creneau}. "
+                f"Debouchez vos canaux et creusez des sillons entre les rangs "
+                f"pour que l'eau puisse s'ecouler librement hors de la parcelle. "
+                f"Un sol gorge asphyxie les racines et lessive les nutriments."
             )
         return (
             f"Fortes pluies prevues ({pluie_prevue_3h:.0f} mm). "
-            f"Verifiez le drainage : un sol gorge d'eau asphyxie les racines "
-            f"et lessive les nutriments vers les nappes phreatiques."
+            f"Agissez maintenant : debouchez vos canaux d'ecoulement, "
+            f"creusez des sillons entre les rangs si l'eau stagne, "
+            f"et ouvrez les sorties d'eau en bordure de parcelle. "
+            f"Un sol gorge d'eau asphyxie les racines."
         )
 
     # ── Index 1 : Alerte Secheresse ───────────────────────────────────────────
