@@ -115,10 +115,10 @@ def _conseil_dynamique(
                 return (
                     f"Sol sec prevu a {heure_creneau}, aucune pluie attendue. "
                     f"Programmez un arrosage copieux en debut de matinée ou en soirée "
-                    f"pour eviter le fletrissement des tissus."
+                    f"pour eviter que les feuilles ne fanent."
                 )
             return (
-                f"Sol trop sec, aucune pluie prevue (stress hydrique : photosynthese ralentie, tissus fletris). "
+                f"Sol trop sec, aucune pluie prevue (stress hydrique : photosynthese ralentie, feuilles fanees). "
                 f"{_action_irrigation()}"
             )
 
@@ -127,7 +127,7 @@ def _conseil_dynamique(
         if mode == "planning":
             return (
                 f"Sol encore sature a {heure_creneau}. "
-                f"Coupez tout systeme d'arrosage automatique pour ce creneau."
+                f"Coupez tout systeme d'arrosage automatique."
             )
         return (
             "Sol gorge d'eau (risque d'asphyxie des racines) : fermez immediatement vos vannes d'arrosage. "
@@ -139,7 +139,7 @@ def _conseil_dynamique(
         if mode == "planning":
             return (
                 f"Temperature froide ({temperature:.0f}°C) prevue a {heure_creneau} (seuil min : {temp_air_min:.0f}°C). "
-                f"Préparez et installez des voiles d'hivernage, de la paille ou des baches plastiques avant ce creneau."
+                f"Préparez et installez des voiles d'hivernage, de la paille ou des baches plastiques."
             )
         if h >= 17 or h < 8:
             return (
