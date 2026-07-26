@@ -63,92 +63,141 @@ def _conseil_dynamique(
     mode: str = "maintenant"
 ) -> str:
     """
-    Génère un conseil concret adapté à la situation.
+    Génère un conseil agronomique concret adapté à la situation.
     mode='maintenant' -> situation actuelle ESP32, action adaptée à l'heure
     mode='planning'   -> créneau futur de la journée
     """
-    # Heure actuelle (utilisée uniquement en mode maintenant)
     h = datetime.now().hour
 
-    def _action_irrigation_maintenant() -> str:
-        """Retourne l'action d'irrigation adaptée à l'heure actuelle."""
+    def _action_irrigation() -> str:
+        """Action d'irrigation précise selon l'heure actuelle."""
         if 5 <= h < 10:
-            return "Irriguez maintenant — c'est le meilleur moment de la journee."
+            return "Irriguez maintenant — pertes par evaporation minimales le matin."
         elif 10 <= h < 17:
-            return "Evitez d'irriguer sous la chaleur — attendez 17h30."
+            return "N'irriguez pas sous la chaleur — attendez 17h30 pour limiter l'evaporation."
         elif 17 <= h < 21:
-            return "Irriguez maintenant — les temperatures sont plus fraiches."
+            return "Irriguez maintenant — temperatures plus fraiches, stomates actifs."
         else:
-            return "Irriguez ce matin des le lever du soleil."
+            return "Irriguez ce matin des le lever du soleil pour eviter le stress hydrique."
 
+    # ── Index 2 : Alerte Drainage ─────────────────────────────────────────────
     if idx == 2:
         if mode == "planning":
             return (
                 f"Ouvrez les canaux de drainage avant {heure_creneau} — "
-                f"{pluie_prevue_3h:.0f} mm de pluie arrivent."
+                f"{pluie_prevue_3h:.0f} mm de pluie prevus. "
+                f"Un exces d'eau provoque l'asphyxie racinaire et le lessivage des nutriments."
             )
         return (
             f"Fortes pluies prevues ({pluie_prevue_3h:.0f} mm). "
-            f"Verifiez le drainage et suspendez l'arrosage immediatement."
+            f"Verifiez le drainage : un sol gorge d'eau asphyxie les racines "
+            f"et lessive les nutriments vers les nappes phreatiques."
         )
 
+    # ── Index 1 : Alerte Secheresse ───────────────────────────────────────────
     elif idx == 1:
         if pluie_prevue_3h > 0:
             if mode == "planning":
                 return (
-                    f"Sol sec a {heure_creneau} et pluie prevue ({pluie_prevue_3h:.1f} mm) "
-                    f"insuffisante (besoin : {pluie_min:.0f} mm). Irriguez tot le matin."
+                    f"Sol sec a {heure_creneau}, pluie prevue ({pluie_prevue_3h:.1f} mm) "
+                    f"insuffisante (besoin : {pluie_min:.0f} mm). "
+                    f"Irriguez tot le matin pour eviter le stress hydrique."
                 )
             return (
-                f"La pluie prevue ({pluie_prevue_3h:.1f} mm) ne suffira pas "
-                f"(besoin : {pluie_min:.0f} mm). {_action_irrigation_maintenant()}"
+                f"La pluie prevue ({pluie_prevue_3h:.1f} mm) ne couvrira pas le besoin "
+                f"({pluie_min:.0f} mm). Un sol trop sec reduit la photosynthese "
+                f"et fletrit les tissus. {_action_irrigation()}"
             )
         else:
             if mode == "planning":
                 return (
-                    f"Sol sec prevu a {heure_creneau} et aucune pluie attendue. "
-                    f"Irriguez tot le matin ou en soiree."
+                    f"Sol sec prevu a {heure_creneau}, aucune pluie attendue. "
+                    f"Programmez un apport en eau pour eviter le stress hydrique "
+                    f"et le flétrissement des tissus."
                 )
-            return f"Sol trop sec, aucune pluie prevue. {_action_irrigation_maintenant()}"
+            return (
+                f"Sol sec, aucune pluie prevue. Sans apport, la plante entre en stress "
+                f"hydrique : photosynthese reduite, tissus fletris. "
+                f"{_action_irrigation()}"
+            )
 
+    # ── Index 4 : Alerte Saturation ───────────────────────────────────────────
     elif idx == 4:
         if mode == "planning":
-            return f"Sol encore sature a {heure_creneau} — aucun arrosage sur ce creneau."
-        return "Sol sature en eau. Risque d'asphyxie des racines. Arretez toute irrigation."
+            return (
+                f"Sol encore sature a {heure_creneau}. "
+                f"L'exces d'eau provoque l'asphyxie racinaire et le lessivage "
+                f"des nutriments. Aucun arrosage sur ce creneau."
+            )
+        return (
+            "Sol sature : l'exces d'eau prive les racines d'oxygene (asphyxie racinaire), "
+            "lessive les nutriments et risque de polluer les nappes phreatiques. "
+            "Arretez toute irrigation immediatement."
+        )
 
+    # ── Index 5 : Alerte Gel / Froid ──────────────────────────────────────────
     elif idx == 5:
         if mode == "planning":
             return (
                 f"Temperature prevue a {temperature:.0f}°C a {heure_creneau}, "
-                f"sous le seuil de {temp_air_min:.0f}°C. Couvrez vos plants cette nuit."
+                f"sous le seuil minimal de {temp_air_min:.0f}°C. "
+                f"Le froid bloque la photosynthese et endommage les stomates — "
+                f"couvrez vos plants avant la nuit."
             )
         if h >= 17 or h < 8:
-            return "Temperature sous le seuil. Couvrez vos plants avant de dormir."
-        return "Temperature sous le seuil. Protegez vos cultures des maintenant."
+            return (
+                f"Temperature sous le seuil minimal ({temp_air_min:.0f}°C). "
+                f"Le froid paralyse les stomates et bloque la photosynthese. "
+                f"Couvrez vos plants avant de dormir."
+            )
+        return (
+            f"Temperature sous le seuil minimal ({temp_air_min:.0f}°C). "
+            f"Protegez vos cultures maintenant pour eviter les degats sur les tissus."
+        )
 
+    # ── Index 3 : Alerte Evapotranspiration ───────────────────────────────────
     elif idx == 3:
         if mode == "planning":
             return (
                 f"Chaleur ({temperature:.0f}°C) + vent ({vitesse_vent:.0f} km/h) "
-                f"+ air sec ({humidite_air:.0f}%) a {heure_creneau}. "
-                f"Ne gaspillez pas d'eau — tout s'evapore rapidement."
+                f"+ air sec a {heure_creneau} : evapotranspiration acceleree. "
+                f"L'irrigation sera peu efficace et la pulverisation phytosanitaire "
+                f"deconseillee — risque de derive des produits."
             )
-        return "Chaleur forte, vent et air tres sec. L'eau s'evapore — evitez d'irriguer maintenant."
+        return (
+            f"Vent fort ({vitesse_vent:.0f} km/h) + chaleur + air sec : "
+            f"l'evapotranspiration est maximale, les feuilles se dessechent rapidement. "
+            f"Evitez d'irriguer et ne pulverisez aucun produit phytosanitaire maintenant."
+        )
 
+    # ── Index 6 : Alerte Risque de Maladies ───────────────────────────────────
     elif idx == 6:
         if mode == "planning":
             return (
-                f"Air tres humide et temperature favorable aux champignons a {heure_creneau}. "
+                f"Humidite de l'air elevee et temperature dans la plage optimale "
+                f"des champignons a {heure_creneau}. "
+                f"Ces conditions favorisent le developpement des maladies fongiques. "
                 f"Inspectez le feuillage en soiree."
             )
         if h >= 16:
-            return "Air tres humide et temperature propice aux maladies. Inspectez le feuillage maintenant."
-        return "Air tres humide et temperature propice aux maladies. Inspectez le feuillage ce soir."
+            return (
+                "Humidite de l'air elevee : les stomates sont satures et l'air "
+                "favorise le developpement des maladies fongiques (mildiou, etc.). "
+                "Inspectez le feuillage maintenant."
+            )
+        return (
+            "Humidite de l'air elevee : conditions propices aux maladies fongiques. "
+            "Surveillez l'etat du feuillage et preparez un traitement preventif ce soir."
+        )
 
-    else:  # idx == 0
+    # ── Index 0 : Conditions Optimales ────────────────────────────────────────
+    else:
         if mode == "planning":
             return f"Toutes les conditions sont favorables a {heure_creneau}."
-        return "Conditions optimales. Vos cultures se portent bien. Continuez le suivi normal."
+        return (
+            "Conditions optimales : sol, air et temperature dans les plages ideales. "
+            "Vos cultures se portent bien. Continuez le suivi normal."
+        )
 
 
 # ── Moteur de décision principal ─────────────────────────────────────────────
