@@ -85,16 +85,12 @@ def _conseil_dynamique(
         if mode == "planning":
             return (
                 f"{pluie_prevue_3h:.0f} mm de pluie prevus avant {heure_creneau}. "
-                f"Debouchez vos canaux et creusez des sillons entre les rangs "
-                f"pour que l'eau puisse s'ecouler librement hors de la parcelle. "
                 f"Un sol gorge asphyxie les racines et lessive les nutriments."
             )
         return (
             f"Fortes pluies prevues ({pluie_prevue_3h:.0f} mm). "
-            f"Agissez maintenant : debouchez vos canaux d'ecoulement, "
-            f"creusez des sillons entre les rangs si l'eau stagne, "
-            f"et ouvrez les sorties d'eau en bordure de parcelle. "
-            f"Un sol gorge d'eau asphyxie les racines."
+            f"Agissez maintenant : un sol gorge d'eau asphyxie les racines. "
+            f"Evitez tout ce qui est irrigation."
         )
 
     # ── Index 1 : Alerte Secheresse ───────────────────────────────────────────
@@ -108,17 +104,17 @@ def _conseil_dynamique(
                 )
             return (
                 f"La pluie prevue ({pluie_prevue_3h:.1f} mm) ne suffira pas (besoin : {pluie_min:.0f} mm). "
-                f"La secheresse bloque la photosynthese. {_action_irrigation()}"
+                f"{_action_irrigation()}"
             )
         else:
             if mode == "planning":
                 return (
                     f"Sol sec prevu a {heure_creneau}, aucune pluie attendue. "
-                    f"Programmez un arrosage copieux en debut de matinée ou en soirée "
+                    f"Programmez un arrosage en debut de matinée ou en soirée "
                     f"pour eviter que les feuilles ne fanent."
                 )
             return (
-                f"Sol trop sec, aucune pluie prevue (stress hydrique : photosynthese ralentie, feuilles fanees). "
+                f"Sol trop sec, aucune pluie prevue. "
                 f"{_action_irrigation()}"
             )
 
@@ -127,11 +123,11 @@ def _conseil_dynamique(
         if mode == "planning":
             return (
                 f"Sol encore sature a {heure_creneau}. "
-                f"Coupez tout systeme d'arrosage automatique."
+                f"Coupez tout systeme d'arrosage."
             )
         return (
-            "Sol gorge d'eau (risque d'asphyxie des racines) : fermez immediatement vos vannes d'arrosage. "
-            "Evacuez l'eau stagnante et laissez la surface du sol secher avant toute nouvelle intervention."
+            "Sol gorge d'eau (risque d'asphyxie des racines) : coupez tout systeme d'arrosage "
+            "et laissez la surface du sol secher avant toute nouvelle intervention."
         )
 
     # ── Index 5 : Alerte Gel / Froid ──────────────────────────────────────────
@@ -143,7 +139,7 @@ def _conseil_dynamique(
             )
         if h >= 17 or h < 8:
             return (
-                f"Froid critique ({temperature:.0f}°C). Le gel bloque la photosynthese. "
+                f"Froid critique ({temperature:.0f}°C). "
                 f"Couvrez d'urgence vos cultures (baches, paille au sol) et arretez les arrosages de nuit."
             )
         return (
