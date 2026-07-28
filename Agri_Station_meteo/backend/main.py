@@ -308,9 +308,9 @@ def push_mesures(station_id: str, body: PushMesuresRequest):
                         f"Aucune alerte prevue aujourd'hui."
                     )
 
-                # Tronquer a 320 caracteres (2 SMS GSM)
-                if len(corps) > 320:
-                    corps = corps[:317] + "..."
+                # Tronquer a 1000 caracteres (message complet sans coupure)
+                if len(corps) > 1000:
+                    corps = corps[:997] + "..."
 
                 firebase_service.ecrire_sms_a_envoyer(station_id, corps, telephone, recommandation_id=nouvelle_reco)
                 sms_statut = "ok"
@@ -939,9 +939,9 @@ def envoyer_sms_recommandation(station_id: str, region: str = "Kaolack"):
             f"Aucune alerte prevue aujourd'hui. Bonne journee !"
         )
 
-    # Tronquer à 320 caractères (2 SMS GSM)
-    if len(message) > 320:
-        message = message[:317] + "..."
+    # Tronquer a 1000 caracteres (message complet sans coupure)
+    if len(message) > 1000:
+        message = message[:997] + "..."
 
     # ── 5. Écrire dans Firebase → ESP32 enverra le SMS ──────────────────────
     firebase_service.ecrire_sms_a_envoyer(station_id, message, telephone, recommandation_id=reco["label_idx"])
