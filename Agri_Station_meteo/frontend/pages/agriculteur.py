@@ -183,16 +183,29 @@ def _page_accueil(station_id, nom, station_nom, region):
     st.markdown("#### Planning de la Journee")
 
     if all(isinstance(v, (int, float)) for v in [temp, hum_air, hum_sol, vent]):
-        # Recommandation ESP32 (situation actuelle)
-        reco = _post("/recommandation", {
-            "temperature": temp, "humidite_air": hum_air,
-            "humidite_sol": hum_sol, "vitesse_vent": vent,
-            "nom": nom, "region": region, "culture": culture
-        })
+        # ── Caching en Session State pour éviter les requêtes lentes au clic ──
+        current_sensor_key = f"{temp}_{hum_air}_{hum_sol}_{vent}_{culture}"
+        last_sensor_key = st.session_state.get("last_sensor_key")
 
-        # Planning du jour — créneaux OpenWeather
-        planning_data = _get(f"/ia/planning/{station_id}?region={region}", default={"planning": []})
-        planning = planning_data.get("planning", [])
+        if (
+            "reco_cache" not in st.session_state 
+            or "planning_cache" not in st.session_state 
+            or current_sensor_key != last_sensor_key
+        ):
+            reco = _post("/recommandation", {
+                "temperature": temp, "humidite_air": hum_air,
+                "humidite_sol": hum_sol, "vitesse_vent": vent,
+                "nom": nom, "region": region, "culture": culture
+            })
+            planning_data = _get(f"/ia/planning/{station_id}?region={region}", default={"planning": []})
+            planning = planning_data.get("planning", [])
+
+            st.session_state["reco_cache"] = reco
+            st.session_state["planning_cache"] = planning
+            st.session_state["last_sensor_key"] = current_sensor_key
+        else:
+            reco = st.session_state["reco_cache"]
+            planning = st.session_state["planning_cache"]
 
         # Couleurs par type d'alerte (fond blanc, bordure colorée)
         COULEURS = {
@@ -288,15 +301,17 @@ def _page_accueil(station_id, nom, station_nom, region):
         if reco:
             if st.button("Ecouter le conseil", width='stretch', key="btn_tts"):
                 try:
+                    # Timeout de 30 secondes pour laisser le temps au serveur Render de sortir de veille
                     resp = http_post(
                         f"{BACKEND}/tts",
                         json={"texte": reco.get("message_vocal", reco.get("conseil", "")), "lent": False},
-                        timeout=15
+                        timeout=30
                     )
                     if resp.status_code == 200:
                         st.audio(resp.content, format="audio/mp3")
                     else:
-                        st.error("Erreur lors de la generation audio")
+                        # Afficher le code d'erreur détaillé pour faciliter le diagnostic
+                        st.error(f"Erreur de generation audio (Code: {resp.status_code}). Veuillez reessayer.")
                 except Exception as e:
                     st.error(f"Service vocal indisponible : {e}")
 
