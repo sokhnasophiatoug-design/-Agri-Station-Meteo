@@ -189,7 +189,7 @@ def _page_seuils(stations):
     st.markdown("####  Seuils d'alerte par Culture")
     st.info(" Définissez dynamiquement les seuils agronomiques pour chaque type de culture.")
 
-    cultures_list = ["Manioc", "Tomate", "Poivron", "Aubergine", "Oignon"]
+    cultures_list = ["Manioc", "Arachide", "Mil", "Sorgho"]
     selected_culture = st.selectbox("Sélectionnez la culture à configurer", cultures_list)
 
     # Récupérer les seuils actuels de cette culture

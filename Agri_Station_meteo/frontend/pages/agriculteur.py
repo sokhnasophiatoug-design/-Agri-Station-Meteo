@@ -559,7 +559,7 @@ def page_agriculteur():
             culture_info = _get(f"/stations/{station_id}/culture", default={"culture": "Manioc"})
             culture_active = culture_info.get("culture", "Manioc")
 
-        cultures_list = ["Manioc", "Tomate", "Poivron", "Aubergine", "Oignon"]
+        cultures_list = ["Manioc", "Arachide", "Mil", "Sorgho"]
         if culture_active not in cultures_list:
             cultures_list.append(culture_active)
         culture_index = cultures_list.index(culture_active) if culture_active in cultures_list else 0
